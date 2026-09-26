@@ -20,6 +20,7 @@ import { Route as AuthPublicSignupIndexRouteImport } from './routes/_auth-public
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
 import { Route as AuthenticatedSignoutIndexRouteImport } from './routes/_authenticated/signout/index'
 import { Route as SandboxDefaultErrorIndexRouteImport } from './routes/sandbox/default-error/index'
+import { Route as SandboxPrototypeResidenteIndexRouteImport } from './routes/sandbox/prototype-residente/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +77,12 @@ const SandboxDefaultErrorIndexRoute =
     path: '/default-error/',
     getParentRoute: () => SandboxRouteRoute,
   } as any)
+const SandboxPrototypeResidenteIndexRoute =
+  SandboxPrototypeResidenteIndexRouteImport.update({
+    id: '/prototype-residente/',
+    path: '/prototype-residente/',
+    getParentRoute: () => SandboxRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AuthenticatedAppIndexRoute
   '/signout/': typeof AuthenticatedSignoutIndexRoute
   '/sandbox/default-error/': typeof SandboxDefaultErrorIndexRoute
+  '/sandbox/prototype-residente/': typeof SandboxPrototypeResidenteIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -98,6 +106,7 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppIndexRoute
   '/signout': typeof AuthenticatedSignoutIndexRoute
   '/sandbox/default-error': typeof SandboxDefaultErrorIndexRoute
+  '/sandbox/prototype-residente': typeof SandboxPrototypeResidenteIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -112,6 +121,7 @@ export interface FileRoutesById {
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/signout/': typeof AuthenticatedSignoutIndexRoute
   '/sandbox/default-error/': typeof SandboxDefaultErrorIndexRoute
+  '/sandbox/prototype-residente/': typeof SandboxPrototypeResidenteIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/signout/'
     | '/sandbox/default-error/'
+    | '/sandbox/prototype-residente/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/signout'
     | '/sandbox/default-error'
+    | '/sandbox/prototype-residente'
   id:
     | '__root__'
     | '/'
@@ -149,6 +161,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/'
     | '/_authenticated/signout/'
     | '/sandbox/default-error/'
+    | '/sandbox/prototype-residente/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -239,6 +252,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SandboxDefaultErrorIndexRouteImport
       parentRoute: typeof SandboxRouteRoute
     }
+    '/sandbox/prototype-residente/': {
+      id: '/sandbox/prototype-residente/'
+      path: '/prototype-residente'
+      fullPath: '/sandbox/prototype-residente/'
+      preLoaderRoute: typeof SandboxPrototypeResidenteIndexRouteImport
+      parentRoute: typeof SandboxRouteRoute
+    }
   }
 }
 
@@ -271,10 +291,12 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface SandboxRouteRouteChildren {
   SandboxDefaultErrorIndexRoute: typeof SandboxDefaultErrorIndexRoute
+  SandboxPrototypeResidenteIndexRoute: typeof SandboxPrototypeResidenteIndexRoute
 }
 
 const SandboxRouteRouteChildren: SandboxRouteRouteChildren = {
   SandboxDefaultErrorIndexRoute: SandboxDefaultErrorIndexRoute,
+  SandboxPrototypeResidenteIndexRoute: SandboxPrototypeResidenteIndexRoute,
 }
 
 const SandboxRouteRouteWithChildren = SandboxRouteRoute._addFileChildren(

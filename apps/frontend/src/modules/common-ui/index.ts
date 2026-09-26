@@ -14,3 +14,4 @@ export {
   SEARCH_DEBOUNCE_MS,
   useUrlSyncedSearchTerm,
 } from './use-url-synced-search-term.hooks';
+export { PrototypeSwitcher } from './prototype-switcher.components';
