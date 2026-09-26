@@ -53,10 +53,10 @@ const getMyStateImpl = FunctionImpl.make(
         { concurrency: 'unbounded' }
       );
 
-      const upcomingShifts = scheduledShifts
-        .filter((shift) => (shift.plannedEnd ?? 0) > args.now)
-        .toSorted((a, b) => (a.plannedStart ?? 0) - (b.plannedStart ?? 0))
-        .slice(0, UPCOMING_LIMIT);
+      const upcomingShifts = Shifts.listStartableShifts(
+        scheduledShifts,
+        args.now
+      ).slice(0, UPCOMING_LIMIT);
 
       const openShiftVisits = Predicate.isNull(openShift)
         ? []
@@ -110,7 +110,31 @@ const startImpl = FunctionImpl.make(
 
       const now = yield* Clock.currentTimeMillis;
 
-      if (Predicate.isUndefined(args.shiftId))
+      if (Predicate.isUndefined(args.shiftId)) {
+        const scheduledShifts = yield* reader
+          .table('shifts')
+          .index('by_porterMembershipId_and_status', (q) =>
+            q.eq('porterMembershipId', membership._id).eq('status', 'scheduled')
+          )
+          .take(SCHEDULED_SCAN_LIMIT)
+          .pipe(Effect.orDie);
+
+        // "Iniciar turno" during a planned Turno starts that one, so the plan
+        // and the real start never end up as two separate Turnos.
+        const plannedShift = Shifts.findPlannedShiftToStart(
+          scheduledShifts,
+          now
+        );
+
+        if (Predicate.isNotUndefined(plannedShift)) {
+          yield* writer
+            .table('shifts')
+            .patch(plannedShift._id, { status: 'open', startedAt: now })
+            .pipe(Effect.orDie);
+
+          return plannedShift._id;
+        }
+
         return yield* writer
           .table('shifts')
           .insert({
@@ -120,6 +144,7 @@ const startImpl = FunctionImpl.make(
             startedAt: now,
           })
           .pipe(Effect.orDie);
+      }
 
       const shift = yield* reader
         .table('shifts')
@@ -303,6 +328,12 @@ const scheduleImpl = FunctionImpl.make(
       if (args.plannedEnd <= args.plannedStart)
         return yield* new Shifts.InvalidShiftScheduleError({
           reason: 'endBeforeStart',
+        });
+
+      const now = yield* Clock.currentTimeMillis;
+      if (args.plannedEnd <= now)
+        return yield* new Shifts.InvalidShiftScheduleError({
+          reason: 'endsInThePast',
         });
 
       const isTooLong =

@@ -177,12 +177,18 @@ describe('shifts', () => {
         plannedStart: now + MILLIS_PER_HOUR,
         plannedEnd: now + 9 * MILLIS_PER_HOUR,
       });
-      yield* adminA.mutation(shifts.schedule, {
-        membershipId: world.adminA,
-        porterMembershipId: world.porterA,
-        plannedStart: now - 10 * MILLIS_PER_HOUR,
-        plannedEnd: now - 2 * MILLIS_PER_HOUR,
-      });
+      const alreadyOver = yield* Effect.result(
+        adminA.mutation(shifts.schedule, {
+          membershipId: world.adminA,
+          porterMembershipId: world.porterA,
+          plannedStart: now - 10 * MILLIS_PER_HOUR,
+          plannedEnd: now - 2 * MILLIS_PER_HOUR,
+        })
+      );
+      EffectVitestUtils.assertFailure(
+        alreadyOver,
+        new Shifts.InvalidShiftScheduleError({ reason: 'endsInThePast' })
+      );
 
       const state = yield* porterA.query(shifts.getMyState, {
         membershipId: world.porterA,
@@ -224,6 +230,39 @@ describe('shifts', () => {
         new Shifts.InvalidShiftTransitionError()
       );
     }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'starts the planned Turno under way when the Portero opens one without choosing',
+    () =>
+      Effect.gen(function* () {
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const adminA = yield* PorteriaFixtures.as('adminA');
+        const porterA = yield* PorteriaFixtures.as('porterA');
+        const now = PorteriaFixtures.wallClockMillis();
+
+        const underWay = yield* adminA.mutation(shifts.schedule, {
+          membershipId: world.adminA,
+          porterMembershipId: world.porterA,
+          plannedStart: now - 2 * MILLIS_PER_HOUR,
+          plannedEnd: now + 6 * MILLIS_PER_HOUR,
+        });
+
+        const started = yield* porterA.mutation(shifts.start, {
+          membershipId: world.porterA,
+        });
+        EffectVitestUtils.strictEqual(started, underWay);
+
+        const state = yield* porterA.query(shifts.getMyState, {
+          membershipId: world.porterA,
+          now,
+        });
+        EffectVitestUtils.strictEqual(state.openShift?._id, underWay);
+        EffectVitestUtils.strictEqual(
+          state.openShift?.plannedStart,
+          now - 2 * MILLIS_PER_HOUR
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
   );
 
   it.effect(

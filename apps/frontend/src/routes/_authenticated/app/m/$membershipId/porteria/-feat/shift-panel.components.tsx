@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
+  Badge,
   Button,
   Card,
   cn,
@@ -66,6 +67,7 @@ function NoOpenShiftCard({
   const { residentialUnitTimeZone } =
     MembershipRouteFeat.useCurrentMembership();
   const { startShift, isPending } = useShiftActions();
+  const now = VisitPass.useNow();
 
   return (
     <Card className="gap-5 px-5 py-5">
@@ -99,9 +101,14 @@ function NoOpenShiftCard({
                 key={shift._id}
                 className="flex flex-col gap-2 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
-                <p className="text-sm font-medium">
-                  {describeShiftWindow(shift, residentialUnitTimeZone)}
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-medium">
+                    {describeShiftWindow(shift, residentialUnitTimeZone)}
+                  </p>
+                  {(shift.plannedEnd ?? now) < now ? (
+                    <Badge variant="warning">Atrasado</Badge>
+                  ) : null}
+                </div>
                 <Button
                   variant="outline"
                   className="h-11"

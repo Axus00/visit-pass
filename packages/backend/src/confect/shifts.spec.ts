@@ -22,7 +22,8 @@ export default GroupSpec.make()
   .addFunction(
     /**
      * Portero: marks the real start. With `shiftId` it starts that planned
-     * Turno; without it, it opens an unplanned one.
+     * Turno; without it, it starts the planned Turno under way (see
+     * `findPlannedShiftToStart`) or, if there is none, opens an unplanned one.
      */
     FunctionSpec.publicMutation({
       name: 'start',

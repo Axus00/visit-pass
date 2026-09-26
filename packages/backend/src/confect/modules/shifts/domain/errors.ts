@@ -24,5 +24,12 @@ export class InvalidShiftTransitionError extends Schema.TaggedError<InvalidShift
 
 export class InvalidShiftScheduleError extends Schema.TaggedError<InvalidShiftScheduleError>()(
   'Shifts/InvalidShiftScheduleError',
-  { reason: Schema.Literals(['endBeforeStart', 'tooLong', 'notAPorter']) }
+  {
+    reason: Schema.Literals([
+      'endBeforeStart',
+      'endsInThePast',
+      'tooLong',
+      'notAPorter',
+    ]),
+  }
 ) {}

@@ -41,6 +41,7 @@ const MESSAGES_BY_REASON: Record<string, string> = {
   missingWeekdays: 'Elige al menos un día de la semana.',
   singleVisitorRequired: 'Este tipo de Autorización admite un solo Visitante.',
   tooLong: 'Un Turno no puede durar más de 24 horas.',
+  endsInThePast: 'El Turno ya habría terminado. Elige un horario futuro.',
   notAPorter: 'La Membresía elegida no es de un Portero activo.',
   ...PASS_REJECTION_LABELS,
 };

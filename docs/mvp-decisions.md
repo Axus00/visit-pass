@@ -18,7 +18,8 @@ Implementado según `CONTEXT.md`: Temporal (un Ingreso), Evento (un Pase por inv
 ## #9 Turno
 
 - El Administrador programa Turnos puntuales (Portero, inicio, fin; máximo 24 h). Sin plantillas semanales ni rotaciones.
-- El Portero marca inicio y fin. Puede iniciar un Turno programado o uno no programado; no hay ventana de tolerancia, se guardan las horas reales.
+- El Portero marca inicio y fin. Puede iniciar un Turno programado desde una hora antes de su inicio hasta 12 horas después de su fin; se guardan las horas reales. "Iniciar turno" inicia el Turno programado vigente si lo hay y solo si no, abre uno no programado.
+- No se puede programar un Turno cuyo fin ya pasó.
 - Una Membresía de Portero tiene como máximo un Turno abierto; el mismo Portero puede tener Turnos abiertos en unidades distintas.
 - Registrar un Ingreso exige un Turno abierto; la Salida no.
 - Un Turno olvidado lo cierra el Administrador ("Cerrado por administración"). No hay cierre automático.

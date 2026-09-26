@@ -68,7 +68,10 @@ export type ShiftStats = typeof ShiftStats.Type;
 export const PorterShiftState = Schema.Struct({
   openShift: Schema.NullOr(ShiftSummary),
   openShiftStats: Schema.NullOr(ShiftStats),
-  /** Scheduled Turnos of this Portero that have not ended yet, soonest first. */
+  /**
+   * Planned Turnos this Portero can still start (not ended, or ended less than
+   * `OVERDUE_START_HOURS` ago), soonest first.
+   */
   upcoming: Schema.Array(ShiftSummary),
 });
 
