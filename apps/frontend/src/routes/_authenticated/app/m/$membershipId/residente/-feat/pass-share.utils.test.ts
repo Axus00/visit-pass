@@ -1,0 +1,108 @@
+import { describe, expect, it } from 'vitest';
+
+import * as VisitPass from '#modules/visit-pass';
+
+import {
+  buildPassShareText,
+  describePassValidity,
+  formatWeekdays,
+  passImageFileName,
+  passPageUrl,
+  whatsAppShareUrl,
+} from './pass-share.utils';
+
+describe('passPageUrl', () => {
+  it('points at the public Pase page of the token', () => {
+    expect(passPageUrl('https://visitpass.co', 'abc_123-XYZ')).toBe(
+      'https://visitpass.co/p/abc_123-XYZ'
+    );
+  });
+});
+
+describe('formatWeekdays', () => {
+  it('names the usual schedules', () => {
+    expect(formatWeekdays([1, 2, 3, 4, 5])).toBe('Lun a Vie');
+    expect(formatWeekdays([0, 1, 2, 3, 4, 5, 6])).toBe('Todos los días');
+    expect(formatWeekdays([6, 0])).toBe('Fines de semana');
+  });
+
+  it('lists other days Monday first, ignoring order and repeats', () => {
+    expect(formatWeekdays([0, 5, 1, 1])).toBe('Lun, Vie, Dom');
+  });
+});
+
+describe('describePassValidity', () => {
+  it('shows a single day for Temporal and Evento', () => {
+    expect(
+      describePassValidity({
+        type: 'event',
+        startDate: '2026-10-03',
+        endDate: '2026-10-03',
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
+      })
+    ).toBe(VisitPass.formatLocalDate('2026-10-03'));
+  });
+
+  it('adds the range and weekdays for Servicio', () => {
+    expect(
+      describePassValidity({
+        type: 'service',
+        startDate: '2026-10-01',
+        endDate: '2026-10-31',
+        weekdays: [1, 2, 3, 4, 5],
+      })
+    ).toBe(
+      `${VisitPass.formatLocalDateRange('2026-10-01', '2026-10-31')} · Lun a Vie`
+    );
+  });
+});
+
+describe('buildPassShareText', () => {
+  const url = 'https://visitpass.co/p/token';
+
+  it('greets the Visitante by first name and carries the link inside the text', () => {
+    const text = buildPassShareText({
+      visitorName: '  Juan Carlos Pérez',
+      residentialUnitName: 'Conjunto Los Pinos',
+      apartmentLabel: 'Torre 2 - 402',
+      validityLabel: '26 sep 2026',
+      url,
+    });
+
+    expect(text).toMatch(/^Hola Juan, /);
+    expect(text).toContain('Conjunto Los Pinos (Torre 2 - 402)');
+    expect(text).toContain('documento de identidad');
+    expect(text.endsWith(url)).toBe(true);
+  });
+
+  it('omits the Apartamento when the Membresía has none', () => {
+    expect(
+      buildPassShareText({
+        visitorName: 'Ana',
+        residentialUnitName: 'Edificio Central',
+        apartmentLabel: undefined,
+        validityLabel: 'hoy',
+        url,
+      })
+    ).toContain('ingresar a Edificio Central: hoy');
+  });
+});
+
+describe('whatsAppShareUrl', () => {
+  it('encodes the whole message for wa.me', () => {
+    const text = 'Hola Ana: https://visitpass.co/p/a?b=1&c=2';
+    const shareUrl = new URL(whatsAppShareUrl(text));
+
+    expect(shareUrl.origin).toBe('https://wa.me');
+    expect(shareUrl.searchParams.get('text')).toBe(text);
+  });
+});
+
+describe('passImageFileName', () => {
+  it('slugs the Visitante name without accents', () => {
+    expect(passImageFileName('María José Peña')).toBe(
+      'pase-maria-jose-pena.png'
+    );
+    expect(passImageFileName('  ')).toBe('pase-visitante.png');
+  });
+});

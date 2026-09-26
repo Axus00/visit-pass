@@ -30,7 +30,7 @@ export function UserAvatarMenu({ user }: { user: AuthUser }) {
           <button
             type="button"
             className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            aria-label="Open user menu"
+            aria-label="Abrir menú de usuario"
           />
         }
       >
@@ -40,7 +40,9 @@ export function UserAvatarMenu({ user }: { user: AuthUser }) {
         <div className="px-2 py-2">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">
-              {getUserDisplayName(user.firstName, user.lastName)}
+              {user.firstName || user.lastName
+                ? getUserDisplayName(user.firstName, user.lastName)
+                : 'Sesión iniciada'}
             </p>
             {user.email ? (
               <p className="truncate text-sm text-muted-foreground">
@@ -82,7 +84,7 @@ export function UserSessionMenu({
           <button
             type="button"
             className="group/menu-button flex h-12 w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring active:bg-accent active:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground"
-            aria-label="Open session menu"
+            aria-label="Abrir menú de sesión"
           />
         }
       >
@@ -120,7 +122,10 @@ function UserSessionInfo({
   className?: string;
   textClassName?: string;
 }) {
-  const displayName = getUserDisplayName(user.firstName, user.lastName);
+  const displayName =
+    user.firstName || user.lastName
+      ? getUserDisplayName(user.firstName, user.lastName)
+      : 'Sesión iniciada';
 
   return (
     <div className={cn('flex min-w-0 items-center gap-2', className)}>
@@ -148,7 +153,7 @@ function UserSignOutMenuItem() {
       render={
         <Link className="flex items-center gap-2" to="/signout">
           <LogOut />
-          Log out
+          Cerrar sesión
         </Link>
       }
     />
@@ -168,7 +173,7 @@ function UserAvatar({
     initialFromFullname.toUpperCase() || initialFromEmail.toUpperCase() || '?';
 
   const fullname = parsedFullname.join(' ');
-  const label = fullname ? `${fullname}'s profile photo` : 'User profile photo';
+  const label = fullname ? `Foto de perfil de ${fullname}` : 'Foto de perfil';
 
   return (
     <Avatar aria-label={label} title={fullname || email || undefined}>

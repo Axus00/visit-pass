@@ -6,5 +6,5 @@ export function getUserDisplayName(
     return `${firstName} ${lastName}`;
   }
 
-  return firstName || lastName || 'Signed in';
+  return firstName || lastName || 'Usuario';
 }

@@ -38,7 +38,7 @@ export function TextareaField({
         {label}
         {required ? <span className="text-destructive">*</span> : null}
         {optional ? (
-          <span className="font-normal text-muted-foreground">(Optional)</span>
+          <span className="font-normal text-muted-foreground">(opcional)</span>
         ) : null}
       </Label>
       <Textarea
