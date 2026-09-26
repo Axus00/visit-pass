@@ -46,6 +46,7 @@
     "convex": "catalog:",
     "effect": "catalog:",
     "lucide-react": "catalog:frontend",
+    "qrcode.react": "4.2.0",
     "react": "catalog:frontend",
     "react-dom": "catalog:frontend",
     "tailwind-merge": "catalog:frontend"
