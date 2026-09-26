@@ -23,6 +23,9 @@ _Avoid_: Cuenta, perfil
 **Membresía**:
 La pertenencia de un Usuario a una Unidad residencial con un Rol. Un Usuario puede tener varias membresías en distintas unidades.
 
+**Membresía pendiente**:
+Una Membresía que el Administrador creó con un correo y un Rol, y que se activa cuando un Usuario inicia sesión con ese correo. Revocar una Membresía la conserva para el historial; las Autorizaciones del Apartamento siguen vigentes.
+
 **Rol**:
 El papel de una Membresía dentro de su Unidad residencial: Residente, Portero o Administrador.
 _Avoid_: Tipo de usuario, perfil
@@ -46,7 +49,7 @@ _Avoid_: Admin, administradora, gerente
 Rol de plataforma, fuera de toda Membresía, que crea Unidades residenciales y su primer Administrador.
 
 **Visitante**:
-Persona externa identificada por nombre y documento de identidad. No tiene cuenta.
+Persona externa identificada por nombre y documento de identidad. No tiene cuenta ni un perfil compartido: cada Pase, Visita y Favorito guarda sus propios datos. Si el Residente no conoce el documento, el Portero lo completa en el Ingreso.
 _Avoid_: Invitado, huésped, usuario visitante
 
 **Favorito**:
@@ -59,23 +62,29 @@ La relación del Favorito con el Residente: familiar, amigo u otro (con texto li
 ### Visitas
 
 **Autorización**:
-El permiso que un Residente concede por adelantado a un Visitante para entrar a su Apartamento. Tiene un Tipo de autorización, una fecha o rango de fechas válido y un Pase.
+El permiso que un Residente concede por adelantado para que uno o varios Visitantes entren a un Apartamento. Pertenece al Apartamento, no al Residente que la creó: cualquier Residente activo del Apartamento la ve y la cancela. Tiene un Tipo de autorización, una fecha o rango de fechas y uno o varios Pases.
 _Avoid_: Invitación, reserva, pre-registro
 
 **Tipo de autorización**:
-Temporal (un Visitante, un día, un ingreso), Evento (varios Visitantes para un mismo día, un Pase por cada uno) o Servicio (un Visitante recurrente con rango de fechas y días de la semana).
+Temporal (un Visitante, un día, un Ingreso), Evento (una lista de invitados para un mismo día, un Pase y un Ingreso por cada uno) o Servicio (un Visitante recurrente con rango de fechas y días de la semana, con varios Ingresos por día permitido).
 
 **Pase**:
-El código QR que representa una Autorización. Codifica un identificador opaco que el Portero resuelve contra el sistema. Vale el día completo de su fecha.
+El código QR que habilita a un Visitante concreto dentro de una Autorización. Codifica un identificador opaco que el Portero resuelve contra el sistema. Vale el día completo, en hora local de la Unidad residencial. Un Pase de Temporal o Evento queda usado tras su Ingreso; regenerarlo reemplaza el anterior.
 _Avoid_: QR (a secas), ticket, token
 
+**Pase rechazado**:
+Un Pase escaneado que no habilita el Ingreso, con un motivo (cancelado, vencido, aún no vigente, día no permitido, ya usado, reemplazado, Apartamento sin Residente activo). El Portero puede forzar el ingreso con un Registro manual.
+
 **Registro manual**:
-Alta de una visita hecha por el Portero en portería, sin Autorización previa: nombre, documento, Apartamento destino, tipo de visita y placa opcional.
+Alta de una Visita hecha por el Portero sin un Pase válido: nombre, documento, Apartamento destino, Tipo de visita y placa opcional. Incluye el ingreso forzado tras un Pase rechazado.
 _Avoid_: Visita espontánea, walk-in
 
 **Visita**:
-La presencia real de un Visitante en la Unidad residencial, originada por un Pase o un Registro manual. Tiene un Ingreso y, opcionalmente, una Salida.
+La presencia real de un Visitante en la Unidad residencial, originada por un Pase o un Registro manual. Tiene un Ingreso y, opcionalmente, una Salida: está abierta hasta que el Portero registra la Salida, y nunca se cierra sola. Una Visita registrada por error se anula con motivo, no se borra.
 _Avoid_: Entrada (es el momento, no la visita), acceso
+
+**Tipo de visita**:
+Temporal, Evento o Servicio. En una Visita por Pase se hereda de la Autorización; en un Registro manual lo elige el Portero.
 
 **Ingreso**:
 El momento en que el Portero deja entrar al Visitante y lo registra.
@@ -90,6 +99,12 @@ _Avoid_: Check-out
 **Turno**:
 El periodo de trabajo de un Portero en una Unidad residencial: un horario planeado por el Administrador más la marcación real de inicio y fin que hace el Portero.
 _Avoid_: Jornada, horario (es solo la parte planeada)
+
+**Aviso de privacidad**:
+El texto versionado que informa al Visitante quién trata sus datos, para qué y cómo ejercer sus derechos. Se muestra en el formulario del Portero y en el Pase; cada Visita guarda la versión mostrada.
+
+**Retención**:
+El plazo, configurable por Unidad residencial (3 a 24 meses, 12 por defecto), tras el cual una Visita se anonimiza. Los Pases vencidos que nunca se usaron se purgan a los 30 días.
 
 **Reporte de turno**:
 El listado de las Visitas registradas durante un Turno, exportable a Excel y enviable por correo al Administrador.
