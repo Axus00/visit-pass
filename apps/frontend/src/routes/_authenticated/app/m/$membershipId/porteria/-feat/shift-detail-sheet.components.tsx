@@ -23,7 +23,6 @@ import {
   SheetHeader,
   SheetTitle,
   Skeleton,
-  buttonVariants,
   cn,
   toast,
   useIsMobile,
@@ -267,19 +266,15 @@ function ShiftReportRow({
             Predicate.isNull(report.downloadUrl) ? (
               <Badge variant="success">Listo</Badge>
             ) : (
-              <a
-                href={report.downloadUrl}
-                download={report.fileName}
-                target="_blank"
-                rel="noreferrer"
-                className={cn(
-                  buttonVariants({ variant: 'secondary' }),
-                  'h-11 shrink-0'
-                )}
+              <MembershipRouteFeat.DownloadFileButton
+                url={report.downloadUrl}
+                fileName={report.fileName}
+                variant="secondary"
+                className="h-11 shrink-0"
               >
                 <Download data-icon="inline-start" />
                 Descargar
-              </a>
+              </MembershipRouteFeat.DownloadFileButton>
             )
           ),
           Match.when('failed', () => (

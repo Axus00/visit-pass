@@ -7,9 +7,10 @@ import {
   Mail,
 } from 'lucide-react';
 
-import { Badge, buttonVariants, cn } from '@repo/ui';
+import { Badge, cn } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
+import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import { SHIFT_REPORT_EMAIL_LABELS } from './admin.models';
 
@@ -94,15 +95,16 @@ export function ShiftReportItem({
         ) : null}
       </div>
       {canDownload ? (
-        <a
-          href={report.downloadUrl ?? undefined}
-          download={report.fileName}
-          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+        <MembershipRouteFeat.DownloadFileButton
+          url={report.downloadUrl}
+          fileName={report.fileName}
+          variant="outline"
+          size="sm"
           aria-label={`Descargar ${report.fileName}`}
         >
           <Download aria-hidden="true" />
           <span className="hidden sm:inline">Descargar</span>
-        </a>
+        </MembershipRouteFeat.DownloadFileButton>
       ) : (
         <Badge
           variant={report.status === 'failed' ? 'destructive' : 'secondary'}
