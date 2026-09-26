@@ -1,0 +1,3 @@
+# Store Visitor Data Per Record Without a Shared Profile
+
+A Visitante has no shared profile keyed by document inside a Unidad residencial: each Pase, Visita, and Favorito stores its own name and document. A shared profile would let anyone querying one Visitante see every Apartamento that person visits, which the copropiedad, as Responsable under Habeas Data, has no purpose for, and it would force merging records created before the document was known (the document is optional when authorizing and completed by the Portero at Ingreso). The cost is that recurring Visitantes are not recognised across Apartamentos; searching by document runs over Visitas, not over a Visitante table.
