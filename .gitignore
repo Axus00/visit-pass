@@ -40,5 +40,8 @@ coverage
 playwright-report/
 test-results/
 
+# Local design mockups
+/mockups/stitch_visitpass_access_manager/
+
 # Agent worktrees
 .claude/worktrees/
