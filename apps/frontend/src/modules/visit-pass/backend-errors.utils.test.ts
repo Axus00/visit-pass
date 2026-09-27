@@ -23,6 +23,27 @@ describe('describeBackendError', () => {
     );
   });
 
+  it('names the Autorizaciones limit the Apartamento reached', () => {
+    expect(
+      describeBackendError({
+        _tag: 'Authorizations/AuthorizationLimitReachedError',
+        limit: 100,
+      })
+    ).toBe(
+      'El Apartamento ya tiene el máximo de 100 Autorizaciones vigentes; cancela alguna antes de crear otra.'
+    );
+  });
+
+  it('asks to cancel an Autorización even without the limit', () => {
+    expect(
+      describeBackendError({
+        _tag: 'Authorizations/AuthorizationLimitReachedError',
+      })
+    ).toBe(
+      'El Apartamento ya tiene el máximo de Autorizaciones vigentes; cancela alguna antes de crear otra.'
+    );
+  });
+
   it('asks to cancel a Turno when the unit has too many scheduled', () => {
     expect(
       describeBackendError({

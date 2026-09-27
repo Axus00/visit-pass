@@ -86,10 +86,13 @@ function ManualEntryForm({
     Predicate.isNotNull(shiftState) && Predicate.isNull(shiftState.openShift);
   const forcedReason = prefill?.reason;
 
+  // Replaces this entry, and the Visitante in its history state, so Back
+  // cannot reopen the prefilled form and force the same Visita twice.
   const goHome = () =>
     void navigate({
       to: '/app/m/$membershipId/porteria',
       params: { membershipId },
+      replace: true,
     });
 
   const form = Forms.useAppForm({

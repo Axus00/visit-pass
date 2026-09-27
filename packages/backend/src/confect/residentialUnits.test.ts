@@ -293,6 +293,67 @@ describe('residentialUnits', () => {
     }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect(
+    'flags an Administrador whose Usuario was deleted in the Superadmin’s list',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* TestFixtures.seedTwoUnits;
+
+        yield* confect.mutation(
+          refs.internal.residentialUnits.grantSuperadmin,
+          { email: 'outsider@example.test' }
+        );
+        const superadmin = confect.withIdentity(
+          TestFixtures.identityOf('outsider')
+        );
+
+        // The Membresía stays active; only its Usuario is soft-deleted.
+        yield* confect.run(
+          Effect.gen(function* () {
+            const reader = yield* DatabaseReader;
+            const writer = yield* DatabaseWriter;
+
+            const user = yield* reader
+              .table('users')
+              .get('by_externalId', 'adminB');
+            yield* writer.table('users').patch(user._id, { deletedAt: 0 });
+          }).pipe(Effect.orDie)
+        );
+
+        const units = yield* superadmin.query(
+          refs.public.residentialUnits.listAll,
+          {}
+        );
+
+        EffectVitestUtils.deepStrictEqual(
+          units.map(({ _id, administrators }) => ({ _id, administrators })),
+          [
+            {
+              _id: world.unitA,
+              administrators: [
+                {
+                  email: 'admina@example.test',
+                  status: 'active',
+                  isAccountDeleted: false,
+                },
+              ],
+            },
+            {
+              _id: world.unitB,
+              administrators: [
+                {
+                  email: 'adminb@example.test',
+                  status: 'active',
+                  isAccountDeleted: true,
+                },
+              ],
+            },
+          ]
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('keeps Apartamentos and settings inside their own unit', () =>
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;
@@ -496,7 +557,11 @@ describe('residentialUnits', () => {
               _id: createdId,
               name: 'Conjunto Nuevo',
               administrators: [
-                { email: 'nuevo.admin@example.test', status: 'pending' },
+                {
+                  email: 'nuevo.admin@example.test',
+                  status: 'pending',
+                  isAccountDeleted: false,
+                },
               ],
               apartmentCount: 0,
             },
@@ -505,7 +570,11 @@ describe('residentialUnits', () => {
               name: 'Unidad A',
               // `revokedA` is left out.
               administrators: [
-                { email: 'admina.nuevo@example.test', status: 'active' },
+                {
+                  email: 'admina.nuevo@example.test',
+                  status: 'active',
+                  isAccountDeleted: false,
+                },
               ],
               apartmentCount: 3,
             },
@@ -513,7 +582,11 @@ describe('residentialUnits', () => {
               _id: world.unitB,
               name: 'Unidad B',
               administrators: [
-                { email: 'adminb@example.test', status: 'active' },
+                {
+                  email: 'adminb@example.test',
+                  status: 'active',
+                  isAccountDeleted: false,
+                },
               ],
               apartmentCount: 1,
             },
@@ -629,7 +702,13 @@ describe('residentialUnits', () => {
 
         EffectVitestUtils.deepStrictEqual(
           units.find(({ _id }) => _id === unitId)?.administrators,
-          [{ email: 'nuevo.admin@example.test', status: 'pending' }]
+          [
+            {
+              email: 'nuevo.admin@example.test',
+              status: 'pending',
+              isAccountDeleted: false,
+            },
+          ]
         );
 
         const [revokedTwice, duplicate, invalidEmail] = yield* Effect.all(

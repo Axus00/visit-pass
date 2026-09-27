@@ -351,20 +351,18 @@ const listAllImpl = FunctionImpl.make(
               ),
               (administrator) =>
                 Effect.gen(function* () {
-                  // An active Administrador may have changed email since the invitation.
-                  const isActiveAndLinked =
-                    administrator.status === 'active' &&
-                    Predicate.isNotUndefined(administrator.userId);
+                  const { userId } = administrator;
+                  const isLinked = Predicate.isNotUndefined(userId);
 
-                  const user = isActiveAndLinked
-                    ? yield* Users.getOneById(administrator.userId).pipe(
-                        Users.isActiveOrNull
-                      )
+                  const user = isLinked
+                    ? yield* Users.getOneById(userId).pipe(Users.isActiveOrNull)
                     : null;
 
+                  // A linked Administrador may have changed email since the invitation.
                   return {
                     email: user?.email ?? administrator.email,
                     status: administrator.status,
+                    isAccountDeleted: isLinked && Predicate.isNull(user),
                   };
                 }),
               { concurrency: 'unbounded' }

@@ -24,6 +24,7 @@ export default GroupSpec.make()
           MembershipsDomain.AccessDeniedError,
           AuthorizationsDomain.InvalidAuthorizationError,
           AuthorizationsDomain.FavoriteNotFoundError,
+          AuthorizationsDomain.AuthorizationLimitReachedError,
         ]),
     }).middleware(RequireUserIdentity)
   )

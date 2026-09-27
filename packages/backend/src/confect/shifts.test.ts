@@ -5,7 +5,7 @@ import * as Predicate from 'effect/Predicate';
 import * as Result from 'effect/Result';
 
 import refs from './_generated/refs';
-import { DatabaseWriter } from './_generated/services';
+import { DatabaseReader, DatabaseWriter } from './_generated/services';
 import * as Memberships from './modules/memberships';
 import * as Shifts from './modules/shifts';
 import * as PorteriaFixtures from './porteria.fixtures';
@@ -205,6 +205,42 @@ describe('shifts', () => {
           new Shifts.InvalidShiftScheduleError({ reason: 'tooManyScheduled' })
         );
       }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect('refuses a Turno for a Portero whose Usuario was deleted', () =>
+    Effect.gen(function* () {
+      const confect = yield* TestConfect.TestConfect;
+      const world = yield* PorteriaFixtures.seedPorteria;
+      const adminA = yield* PorteriaFixtures.as('adminA');
+      const now = PorteriaFixtures.wallClockMillis();
+
+      // The Membresía stays active; only its Usuario is soft-deleted.
+      yield* confect.run(
+        Effect.gen(function* () {
+          const reader = yield* DatabaseReader;
+          const writer = yield* DatabaseWriter;
+
+          const user = yield* reader
+            .table('users')
+            .get('by_externalId', 'porterA2');
+          yield* writer.table('users').patch(user._id, { deletedAt: 0 });
+        }).pipe(Effect.orDie)
+      );
+
+      const scheduled = yield* Effect.result(
+        adminA.mutation(shifts.schedule, {
+          membershipId: world.adminA,
+          porterMembershipId: world.porterA2,
+          plannedStart: now + MILLIS_PER_HOUR,
+          plannedEnd: now + 2 * MILLIS_PER_HOUR,
+        })
+      );
+
+      EffectVitestUtils.assertFailure(
+        scheduled,
+        new Shifts.InvalidShiftScheduleError({ reason: 'notAPorter' })
+      );
+    }).pipe(Effect.provide(TestConfect.layer))
   );
 
   it.effect('starts only the Portero’s own scheduled Turno', () =>

@@ -36,6 +36,12 @@ export class PassNotActiveError extends Schema.TaggedError<PassNotActiveError>()
   {}
 ) {}
 
+/** An Apartamento keeps at most as many current Autorizaciones as its list shows. */
+export class AuthorizationLimitReachedError extends Schema.TaggedError<AuthorizationLimitReachedError>()(
+  'Authorizations/AuthorizationLimitReachedError',
+  { limit: Schema.Finite }
+) {}
+
 /** A Residente keeps at most as many Favoritos as their list shows. */
 export class FavoriteLimitReachedError extends Schema.TaggedError<FavoriteLimitReachedError>()(
   'Authorizations/FavoriteLimitReachedError',

@@ -96,6 +96,8 @@ export const PlatformUnitSummary = Schema.Struct({
     Schema.Struct({
       email: Schema.String,
       status: MembershipsDomain.MembershipStatus,
+      /** The linked Usuario was deleted: the unit needs another Administrador. */
+      isAccountDeleted: Schema.Boolean,
     })
   ),
   apartmentCount: Schema.Finite,

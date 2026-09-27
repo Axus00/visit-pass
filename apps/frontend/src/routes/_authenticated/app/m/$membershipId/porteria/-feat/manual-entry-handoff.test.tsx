@@ -16,6 +16,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import * as Result from 'effect/Result';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import refs from '@repo/backend/refs';
@@ -67,10 +68,14 @@ const REJECTED_PASS = {
   },
 };
 
+const HOME_PATH = '/app/m/$membershipId/porteria';
 const SCAN_PATH = '/app/m/$membershipId/porteria/escanear';
 const MANUAL_ENTRY_PATH = '/app/m/$membershipId/porteria/registro';
 
-/** Escanear and Registro manual under a memory history, as the app mounts them. */
+/**
+ * Escanear and Registro manual under a memory history, as the app mounts them,
+ * beside a placeholder Portería home they return to.
+ */
 function renderPorteria(initialPath: string) {
   const stubs = installFrontendStubs();
   // jsdom has no scrolling; the router scrolls to the top on every navigation.
@@ -101,6 +106,11 @@ function renderPorteria(initialPath: string) {
     routeTree: rootRoute.addChildren([
       createRoute({
         getParentRoute: () => rootRoute,
+        path: HOME_PATH,
+        component: () => <p>Inicio de Portería</p>,
+      }),
+      createRoute({
+        getParentRoute: () => rootRoute,
         path: SCAN_PATH,
         component: EscanearRoute.Route.options.component,
       }),
@@ -115,13 +125,29 @@ function renderPorteria(initialPath: string) {
 
   render(<RouterProvider router={router} />);
 
-  return router;
+  return { router, stubs };
 }
 
 const nameInput = () =>
   screen.getByLabelText(/Nombre completo/) as HTMLInputElement;
 const documentInput = () =>
   screen.getByLabelText(/Documento de identidad/) as HTMLInputElement;
+
+/** Verifies the rejected Pase in Escanear and admits it through Registro manual. */
+async function openPrefilledManualEntry() {
+  fireEvent.change(
+    await screen.findByLabelText('Ingresa o pega el código del Pase'),
+    { target: { value: TOKEN } }
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Verificar Pase' }));
+  fireEvent.click(
+    await screen.findByRole('button', {
+      name: /Registrar como ingreso manual/,
+    })
+  );
+
+  await waitFor(() => expect(nameInput().value).toBe('Ana Gómez'));
+}
 
 afterEach(() => {
   cleanup();
@@ -130,20 +156,11 @@ afterEach(() => {
 
 describe('Escanear → Registro manual', () => {
   it('prefills a rejected Pase without putting the Visitante or token in the URL', async () => {
-    const router = renderPorteria('/app/m/membership_porter/porteria/escanear');
-
-    fireEvent.change(
-      await screen.findByLabelText('Ingresa o pega el código del Pase'),
-      { target: { value: TOKEN } }
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Verificar Pase' }));
-    fireEvent.click(
-      await screen.findByRole('button', {
-        name: /Registrar como ingreso manual/,
-      })
+    const { router } = renderPorteria(
+      '/app/m/membership_porter/porteria/escanear'
     );
 
-    await waitFor(() => expect(nameInput().value).toBe('Ana Gómez'));
+    await openPrefilledManualEntry();
     expect(documentInput().value).toBe('52123456');
     expect(
       (screen.getByLabelText(/Apartamento destino/) as HTMLInputElement).value
@@ -168,7 +185,9 @@ describe('Escanear → Registro manual', () => {
   });
 
   it('clears the prefilled Visitante when the Portero opens the plain Registro manual', async () => {
-    const router = renderPorteria('/app/m/membership_porter/porteria/registro');
+    const { router } = renderPorteria(
+      '/app/m/membership_porter/porteria/registro'
+    );
 
     await act(() =>
       router.navigate({
@@ -198,4 +217,42 @@ describe('Escanear → Registro manual', () => {
     await waitFor(() => expect(nameInput().value).toBe(''));
     expect(screen.getByText('Sin Autorización previa')).toBeDefined();
   });
+
+  it.each([
+    {
+      exit: 'registering the Ingreso',
+      leave: (stubs: ReturnType<typeof renderPorteria>['stubs']) => {
+        stubs.mutation.mockResolvedValue(Result.succeed(null));
+        fireEvent.click(
+          screen.getByRole('button', { name: /Registrar ingreso/ })
+        );
+      },
+    },
+    {
+      exit: 'cancelling',
+      leave: () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+      },
+    },
+  ])(
+    'does not reopen the prefilled Visitante on Back after $exit',
+    async ({ leave }) => {
+      const { router, stubs } = renderPorteria(
+        '/app/m/membership_porter/porteria/escanear'
+      );
+      await openPrefilledManualEntry();
+
+      leave(stubs);
+      expect(await screen.findByText('Inicio de Portería')).toBeDefined();
+
+      act(() => router.history.back());
+
+      await waitFor(() =>
+        expect(router.state.location.pathname).toBe(
+          '/app/m/membership_porter/porteria/escanear'
+        )
+      );
+      expect(screen.queryByLabelText(/Nombre completo/)).toBeNull();
+    }
+  );
 });

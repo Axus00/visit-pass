@@ -255,33 +255,46 @@ function UnitList({
                   aria-label={`Administradores de ${unit.name}`}
                   className="flex flex-col gap-1"
                 >
-                  {unit.administrators.map(({ email, status }) => (
-                    <li
-                      key={email}
-                      className="flex flex-wrap items-center gap-2"
-                    >
-                      <UserCog
-                        className="size-4 shrink-0 text-muted-foreground"
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 flex-1 break-all text-muted-foreground">
-                        {email}
-                      </span>
-                      <Badge
-                        variant={ADMINISTRATOR_STATUS_BADGES[status].variant}
+                  {unit.administrators.map(
+                    ({ email, status, isAccountDeleted }) => (
+                      <li
+                        key={email}
+                        className="flex flex-wrap items-center gap-2"
                       >
-                        {ADMINISTRATOR_STATUS_BADGES[status].label}
-                      </Badge>
-                      {status === 'pending' ? (
-                        <RevokeAdministratorInvitationDialog
-                          unit={unit}
-                          email={email}
+                        <UserCog
+                          className="size-4 shrink-0 text-muted-foreground"
+                          aria-hidden="true"
                         />
-                      ) : null}
-                    </li>
-                  ))}
+                        <span className="min-w-0 flex-1 break-all text-muted-foreground">
+                          {email}
+                        </span>
+                        <Badge
+                          variant={ADMINISTRATOR_STATUS_BADGES[status].variant}
+                        >
+                          {ADMINISTRATOR_STATUS_BADGES[status].label}
+                        </Badge>
+                        {isAccountDeleted ? (
+                          <Badge variant="destructive">Usuario eliminado</Badge>
+                        ) : null}
+                        {status === 'pending' ? (
+                          <RevokeAdministratorInvitationDialog
+                            unit={unit}
+                            email={email}
+                          />
+                        ) : null}
+                      </li>
+                    )
+                  )}
                 </ul>
               )}
+              {unit.administrators.some(
+                (administrator) => administrator.isAccountDeleted
+              ) ? (
+                <p className="text-muted-foreground">
+                  Un Usuario eliminado ya no puede entrar como Administrador;
+                  invita a otro Administrador para reemplazarlo.
+                </p>
+              ) : null}
               <InviteAdministratorButton unit={unit} />
             </div>
           </Card>

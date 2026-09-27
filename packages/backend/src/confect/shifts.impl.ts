@@ -349,12 +349,16 @@ const scheduleImpl = FunctionImpl.make(
           })
         );
 
-      const isActivePorterOfUnit =
+      const isPorterOfUnit =
         Predicate.isNotNull(porterMembership) &&
         porterMembership.residentialUnitId === membership.residentialUnitId &&
-        porterMembership.role === 'porter' &&
-        porterMembership.status === 'active';
-      if (!isActivePorterOfUnit)
+        porterMembership.role === 'porter';
+
+      // Also drops a pending Portero and one whose Usuario was deleted.
+      const [activePorter] = isPorterOfUnit
+        ? yield* Memberships.filterActiveMembers([porterMembership])
+        : [];
+      if (Predicate.isUndefined(activePorter))
         return yield* new Shifts.InvalidShiftScheduleError({
           reason: 'notAPorter',
         });
@@ -399,7 +403,7 @@ const scheduleImpl = FunctionImpl.make(
         .table('shifts')
         .insert({
           residentialUnitId: membership.residentialUnitId,
-          porterMembershipId: porterMembership._id,
+          porterMembershipId: activePorter._id,
           plannedStart: args.plannedStart,
           plannedEnd: args.plannedEnd,
           status: 'scheduled',

@@ -33,6 +33,10 @@ const MESSAGES_BY_TAG: Record<
   'Authorizations/AuthorizationNotFoundError': 'La Autorización no existe.',
   'Authorizations/PassNotFoundError': 'El Pase no existe.',
   'Authorizations/PassNotActiveError': 'El Pase ya no está vigente.',
+  'Authorizations/AuthorizationLimitReachedError': ({ limit }) =>
+    Predicate.isNumber(limit)
+      ? `El Apartamento ya tiene el máximo de ${limit} Autorizaciones vigentes; cancela alguna antes de crear otra.`
+      : 'El Apartamento ya tiene el máximo de Autorizaciones vigentes; cancela alguna antes de crear otra.',
   'Authorizations/FavoriteNotFoundError': 'El Favorito no existe.',
   'Authorizations/FavoriteLimitReachedError': ({ limit }) =>
     Predicate.isNumber(limit)

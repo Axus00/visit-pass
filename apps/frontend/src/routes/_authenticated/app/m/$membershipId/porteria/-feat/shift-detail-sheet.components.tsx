@@ -253,6 +253,8 @@ function ShiftReportRow({
   );
   const isEmailProblem =
     report.emailStatus === 'failed' || report.emailStatus === 'notConfigured';
+  const isFileMissing =
+    report.status === 'ready' && Predicate.isNull(report.downloadUrl);
 
   return (
     <li className="flex flex-col gap-2 rounded-xl border px-4 py-3">
@@ -276,7 +278,7 @@ function ShiftReportRow({
           )),
           Match.when('ready', () =>
             Predicate.isNull(report.downloadUrl) ? (
-              <Badge variant="success">Listo</Badge>
+              <Badge variant="secondary">Sin archivo</Badge>
             ) : (
               <MembershipRouteFeat.DownloadFileButton
                 url={report.downloadUrl}
@@ -295,6 +297,12 @@ function ShiftReportRow({
           Match.exhaustive
         )}
       </div>
+      {isFileMissing ? (
+        <p className="text-xs text-muted-foreground">
+          El archivo ya no está disponible; usa «Generar Excel» para crearlo de
+          nuevo.
+        </p>
+      ) : null}
       {Predicate.isNull(emailStatus) ? null : (
         <p
           className={cn(

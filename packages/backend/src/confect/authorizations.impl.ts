@@ -16,7 +16,10 @@ import * as Shifts from './modules/shifts';
 
 /** The latest Autorizaciones listed whatever their state. */
 const LIST_FOR_APARTMENT_LATEST_LIMIT = 50;
-/** Active Autorizaciones still valid today or later, however old. */
+/**
+ * Active Autorizaciones still valid today or later, however old; `create`
+ * refuses past it.
+ */
 const LIST_FOR_APARTMENT_CURRENT_LIMIT = 200;
 /** A Residente's whole Favoritos list; `createFavorite` refuses past it. */
 const FAVORITES_LIMIT = 200;
@@ -42,11 +45,9 @@ const createImpl = FunctionImpl.make(
         .get(membership.residentialUnitId)
         .pipe(Effect.orDie);
       const now = yield* Clock.currentTimeMillis;
+      const today = Calendar.toLocalDate(now, unit.timeZone);
 
-      const validity = Authorizations.resolveAuthorizationValidity(
-        args,
-        Calendar.toLocalDate(now, unit.timeZone)
-      );
+      const validity = Authorizations.resolveAuthorizationValidity(args, today);
       if (Result.isFailure(validity))
         return yield* new Authorizations.InvalidAuthorizationError({
           reason: validity.failure,
@@ -76,6 +77,23 @@ const createImpl = FunctionImpl.make(
       );
       if (!areOwnFavorites)
         return yield* new Authorizations.FavoriteNotFoundError();
+
+      // The same range `listForApartment` shows, so every current
+      // Autorización stays visible to the Apartamento.
+      const currentAuthorizations = yield* reader
+        .table('authorizations')
+        .index('by_apartmentId_and_status_and_endDate', (q) =>
+          q
+            .eq('apartmentId', apartmentId)
+            .eq('status', 'active')
+            .gte('endDate', today)
+        )
+        .take(LIST_FOR_APARTMENT_CURRENT_LIMIT)
+        .pipe(Effect.orDie);
+      if (currentAuthorizations.length >= LIST_FOR_APARTMENT_CURRENT_LIMIT)
+        return yield* new Authorizations.AuthorizationLimitReachedError({
+          limit: LIST_FOR_APARTMENT_CURRENT_LIMIT,
+        });
 
       const authorizationId = yield* writer
         .table('authorizations')

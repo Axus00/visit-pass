@@ -2,6 +2,7 @@ import { describe, it } from '@effect/vitest';
 import * as EffectVitestUtils from '@effect/vitest/utils';
 import * as Effect from 'effect/Effect';
 import * as Predicate from 'effect/Predicate';
+import * as Result from 'effect/Result';
 import * as Schema from 'effect/Schema';
 
 import { Id } from './_generated/id';
@@ -668,6 +669,87 @@ describe('authorizations', () => {
         favorites.some((favorite) => favorite.visitorName === 'Último')
       );
     }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'refuses a current Autorización past what the Apartamento’s list shows',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const residentA = yield* PorteriaFixtures.as('residentA');
+        const residentA102 = yield* PorteriaFixtures.as('residentA102');
+
+        // Expired and cancelled Autorizaciones no longer count.
+        yield* confect.run(
+          Effect.gen(function* () {
+            const writer = yield* DatabaseWriter;
+
+            const insert = (args: {
+              endDate: string;
+              status: 'active' | 'cancelled';
+            }) =>
+              writer.table('authorizations').insert({
+                residentialUnitId: world.unitA,
+                apartmentId: world.apartmentA101,
+                createdByMembershipId: world.residentA,
+                type: 'temporary',
+                startDate: args.endDate,
+                endDate: args.endDate,
+                weekdays: Authorizations.ALL_WEEKDAYS,
+                status: args.status,
+              });
+
+            yield* insert({
+              endDate: PorteriaFixtures.localDateFromToday(-1),
+              status: 'active',
+            });
+            yield* insert({
+              endDate: PorteriaFixtures.localDateFromToday(0),
+              status: 'cancelled',
+            });
+            yield* Effect.forEach(
+              Array.from({ length: 199 }, (_, index) => index),
+              () =>
+                insert({
+                  endDate: PorteriaFixtures.localDateFromToday(0),
+                  status: 'active',
+                }),
+              { discard: true }
+            );
+          }).pipe(Effect.orDie)
+        );
+
+        const create = (
+          resident: typeof residentA,
+          membershipId: typeof world.residentA
+        ) =>
+          Effect.result(
+            resident.mutation(authorizations.create, {
+              membershipId,
+              type: 'temporary',
+              startDate: PorteriaFixtures.localDateFromToday(0),
+              visitors: [{ name: 'Ana Visitante' }],
+            })
+          );
+
+        const lastFitting = yield* create(residentA, world.residentA);
+        EffectVitestUtils.assertTrue(Result.isSuccess(lastFitting));
+
+        const [overflow, otherApartment] = yield* Effect.all(
+          [
+            create(residentA, world.residentA),
+            create(residentA102, world.residentA102),
+          ],
+          { concurrency: 'unbounded' }
+        );
+
+        EffectVitestUtils.assertFailure(
+          overflow,
+          new Authorizations.AuthorizationLimitReachedError({ limit: 200 })
+        );
+        EffectVitestUtils.assertTrue(Result.isSuccess(otherApartment));
+      }).pipe(Effect.provide(TestConfect.layer))
   );
 
   it.effect(
