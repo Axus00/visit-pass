@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import * as Predicate from 'effect/Predicate';
 import {
@@ -69,7 +69,8 @@ export function AuthorizeVisitCard({
   const saveFavoriteId = useId();
   const relationshipId = useId();
   const weekdaysLabelId = useId();
-  const today = VisitPass.todayIn(timeZone);
+  const today = VisitPass.todayIn(timeZone, VisitPass.useNow());
+  const previousToday = useRef(today);
   // The type a reset keeps. It feeds `defaultValues` too, because TanStack Form
   // re-applies changed `defaultValues` to an untouched form on every render.
   const [defaultType, setDefaultType] =
@@ -122,6 +123,26 @@ export function AuthorizeVisitCard({
       onShared(shared);
     },
   });
+
+  // At midnight, move the dates still on yesterday's defaults to today's, so a
+  // form left open overnight does not start in the past.
+  useEffect(() => {
+    const yesterday = previousToday.current;
+    previousToday.current = today;
+    if (yesterday === today) return;
+
+    const previousDefaults = defaultAuthorizeFormValues(yesterday);
+    const nextDefaults = defaultAuthorizeFormValues(today);
+
+    for (const name of ['startDate', 'endDate'] as const) {
+      const isUntouchedDefault =
+        !(form.getFieldMeta(name)?.isTouched ?? false) &&
+        form.getFieldValue(name) === previousDefaults[name];
+
+      if (isUntouchedDefault)
+        form.setFieldValue(name, nextDefaults[name], { dontUpdateMeta: true });
+    }
+  }, [form, today]);
 
   return (
     <Card className="gap-5">

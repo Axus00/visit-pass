@@ -8,14 +8,10 @@ import { DatabaseReader, StorageReader } from '../../../_generated/services';
 import * as ResidentialUnitsDomain from '../../residentialUnits/domain';
 import * as ShiftsDomain from '../../shifts/domain';
 import * as UsersApplication from '../../users/application';
-import * as UsersDomain from '../../users/domain';
 import * as Domain from '../domain';
 
 /** Visitas one report lists; a Turno past this is truncated rather than failing. */
 const VISITS_PER_REPORT_LIMIT = 2000;
-
-/** Administradores are a handful per unit; this bounds a misconfigured one. */
-const ADMINISTRATORS_PER_UNIT_LIMIT = 100;
 
 // -*******************************************************************************-
 // API
@@ -37,7 +33,10 @@ export const getOneReportByIdOrNull = Effect.fn(
     );
 });
 
-/** Membresías are never deleted, so a dangling reference is a defect. */
+/**
+ * Names a Membresía the way reports show it. Membresías are never deleted, so
+ * a dangling reference is a defect.
+ */
 export const getMemberDisplayName = Effect.fn(
   'ShiftReports.getMemberDisplayName'
 )(function* (membershipId: Id<'memberships'>) {
@@ -52,7 +51,16 @@ export const getMemberDisplayName = Effect.fn(
     ? null
     : yield* UsersApplication.getOneById(membership.userId);
 
-  return Domain.toMemberDisplayName({ membership, user });
+  // The signed-in Usuario's full name, else the name the Administrador typed,
+  // else the email.
+  const fullName = [user?.firstName, user?.lastName]
+    .map((part) => part?.trim() ?? '')
+    .filter((part) => part.length > 0)
+    .join(' ');
+
+  if (fullName.length > 0) return fullName;
+
+  return membership.displayName ?? membership.email;
 });
 
 /**
@@ -93,42 +101,6 @@ export const requireReportableShift = Effect.fn(
     });
 
   return shift;
-});
-
-/**
- * Emails of the unit's active Administradores: the linked Usuario's current
- * email, or the invited email while none is linked. An Administrador whose
- * Usuario was deleted receives nothing.
- */
-export const listAdministratorEmails = Effect.fn(
-  'ShiftReports.listAdministratorEmails'
-)(function* (residentialUnitId: Id<'residentialUnits'>) {
-  const reader = yield* DatabaseReader;
-
-  const administrators = yield* reader
-    .table('memberships')
-    .index('by_residentialUnitId_and_role', (q) =>
-      q.eq('residentialUnitId', residentialUnitId).eq('role', 'administrator')
-    )
-    .take(ADMINISTRATORS_PER_UNIT_LIMIT)
-    .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
-
-  const emails = yield* Effect.forEach(
-    administrators.filter((membership) => membership.status === 'active'),
-    (membership) =>
-      Effect.gen(function* () {
-        if (Predicate.isUndefined(membership.userId)) return membership.email;
-
-        const user = yield* UsersApplication.getOneById(membership.userId).pipe(
-          UsersDomain.isActiveOrNull
-        );
-
-        return user?.email ?? null;
-      }),
-    { concurrency: 'unbounded' }
-  );
-
-  return [...new Set(emails.filter(Predicate.isNotNull))];
 });
 
 /** Loads the Turno, its Visitas and every name the workbook prints. */
@@ -256,7 +228,7 @@ export const loadShiftReportEmail = Effect.fn(
     residentialUnitName: unit.name,
     porterName,
     shiftStartLabel: Domain.formatLocalDateTime(
-      Domain.toShiftStart(shift),
+      shift.startedAt ?? shift.plannedStart ?? shift._creationTime,
       unit.timeZone
     ),
   };

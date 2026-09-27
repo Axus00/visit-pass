@@ -113,6 +113,8 @@ export const CreateApartmentsFormStandardSchema = Forms.toSpanishStandardSchema(
   })
 );
 
+const VISIT_RETENTION_MESSAGE = `Elige entre ${ResidentialUnitsShared.MIN_VISIT_RETENTION_MONTHS} y ${ResidentialUnitsShared.MAX_VISIT_RETENTION_MONTHS} meses.`;
+
 export const UpdateUnitFormStandardSchema = Forms.toSpanishStandardSchema(
   Schema.Struct({
     name: requiredText('Escribe el nombre de la Unidad residencial.').check(
@@ -125,13 +127,19 @@ export const UpdateUnitFormStandardSchema = Forms.toSpanishStandardSchema(
         message: `Usa máximo ${ResidentialUnitsShared.NAME_MAX_LENGTH} caracteres.`,
       })
     ),
-    visitRetentionMonths: Schema.Finite.check(
+    // A cleared number input reads as NaN. `Schema.Finite` rejects it with the
+    // Spanish message, and the range check leaves non-finite values to it so
+    // the field shows that message once.
+    visitRetentionMonths: Schema.Finite.annotate({
+      message: VISIT_RETENTION_MESSAGE,
+    }).check(
       Schema.makeFilter(
         (months: number) =>
+          !Number.isFinite(months) ||
           (Number.isInteger(months) &&
             months >= ResidentialUnitsShared.MIN_VISIT_RETENTION_MONTHS &&
             months <= ResidentialUnitsShared.MAX_VISIT_RETENTION_MONTHS) ||
-          `Elige entre ${ResidentialUnitsShared.MIN_VISIT_RETENTION_MONTHS} y ${ResidentialUnitsShared.MAX_VISIT_RETENTION_MONTHS} meses.`
+          VISIT_RETENTION_MESSAGE
       )
     ),
   })

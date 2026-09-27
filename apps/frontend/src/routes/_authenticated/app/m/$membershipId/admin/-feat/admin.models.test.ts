@@ -105,4 +105,16 @@ describe('UpdateUnitFormStandardSchema', () => {
       { path: 'visitRetentionMonths', message: 'Elige entre 3 y 24 meses.' },
     ]);
   });
+
+  it('asks for the allowed months, in Spanish only, when the field is cleared', async () => {
+    const issues = await issuesOf(UpdateUnitFormStandardSchema, {
+      name: 'Torres del Parque',
+      city: 'Bogotá',
+      visitRetentionMonths: Number.NaN,
+    });
+
+    expect(issues).toEqual([
+      { path: 'visitRetentionMonths', message: 'Elige entre 3 y 24 meses.' },
+    ]);
+  });
 });

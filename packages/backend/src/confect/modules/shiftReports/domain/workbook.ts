@@ -61,30 +61,6 @@ const XLSX_CONTENT_TYPE =
 /** MIME type of the generated `.xlsx` file. */
 export const XLSX_MIME_TYPE = `${XLSX_CONTENT_TYPE}.sheet`;
 
-/** Drops characters XML 1.0 forbids, then escapes markup. */
-function escapeXml(text: string) {
-  return Array.from(text)
-    .filter((character) => {
-      // Lone surrogates and most control characters are out.
-      const codePoint = character.codePointAt(0) ?? 0;
-
-      return (
-        codePoint === 0x9 ||
-        codePoint === 0xa ||
-        codePoint === 0xd ||
-        (codePoint >= 0x20 && codePoint <= 0xd7ff) ||
-        (codePoint >= 0xe000 && codePoint <= 0xfffd) ||
-        codePoint >= 0x10000
-      );
-    })
-    .join('')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
 /** `0` → `A`, `25` → `Z`, `26` → `AA`. */
 function toColumnName(index: number): string {
   const letter = String.fromCharCode(65 + (index % 26));
@@ -110,6 +86,29 @@ export function buildShiftReportWorkbookParts(args: {
 }): Record<string, string> {
   const { content, generatedAt } = args;
   const { timeZone } = content;
+
+  // Drops characters XML 1.0 forbids, then escapes markup.
+  const escapeXml = (text: string) =>
+    Array.from(text)
+      .filter((character) => {
+        // Lone surrogates and most control characters are out.
+        const codePoint = character.codePointAt(0) ?? 0;
+
+        return (
+          codePoint === 0x9 ||
+          codePoint === 0xa ||
+          codePoint === 0xd ||
+          (codePoint >= 0x20 && codePoint <= 0xd7ff) ||
+          (codePoint >= 0xe000 && codePoint <= 0xfffd) ||
+          codePoint >= 0x10000
+        );
+      })
+      .join('')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
 
   const visits = [...content.visits].sort(
     (left, right) =>
@@ -147,17 +146,23 @@ export function buildShiftReportWorkbookParts(args: {
   const countedVisits = content.visits.filter((visit) => !isVoided(visit));
   const count = (predicate: (visit: ShiftReportVisitRow) => boolean) =>
     countedVisits.filter(predicate).length;
-  const formatInstant = (epochMillis: number | undefined, fallback: string) =>
-    Predicate.isUndefined(epochMillis)
-      ? fallback
-      : formatLocalDateTime(epochMillis, timeZone);
 
   const summaryRows = [
     ['Reporte de turno', null],
     ['Unidad residencial', content.residentialUnitName],
     ['Portero', content.porterName],
-    ['Inicio del turno', formatInstant(content.shiftStartedAt, 'Sin iniciar')],
-    ['Fin del turno', formatInstant(content.shiftEndedAt, 'Turno abierto')],
+    [
+      'Inicio del turno',
+      Predicate.isUndefined(content.shiftStartedAt)
+        ? 'Sin iniciar'
+        : formatLocalDateTime(content.shiftStartedAt, timeZone),
+    ],
+    [
+      'Fin del turno',
+      Predicate.isUndefined(content.shiftEndedAt)
+        ? 'Turno abierto'
+        : formatLocalDateTime(content.shiftEndedAt, timeZone),
+    ],
     ['Generado', formatLocalDateTime(generatedAt, timeZone)],
     [null, null],
     ['Total de visitas', countedVisits.length],

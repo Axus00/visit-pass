@@ -36,6 +36,8 @@ export function InputField({
   const error = getFieldErrorMessage(field);
   const hasNumberValue = typeof field.state.value === 'number';
   const shouldUseNumericPattern = numeric && !hasNumberValue;
+  // A cleared number input reads as NaN; show it empty instead of passing NaN.
+  const inputValue = Number.isNaN(field.state.value) ? '' : field.state.value;
 
   const labelElement = (
     <Label htmlFor={inputId} className="gap-1">
@@ -67,7 +69,7 @@ export function InputField({
         inputMode={numeric ? 'numeric' : inputMode}
         pattern={shouldUseNumericPattern ? '[0-9]*' : inputProps.pattern}
         type={hasNumberValue ? 'number' : inputProps.type}
-        value={field.state.value}
+        value={inputValue}
         onBlur={field.handleBlur}
         onChange={(event) => {
           const nextValue = hasNumberValue

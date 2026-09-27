@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react';
 
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -58,7 +59,13 @@ function renderCard() {
 
 const typeButton = (name: RegExp) => screen.getByRole('button', { name });
 
-afterEach(cleanup);
+const dateInput = (label: RegExp) =>
+  screen.getByLabelText(label) as HTMLInputElement;
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 describe('AuthorizeVisitCard', () => {
   it('keeps the chosen type after "Limpiar" and a re-render', () => {
@@ -96,5 +103,43 @@ describe('AuthorizeVisitCard', () => {
     expect(
       (screen.getByLabelText(/^Visitante 1/) as HTMLInputElement).value
     ).toBe('');
+  });
+
+  describe('when the page stays open past midnight', () => {
+    // 23:59:30 on 27 September in Bogotá (UTC-5).
+    const ALMOST_MIDNIGHT = Date.UTC(2026, 8, 28, 4, 59, 30);
+
+    const passMidnight = () =>
+      act(() => {
+        vi.advanceTimersByTime(60_000);
+      });
+
+    it('moves the untouched dates to the new day', () => {
+      vi.useFakeTimers({ now: ALMOST_MIDNIGHT });
+      renderCard();
+      fireEvent.change(screen.getByLabelText(/Nombre del Visitante/), {
+        target: { value: 'Ana' },
+      });
+      fireEvent.click(typeButton(/Servicio/));
+
+      passMidnight();
+
+      expect(dateInput(/Fecha de inicio/).value).toBe('2026-09-28');
+      expect(dateInput(/Fecha de inicio/).min).toBe('2026-09-28');
+      expect(dateInput(/Fecha final/).value).toBe('2026-10-28');
+      expect(dateInput(/Fecha final/).min).toBe('2026-09-28');
+    });
+
+    it('keeps a date the Residente chose', () => {
+      vi.useFakeTimers({ now: ALMOST_MIDNIGHT });
+      renderCard();
+      fireEvent.change(dateInput(/^Fecha/), {
+        target: { value: '2026-10-02' },
+      });
+
+      passMidnight();
+
+      expect(dateInput(/^Fecha/).value).toBe('2026-10-02');
+    });
   });
 });

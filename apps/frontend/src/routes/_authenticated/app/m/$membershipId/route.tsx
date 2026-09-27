@@ -47,7 +47,9 @@ function MembershipLayout() {
       isSuperadmin={access.isSuperadmin}
     >
       <MembershipRouteFeat.AppShell>
-        <Outlet />
+        {/* Switching Membresía keeps this route matched, so the key remounts
+            its pages: no draft or selection carries over to another unit. */}
+        <Outlet key={membership.membershipId} />
       </MembershipRouteFeat.AppShell>
     </MembershipRouteFeat.MembershipProvider>
   );

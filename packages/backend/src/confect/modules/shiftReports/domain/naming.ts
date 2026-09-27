@@ -1,31 +1,5 @@
-import { formatFileTimestamp } from './localDateTime';
-
 /** Stands in for the Portero of a report whose Turno no longer exists. */
 export const DELETED_SHIFT_PORTER_NAME = 'Turno eliminado';
-
-/**
- * Names a Membresía the way reports show it: the signed-in Usuario's full
- * name, else the name the Administrador typed, else the email.
- */
-export function toMemberDisplayName(args: {
-  readonly membership: {
-    readonly email: string;
-    readonly displayName?: string | undefined;
-  };
-  readonly user: {
-    readonly firstName: string | null;
-    readonly lastName: string | null;
-  } | null;
-}) {
-  const fullName = [args.user?.firstName, args.user?.lastName]
-    .map((part) => part?.trim() ?? '')
-    .filter((part) => part.length > 0)
-    .join(' ');
-
-  if (fullName.length > 0) return fullName;
-
-  return args.membership.displayName ?? args.membership.email;
-}
 
 /** `reporte-turno-<unit-slug>-<YYYY-MM-DD>-<HHmm>.xlsx`, local to the unit. */
 export function toShiftReportFileName(args: {
@@ -41,16 +15,20 @@ export function toShiftReportFileName(args: {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
   const slug = unitSlug.length > 0 ? unitSlug : 'unidad';
-  const timestamp = formatFileTimestamp(args.shiftStart, args.timeZone);
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: args.timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(args.shiftStart);
+  // Zero-padded wall-clock part of the shift start in the unit's time zone.
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((candidate) => candidate.type === type)?.value ?? '';
+  const timestamp = `${part('year')}-${part('month')}-${part('day')}-${part('hour')}${part('minute')}`;
 
   return `reporte-turno-${slug}-${timestamp}.xlsx`;
-}
-
-/** When a Turno began: its real start, else its planned start, else its creation. */
-export function toShiftStart(shift: {
-  readonly startedAt?: number | undefined;
-  readonly plannedStart?: number | undefined;
-  readonly _creationTime: number;
-}) {
-  return shift.startedAt ?? shift.plannedStart ?? shift._creationTime;
 }

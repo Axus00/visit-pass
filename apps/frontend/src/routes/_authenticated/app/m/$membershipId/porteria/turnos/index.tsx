@@ -25,12 +25,22 @@ function PorteriaShiftsPage() {
   const shiftState = PorteriaRouteFeat.usePorterShiftState();
   const now = VisitPass.useNow();
   const history = useQuery(refs.public.shifts.listMine, { membershipId });
-  const [selectedShift, setSelectedShift] =
-    useState<VisitPass.ShiftSummary | null>(null);
+  const [selectedShiftId, setSelectedShiftId] = useState<
+    VisitPass.ShiftSummary['_id'] | null
+  >(null);
   const openShift = shiftState?.openShift ?? null;
-  const closedShifts = QueryResult.isSuccess(history)
-    ? history.value.filter((shift) => shift.status === 'closed')
-    : [];
+  const startedShifts = QueryResult.isSuccess(history) ? history.value : [];
+  const closedShifts = startedShifts.filter(
+    (shift) => shift.status === 'closed'
+  );
+  // Read the selected Turno from the live data so the sheet follows its status
+  // (the Turno en curso closing) and closes once it is gone. `listMine` holds
+  // the open Turno too; `openShift` covers it while that list loads.
+  const selectedShift =
+    [
+      ...startedShifts,
+      ...(Predicate.isNull(openShift) ? [] : [openShift]),
+    ].find((shift) => shift._id === selectedShiftId) ?? null;
 
   return (
     <>
@@ -51,7 +61,7 @@ function PorteriaShiftsPage() {
             <Button
               variant="outline"
               className="h-12 text-base"
-              onClick={() => setSelectedShift(openShift)}
+              onClick={() => setSelectedShiftId(openShift._id)}
             >
               <FileSpreadsheet data-icon="inline-start" />
               Visitas y reporte del Turno en curso
@@ -79,7 +89,7 @@ function PorteriaShiftsPage() {
                   <li key={shift._id}>
                     <button
                       type="button"
-                      onClick={() => setSelectedShift(shift)}
+                      onClick={() => setSelectedShiftId(shift._id)}
                       className="flex min-h-16 w-full items-center gap-3 rounded-xl bg-card px-4 py-3 text-left shadow-xs ring-1 ring-foreground/10 transition-colors outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-secondary text-primary">
@@ -127,7 +137,7 @@ function PorteriaShiftsPage() {
 
       <PorteriaRouteFeat.ShiftDetailSheet
         shift={selectedShift}
-        onClose={() => setSelectedShift(null)}
+        onClose={() => setSelectedShiftId(null)}
       />
     </>
   );
