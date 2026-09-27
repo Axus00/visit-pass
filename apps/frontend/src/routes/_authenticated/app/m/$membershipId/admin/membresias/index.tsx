@@ -53,19 +53,6 @@ const STATUS_BADGES = {
   revoked: 'outline',
 } as const satisfies Record<AdminRouteFeat.MembershipStatus, string>;
 
-/** Newest first, with revoked ones after the rest. */
-function compareMemberships(
-  left: AdminRouteFeat.MembershipDetail,
-  right: AdminRouteFeat.MembershipDetail
-) {
-  const leftRevoked = left.status === 'revoked' ? 1 : 0;
-  const rightRevoked = right.status === 'revoked' ? 1 : 0;
-
-  if (leftRevoked !== rightRevoked) return leftRevoked - rightRevoked;
-
-  return right._creationTime - left._creationTime;
-}
-
 /** Everyone with access to the unit: invite, filter and revoke Membresías. */
 function AdminMembershipsPage() {
   const membership = MembershipRouteFeat.useCurrentMembership();
@@ -133,7 +120,16 @@ function AdminMembershipsPage() {
                 (roleTab === 'all' || candidate.role === roleTab) &&
                 (status === 'all' || candidate.status === status)
             )
-            .sort(compareMemberships);
+            // Newest first, with revoked ones after the rest.
+            .sort((left, right) => {
+              const leftRevoked = left.status === 'revoked' ? 1 : 0;
+              const rightRevoked = right.status === 'revoked' ? 1 : 0;
+
+              if (leftRevoked !== rightRevoked)
+                return leftRevoked - rightRevoked;
+
+              return right._creationTime - left._creationTime;
+            });
 
           if (filtered.length === 0)
             return (
@@ -213,10 +209,10 @@ function MembershipRow({
             <span className="font-medium text-foreground">
               {VisitPass.ROLE_LABELS[member.role]}
             </span>
-            {member.apartmentLabel ? (
+            {Predicate.isNotUndefined(member.apartmentLabel) ? (
               <span>{member.apartmentLabel}</span>
             ) : null}
-            {member.occupancyType ? (
+            {Predicate.isNotUndefined(member.occupancyType) ? (
               <span>{VisitPass.OCCUPANCY_LABELS[member.occupancyType]}</span>
             ) : null}
           </p>

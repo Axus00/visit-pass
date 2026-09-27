@@ -39,24 +39,29 @@ export const toVisitSummaries = Effect.fn('Visits.toVisitSummaries')(function* (
     ])
   );
 
-  return visits.map((visit): Domain.VisitSummary => ({
-    _id: visit._id,
-    visitorName: visit.visitorName,
-    visitorDocument:
-      options.maskDocuments && Predicate.isNotUndefined(visit.visitorDocument)
-        ? Domain.maskDocument(visit.visitorDocument)
-        : visit.visitorDocument,
-    plate: visit.plate,
-    apartmentId: visit.apartmentId,
-    apartmentLabel: apartmentLabels.get(visit.apartmentId) ?? '',
-    visitType: visit.visitType,
-    origin: visit.origin,
-    overriddenRejection: visit.overriddenRejection,
-    enteredAt: visit.enteredAt,
-    exitedAt: visit.exitedAt,
-    entryPorterName: porterNames.get(visit.entryPorterMembershipId),
-    anonymized: Predicate.isNotUndefined(visit.anonymizedAt),
-    voided: Predicate.isNotUndefined(visit.voidedAt),
-    voidReason: visit.voidReason,
-  }));
+  return visits.map((visit): Domain.VisitSummary => {
+    const { visitorDocument } = visit;
+    const shouldMaskDocument =
+      options.maskDocuments && Predicate.isNotUndefined(visitorDocument);
+
+    return {
+      _id: visit._id,
+      visitorName: visit.visitorName,
+      visitorDocument: shouldMaskDocument
+        ? `••••${visitorDocument.slice(-4)}`
+        : visitorDocument,
+      plate: visit.plate,
+      apartmentId: visit.apartmentId,
+      apartmentLabel: apartmentLabels.get(visit.apartmentId) ?? '',
+      visitType: visit.visitType,
+      origin: visit.origin,
+      overriddenRejection: visit.overriddenRejection,
+      enteredAt: visit.enteredAt,
+      exitedAt: visit.exitedAt,
+      entryPorterName: porterNames.get(visit.entryPorterMembershipId),
+      anonymized: Predicate.isNotUndefined(visit.anonymizedAt),
+      voided: Predicate.isNotUndefined(visit.voidedAt),
+      voidReason: visit.voidReason,
+    };
+  });
 });

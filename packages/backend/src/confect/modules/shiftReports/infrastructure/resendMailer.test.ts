@@ -37,18 +37,6 @@ const stubFetch = (status: number) =>
       Promise.resolve(new Response('resend says no', { status }))
     );
 
-/** The `to` list and Idempotency-Key of every request, in order. */
-const sentRequests = (fetchSpy: ReturnType<typeof stubFetch>) =>
-  Effect.forEach(fetchSpy.mock.calls, ([, init]) =>
-    Schema.decodeUnknownEffect(RequestBodyJson)(init?.body).pipe(
-      Effect.map((body) => ({
-        to: body.to,
-        idempotencyKey: new Headers(init?.headers).get('Idempotency-Key'),
-      })),
-      Effect.orDie
-    )
-  );
-
 describe('resendShiftReportMailerLayer', () => {
   beforeEach(() => {
     vi.stubEnv('RESEND_API_KEY', 're_test');
@@ -67,7 +55,17 @@ describe('resendShiftReportMailerLayer', () => {
       const result = yield* send(recipients(3));
 
       EffectVitestUtils.strictEqual(result, 'sent');
-      EffectVitestUtils.deepStrictEqual(yield* sentRequests(fetchSpy), [
+      // The `to` list and Idempotency-Key of every request, in order.
+      const requests = yield* Effect.forEach(fetchSpy.mock.calls, ([, init]) =>
+        Schema.decodeUnknownEffect(RequestBodyJson)(init?.body).pipe(
+          Effect.map((body) => ({
+            to: body.to,
+            idempotencyKey: new Headers(init?.headers).get('Idempotency-Key'),
+          })),
+          Effect.orDie
+        )
+      );
+      EffectVitestUtils.deepStrictEqual(requests, [
         { to: recipients(3), idempotencyKey: 'shift-report/1/recipients-0' },
       ]);
     })
@@ -82,7 +80,20 @@ describe('resendShiftReportMailerLayer', () => {
 
         yield* send(to);
 
-        const requests = yield* sentRequests(fetchSpy);
+        // The `to` list and Idempotency-Key of every request, in order.
+        const requests = yield* Effect.forEach(
+          fetchSpy.mock.calls,
+          ([, init]) =>
+            Schema.decodeUnknownEffect(RequestBodyJson)(init?.body).pipe(
+              Effect.map((body) => ({
+                to: body.to,
+                idempotencyKey: new Headers(init?.headers).get(
+                  'Idempotency-Key'
+                ),
+              })),
+              Effect.orDie
+            )
+        );
         EffectVitestUtils.deepStrictEqual(
           requests.map((request) => request.to.length),
           [50, 50, 1]

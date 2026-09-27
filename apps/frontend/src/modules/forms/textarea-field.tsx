@@ -34,7 +34,7 @@ export function TextareaField({
   return (
     <div
       className="flex w-full flex-col gap-1.5"
-      data-invalid={error ? '' : undefined}
+      data-invalid={Predicate.isNull(error) ? undefined : ''}
     >
       <Label htmlFor={textareaId} className="gap-1">
         {label}
@@ -55,7 +55,9 @@ export function TextareaField({
         aria-required={required}
       />
       <div className="flex items-start justify-between gap-3">
-        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        {Predicate.isNull(error) ? null : (
+          <p className="text-xs text-destructive">{error}</p>
+        )}
         {/* Keep the changing count silent for screen readers. */}
         <p
           className="ml-auto text-xs text-muted-foreground tabular-nums"

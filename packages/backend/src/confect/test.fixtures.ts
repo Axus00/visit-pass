@@ -1,4 +1,5 @@
 import * as Effect from 'effect/Effect';
+import * as Record from 'effect/Record';
 import * as Schema from 'effect/Schema';
 
 import { Id } from './_generated/id';
@@ -32,19 +33,6 @@ export const insertUser = Effect.fn('TestFixtures.insertUser')(function* (
   });
 });
 
-const insertUnit = Effect.fn('TestFixtures.insertUnit')(function* (
-  name: string
-) {
-  const writer = yield* DatabaseWriter;
-
-  return yield* writer.table('residentialUnits').insert({
-    name,
-    city: 'Bogotá',
-    timeZone: Calendar.DEFAULT_TIME_ZONE,
-    visitRetentionMonths: ResidentialUnits.DEFAULT_VISIT_RETENTION_MONTHS,
-  });
-});
-
 const TwoUnits = Schema.Struct({
   unitA: Id('residentialUnits'),
   unitB: Id('residentialUnits'),
@@ -75,8 +63,16 @@ export const seedTwoUnits = Effect.gen(function* () {
     Effect.gen(function* () {
       const writer = yield* DatabaseWriter;
 
-      const [unitA, unitB] = yield* Effect.all(
-        [insertUnit('Unidad A'), insertUnit('Unidad B')],
+      const { unitA, unitB } = yield* Effect.all(
+        Record.map({ unitA: 'Unidad A', unitB: 'Unidad B' }, (name) =>
+          writer.table('residentialUnits').insert({
+            name,
+            city: 'Bogotá',
+            timeZone: Calendar.DEFAULT_TIME_ZONE,
+            visitRetentionMonths:
+              ResidentialUnits.DEFAULT_VISIT_RETENTION_MONTHS,
+          })
+        ),
         { concurrency: 'unbounded' }
       );
 

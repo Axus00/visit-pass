@@ -3,6 +3,7 @@ import * as EffectVitestUtils from '@effect/vitest/utils';
 import type { GenericId } from 'convex/values';
 import * as Effect from 'effect/Effect';
 import * as Predicate from 'effect/Predicate';
+import * as Record from 'effect/Record';
 import * as Schema from 'effect/Schema';
 
 import { Id } from './_generated/id';
@@ -58,36 +59,38 @@ const seedWorld = Effect.gen(function* () {
     Effect.gen(function* () {
       const writer = yield* DatabaseWriter;
 
-      const seedUnit = Effect.fn(function* (visitRetentionMonths: number) {
-        const unitId = yield* writer.table('residentialUnits').insert({
-          name: `Unidad ${visitRetentionMonths}`,
-          city: 'Bogotá',
-          timeZone: TIME_ZONE,
-          visitRetentionMonths,
-        });
-        const apartmentId = yield* writer.table('apartments').insert({
-          residentialUnitId: unitId,
-          tower: '1',
-          number: '101',
-        });
-        const porterId = yield* writer.table('memberships').insert({
-          residentialUnitId: unitId,
-          email: `porter-${visitRetentionMonths}@example.test`,
-          role: 'porter',
-          status: 'active',
-        });
-        const shiftId = yield* writer.table('shifts').insert({
-          residentialUnitId: unitId,
-          porterMembershipId: porterId,
-          status: 'open',
-          startedAt: now - 200 * MILLIS_PER_DAY,
-        });
+      const { unitA, unitB } = yield* Effect.all(
+        Record.map({ unitA: 3, unitB: 12 }, (visitRetentionMonths) =>
+          Effect.gen(function* () {
+            const unitId = yield* writer.table('residentialUnits').insert({
+              name: `Unidad ${visitRetentionMonths}`,
+              city: 'Bogotá',
+              timeZone: TIME_ZONE,
+              visitRetentionMonths,
+            });
+            const apartmentId = yield* writer.table('apartments').insert({
+              residentialUnitId: unitId,
+              tower: '1',
+              number: '101',
+            });
+            const porterId = yield* writer.table('memberships').insert({
+              residentialUnitId: unitId,
+              email: `porter-${visitRetentionMonths}@example.test`,
+              role: 'porter',
+              status: 'active',
+            });
+            const shiftId = yield* writer.table('shifts').insert({
+              residentialUnitId: unitId,
+              porterMembershipId: porterId,
+              status: 'open',
+              startedAt: now - 200 * MILLIS_PER_DAY,
+            });
 
-        return { unitId, apartmentId, porterId, shiftId };
-      });
-
-      const unitA = yield* seedUnit(3);
-      const unitB = yield* seedUnit(12);
+            return { unitId, apartmentId, porterId, shiftId };
+          })
+        ),
+        { concurrency: 'unbounded' }
+      );
 
       const insertVisit = (
         unit: typeof unitA,
@@ -150,34 +153,37 @@ const seedWorld = Effect.gen(function* () {
           lastEntryAt: entryCount > 0 ? now - 100 * MILLIS_PER_DAY : undefined,
         });
 
-      /** Servicio Pases stay `active` across Ingresos. */
-      const insertServicePass = (
-        authorizationId: GenericId<'authorizations'>,
-        token: string
-      ) =>
-        writer.table('passes').insert({
-          authorizationId,
-          residentialUnitId: unitA.unitId,
-          apartmentId: unitA.apartmentId,
-          visitorName: 'Marta',
-          visitorDocument: '33334444',
-          token,
-          status: 'active',
-          entryCount: 1,
-          lastEntryAt: now - 100 * MILLIS_PER_DAY,
-        });
+      const { runningServicePass, endedServicePass } = yield* Effect.all(
+        Record.map(
+          {
+            runningServicePass: {
+              endDaysFromToday: 30,
+              token: 'running-service',
+            },
+            endedServicePass: { endDaysFromToday: -40, token: 'ended-service' },
+          },
+          ({ endDaysFromToday, token }) =>
+            Effect.gen(function* () {
+              const authorizationId = yield* insertAuthorization(
+                localDateFromToday(endDaysFromToday),
+                { startDate: localDateFromToday(-120) }
+              );
 
-      const runningServicePass = yield* insertServicePass(
-        yield* insertAuthorization(localDateFromToday(30), {
-          startDate: localDateFromToday(-120),
-        }),
-        'running-service'
-      );
-      const endedServicePass = yield* insertServicePass(
-        yield* insertAuthorization(localDateFromToday(-40), {
-          startDate: localDateFromToday(-120),
-        }),
-        'ended-service'
+              // Servicio Pases stay `active` across Ingresos.
+              return yield* writer.table('passes').insert({
+                authorizationId,
+                residentialUnitId: unitA.unitId,
+                apartmentId: unitA.apartmentId,
+                visitorName: 'Marta',
+                visitorDocument: '33334444',
+                token,
+                status: 'active',
+                entryCount: 1,
+                lastEntryAt: now - 100 * MILLIS_PER_DAY,
+              });
+            })
+        ),
+        { concurrency: 'unbounded' }
       );
       yield* insertVisit(unitA, 100, { passId: runningServicePass });
       yield* insertVisit(unitA, 100, {
@@ -185,48 +191,10 @@ const seedWorld = Effect.gen(function* () {
         anonymizedAt: now - 10 * MILLIS_PER_DAY,
       });
 
-      /**
-       * A Pase whose only Ingreso, `daysAgo`, was voided: its count is back to
-       * zero, but the voided Visita still names it and `lastEntryAt` stays.
-       */
-      const insertVoidedEntryPass = Effect.fn(function* (args: {
-        authorizationId: GenericId<'authorizations'>;
-        daysAgo: number;
-        token: string;
-        visitAnonymizedAt?: number;
-      }) {
-        const enteredAt = now - args.daysAgo * MILLIS_PER_DAY;
-        const passId = yield* writer.table('passes').insert({
-          authorizationId: args.authorizationId,
-          residentialUnitId: unitA.unitId,
-          apartmentId: unitA.apartmentId,
-          visitorName: 'Luis',
-          visitorDocument: '11112222',
-          token: args.token,
-          status: 'active',
-          entryCount: 0,
-          lastEntryAt: enteredAt,
-        });
-        yield* insertVisit(unitA, args.daysAgo, {
-          passId,
-          voidedAt: enteredAt,
-          anonymizedAt: args.visitAnonymizedAt,
-        });
-
-        return passId;
-      });
-
-      // Its voided Visita was anonymized 50 days ago, while the Servicio still
-      // ran, so only the Pase sweep can anonymize the Pase now.
-      const oldVoidedEntryPass = yield* insertVoidedEntryPass({
-        authorizationId: yield* insertAuthorization(localDateFromToday(-40), {
-          startDate: localDateFromToday(-200),
-        }),
-        daysAgo: 140,
-        token: 'old-voided',
-        visitAnonymizedAt: now - 50 * MILLIS_PER_DAY,
-      });
-
+      const oldServiceAuthorization = yield* insertAuthorization(
+        localDateFromToday(-40),
+        { startDate: localDateFromToday(-200) }
+      );
       const usedAuthorization = yield* insertAuthorization(
         localDateFromToday(-40)
       );
@@ -236,12 +204,53 @@ const seedWorld = Effect.gen(function* () {
         0,
         'unused'
       );
-      // Its Ingreso on the Autorización's last day was voided.
-      const voidedEntryPass = yield* insertVoidedEntryPass({
-        authorizationId: usedAuthorization,
-        daysAgo: 40,
-        token: 'voided',
-      });
+
+      // Pases whose only Ingreso, `daysAgo`, was voided: their count is back
+      // to zero, but the voided Visita still names them and `lastEntryAt` stays.
+      const { oldVoidedEntryPass, voidedEntryPass } = yield* Effect.all(
+        Record.map(
+          {
+            // Its voided Visita was anonymized 50 days ago, while the Servicio
+            // still ran, so only the Pase sweep can anonymize the Pase now.
+            oldVoidedEntryPass: {
+              authorizationId: oldServiceAuthorization,
+              daysAgo: 140,
+              token: 'old-voided',
+              visitAnonymizedAt: now - 50 * MILLIS_PER_DAY,
+            },
+            // Its Ingreso on the Autorización's last day was voided.
+            voidedEntryPass: {
+              authorizationId: usedAuthorization,
+              daysAgo: 40,
+              token: 'voided',
+              visitAnonymizedAt: undefined,
+            },
+          },
+          ({ authorizationId, daysAgo, token, visitAnonymizedAt }) =>
+            Effect.gen(function* () {
+              const enteredAt = now - daysAgo * MILLIS_PER_DAY;
+              const passId = yield* writer.table('passes').insert({
+                authorizationId,
+                residentialUnitId: unitA.unitId,
+                apartmentId: unitA.apartmentId,
+                visitorName: 'Luis',
+                visitorDocument: '11112222',
+                token,
+                status: 'active',
+                entryCount: 0,
+                lastEntryAt: enteredAt,
+              });
+              yield* insertVisit(unitA, daysAgo, {
+                passId,
+                voidedAt: enteredAt,
+                anonymizedAt: visitAnonymizedAt,
+              });
+
+              return passId;
+            })
+        ),
+        { concurrency: 'unbounded' }
+      );
 
       const expiredAuthorization = yield* insertAuthorization(
         localDateFromToday(-40)
@@ -330,7 +339,7 @@ const readSnapshot = Effect.gen(function* () {
           visitorName: visit.visitorName,
           visitorDocument: visit.visitorDocument,
           plate: visit.plate,
-          isAnonymized: visit.anonymizedAt !== undefined,
+          isAnonymized: Predicate.isNotUndefined(visit.anonymizedAt),
         })),
         passes: passes.map((pass) => ({
           _id: pass._id,
@@ -511,51 +520,53 @@ describe('retention', () => {
               status: 'active',
             });
 
-            const insertAuthorizationWithPass = Effect.fn(function* (
-              endedDaysAgo: number,
-              lastEntryAt: number | undefined
-            ) {
-              const authorizationId = yield* writer
-                .table('authorizations')
-                .insert({
-                  residentialUnitId: unitId,
-                  apartmentId,
-                  createdByMembershipId: porterId,
-                  type: 'temporary',
-                  startDate: localDateFromToday(-endedDaysAgo),
-                  endDate: localDateFromToday(-endedDaysAgo),
-                  weekdays: [0, 1, 2, 3, 4, 5, 6],
-                  status: 'active',
-                });
+            return yield* Effect.all(
+              Record.map(
+                {
+                  // Used on its last day, it only now ages out of the longest retention.
+                  agedOutPass: {
+                    endedDaysAgo: longestRetentionDays + 2,
+                    lastEntryAt:
+                      now - (longestRetentionDays + 2) * MILLIS_PER_DAY,
+                  },
+                  // Past the sweep window, earlier runs already settled it.
+                  settledPass: {
+                    endedDaysAgo: sweepFloorDaysAgo + 1,
+                    lastEntryAt: undefined,
+                  },
+                },
+                ({ endedDaysAgo, lastEntryAt }) =>
+                  Effect.gen(function* () {
+                    const authorizationId = yield* writer
+                      .table('authorizations')
+                      .insert({
+                        residentialUnitId: unitId,
+                        apartmentId,
+                        createdByMembershipId: porterId,
+                        type: 'temporary',
+                        startDate: localDateFromToday(-endedDaysAgo),
+                        endDate: localDateFromToday(-endedDaysAgo),
+                        weekdays: [0, 1, 2, 3, 4, 5, 6],
+                        status: 'active',
+                      });
 
-              return yield* writer.table('passes').insert({
-                authorizationId,
-                residentialUnitId: unitId,
-                apartmentId,
-                visitorName: 'Luis',
-                visitorDocument: '11112222',
-                token: `ended-${endedDaysAgo}`,
-                status: Predicate.isUndefined(lastEntryAt) ? 'active' : 'used',
-                entryCount: Predicate.isUndefined(lastEntryAt) ? 0 : 1,
-                lastEntryAt,
-              });
-            });
-
-            const lastEntryAt =
-              now - (longestRetentionDays + 2) * MILLIS_PER_DAY;
-
-            return {
-              // Used on its last day, it only now ages out of the longest retention.
-              agedOutPass: yield* insertAuthorizationWithPass(
-                longestRetentionDays + 2,
-                lastEntryAt
+                    return yield* writer.table('passes').insert({
+                      authorizationId,
+                      residentialUnitId: unitId,
+                      apartmentId,
+                      visitorName: 'Luis',
+                      visitorDocument: '11112222',
+                      token: `ended-${endedDaysAgo}`,
+                      status: Predicate.isUndefined(lastEntryAt)
+                        ? 'active'
+                        : 'used',
+                      entryCount: Predicate.isUndefined(lastEntryAt) ? 0 : 1,
+                      lastEntryAt,
+                    });
+                  })
               ),
-              // Past the sweep window, earlier runs already settled it.
-              settledPass: yield* insertAuthorizationWithPass(
-                sweepFloorDaysAgo + 1,
-                undefined
-              ),
-            };
+              { concurrency: 'unbounded' }
+            );
           }).pipe(Effect.orDie),
           Schema.Struct({
             agedOutPass: Id('passes'),

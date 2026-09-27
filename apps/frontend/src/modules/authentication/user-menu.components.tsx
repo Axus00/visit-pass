@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type * as React from 'react';
 
 import { Link } from '@tanstack/react-router';
+import * as Predicate from 'effect/Predicate';
 import { ChevronDown, ChevronRight, LogOut } from 'lucide-react';
 
 import {
@@ -21,7 +22,7 @@ import type { AuthUser } from './user.models';
 import { getUserDisplayName } from './user.utils';
 
 export function UserAvatarMenu({ user }: { user: AuthUser }) {
-  if (!user) return null;
+  if (Predicate.isNull(user)) return null;
 
   const hasName = Boolean(user.firstName || user.lastName);
 

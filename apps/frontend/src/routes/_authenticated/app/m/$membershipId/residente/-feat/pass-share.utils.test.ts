@@ -7,18 +7,8 @@ import {
   describePassValidity,
   formatWeekdays,
   passImageFileName,
-  passPageUrl,
   sharePassLink,
-  whatsAppShareUrl,
 } from './pass-share.utils';
-
-describe('passPageUrl', () => {
-  it('points at the public Pase page of the token', () => {
-    expect(passPageUrl('https://visitpass.co', 'abc_123-XYZ')).toBe(
-      'https://visitpass.co/p/abc_123-XYZ'
-    );
-  });
-});
 
 describe('formatWeekdays', () => {
   it('names the usual schedules', () => {
@@ -89,16 +79,6 @@ describe('buildPassShareText', () => {
   });
 });
 
-describe('whatsAppShareUrl', () => {
-  it('encodes the whole message for wa.me', () => {
-    const text = 'Hola Ana: https://visitpass.co/p/a?b=1&c=2';
-    const shareUrl = new URL(whatsAppShareUrl(text));
-
-    expect(shareUrl.origin).toBe('https://wa.me');
-    expect(shareUrl.searchParams.get('text')).toBe(text);
-  });
-});
-
 describe('passImageFileName', () => {
   it('slugs the Visitante name without accents', () => {
     expect(passImageFileName('María José Peña')).toBe(
@@ -110,7 +90,7 @@ describe('passImageFileName', () => {
 
 describe('sharePassLink', () => {
   const text =
-    'Hola Ana, te autoricé para ingresar a Edificio Central: hoy. Muestra este Pase en portería junto con tu documento de identidad: https://visitpass.co/p/abc';
+    'Hola Ana, te autoricé para ingresar a Edificio Central: hoy. Muestra este Pase en portería junto con tu documento de identidad: https://visitpass.co/p/a?b=1&c=2';
 
   const stubDevice = ({
     isTouchDevice,
@@ -153,15 +133,18 @@ describe('sharePassLink', () => {
     expect(open).not.toHaveBeenCalled();
   });
 
-  it('opens WhatsApp Web with the text off touch devices', async () => {
+  it('opens WhatsApp Web with the whole text off touch devices', async () => {
     const { open, share } = stubDevice({ isTouchDevice: false });
 
     await expect(sharePassLink(text)).resolves.toBe('whatsApp');
     expect(share).not.toHaveBeenCalled();
     expect(open).toHaveBeenCalledWith(
-      whatsAppShareUrl(text),
+      expect.any(String),
       '_blank',
       'noopener,noreferrer'
     );
+    const shareUrl = new URL(String(open.mock.calls[0]?.[0]));
+    expect(shareUrl.origin).toBe('https://wa.me');
+    expect(shareUrl.searchParams.get('text')).toBe(text);
   });
 });

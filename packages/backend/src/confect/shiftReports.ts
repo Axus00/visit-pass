@@ -68,6 +68,9 @@ export const startShiftReportWorkflow = internalMutation({
  * `@convex-dev/workflow` records a throwing `onComplete` in its
  * `onCompleteFailures` table and does not retry it, so a report whose
  * terminalization fails stays without `completedAt` over a terminal workflow.
+ * After terminalizing, it deletes the finished workflow and its step journal,
+ * which the component otherwise keeps forever; cleanup runs as its own
+ * subtransaction, so a failed cleanup is logged and leaves the report terminal.
  */
 export const handleShiftReportWorkflowComplete = internalMutation({
   args: {
@@ -105,6 +108,17 @@ export const handleShiftReportWorkflowComplete = internalMutation({
       shiftReportId: args.context.shiftReportId,
       outcome,
     });
+
+    await Effect.runPromise(
+      Effect.tryPromise(() =>
+        Workflows.workflowManager.cleanup(ctx, args.workflowId)
+      ).pipe(
+        Effect.ignore({
+          log: 'Warn',
+          message: 'Could not clean up the Reporte de turno workflow',
+        })
+      )
+    );
 
     return null;
   },

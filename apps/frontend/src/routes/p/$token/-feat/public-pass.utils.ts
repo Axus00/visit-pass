@@ -70,12 +70,3 @@ export function formatWeekdays(weekdays: ReadonlyArray<number>) {
     .map((weekday) => VisitPass.WEEKDAY_SHORT_LABELS[weekday] ?? '')
     .join(', ');
 }
-
-/** `sábado 26 sep` for banners about a specific day. */
-export function formatBannerDay(localDate: string) {
-  return VisitPass.formatLocalDate(localDate, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'short',
-  });
-}

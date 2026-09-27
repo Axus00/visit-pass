@@ -4,6 +4,7 @@ import * as EffectVitestUtils from '@effect/vitest/utils';
 import type { GenericId } from 'convex/values';
 import * as Effect from 'effect/Effect';
 import * as Predicate from 'effect/Predicate';
+import * as Record from 'effect/Record';
 import * as Schema from 'effect/Schema';
 
 import { Id } from './_generated/id';
@@ -44,14 +45,6 @@ const seedWorld = Effect.gen(function* () {
     Effect.gen(function* () {
       const writer = yield* DatabaseWriter;
 
-      const insertUnit = (name: string) =>
-        writer.table('residentialUnits').insert({
-          name,
-          city: 'Bogotá',
-          timeZone: 'America/Bogota',
-          visitRetentionMonths: 12,
-        });
-
       const insertMember = Effect.fn(function* (args: {
         key: string;
         residentialUnitId: GenericId<'residentialUnits'>;
@@ -81,8 +74,19 @@ const seedWorld = Effect.gen(function* () {
         });
       });
 
-      const unitA = yield* insertUnit('Conjunto Los Álamos');
-      const unitB = yield* insertUnit('Edificio Central');
+      const { unitA, unitB } = yield* Effect.all(
+        Record.map(
+          { unitA: 'Conjunto Los Álamos', unitB: 'Edificio Central' },
+          (name) =>
+            writer.table('residentialUnits').insert({
+              name,
+              city: 'Bogotá',
+              timeZone: 'America/Bogota',
+              visitRetentionMonths: 12,
+            })
+        ),
+        { concurrency: 'unbounded' }
+      );
 
       const porterA = yield* insertMember({
         key: 'porterA',

@@ -251,7 +251,7 @@ function ShiftRow({
           aria-hidden="true"
         />
       </button>
-      {action ? (
+      {Predicate.isNotNullish(action) ? (
         <div className="flex justify-end pl-13 sm:pl-0">{action}</div>
       ) : null}
     </li>

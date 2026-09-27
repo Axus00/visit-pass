@@ -156,9 +156,3 @@ export const PassResolution = Schema.Union([
 ]);
 
 export type PassResolution = typeof PassResolution.Type;
-
-export function maskDocument(document: string) {
-  const visibleDigits = document.slice(-4);
-
-  return `••••${visibleDigits}`;
-}

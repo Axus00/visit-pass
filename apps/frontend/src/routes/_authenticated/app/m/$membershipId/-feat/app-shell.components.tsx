@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@workos-inc/authkit-react';
+import * as Predicate from 'effect/Predicate';
 import {
   ArrowLeftRight,
   Check,
@@ -257,7 +258,7 @@ function UserMenu() {
   const isSuperadmin = useIsSuperadmin();
   const navigate = useNavigate();
 
-  if (!user) return null;
+  if (Predicate.isNull(user)) return null;
 
   const displayName = Authentication.getUserDisplayName(
     user.firstName,

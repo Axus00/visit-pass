@@ -3,21 +3,8 @@ import * as Predicate from 'effect/Predicate';
 
 import type { Id } from '#convex/_generated/dataModel';
 
-import type { MembershipsDoc, UsersDoc } from '../../../_generated/docs';
 import { DatabaseReader } from '../../../_generated/services';
 import * as UsersApplication from '../../users/application';
-
-/** The Usuario's full name, else the name the Administrador typed, else the email. */
-function memberName(membership: MembershipsDoc, user: UsersDoc | undefined) {
-  const userName = [user?.firstName, user?.lastName]
-    .filter(Predicate.isNotNullish)
-    .join(' ')
-    .trim();
-
-  if (userName.length > 0) return userName;
-
-  return membership.displayName ?? membership.email;
-}
 
 /**
  * Names the Membresías behind Visitas, Turnos and Autorizaciones, loading each
@@ -57,15 +44,23 @@ export const loadMemberNames = Effect.fn('Shifts.loadMemberNames')(function* (
     users.filter(Predicate.isNotNull).map((user) => [user._id, user])
   );
 
+  // The Usuario's full name, else the name the Administrador typed, else the email.
   return new Map(
-    memberships.map((membership) => [
-      membership._id,
-      memberName(
-        membership,
-        Predicate.isUndefined(membership.userId)
-          ? undefined
-          : usersById.get(membership.userId)
-      ),
-    ])
+    memberships.map((membership) => {
+      const user = Predicate.isUndefined(membership.userId)
+        ? undefined
+        : usersById.get(membership.userId);
+      const userName = [user?.firstName, user?.lastName]
+        .filter(Predicate.isNotNullish)
+        .join(' ')
+        .trim();
+
+      return [
+        membership._id,
+        userName.length > 0
+          ? userName
+          : (membership.displayName ?? membership.email),
+      ] as const;
+    })
   );
 });

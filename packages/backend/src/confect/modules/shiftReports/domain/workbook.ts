@@ -10,7 +10,8 @@ type Cell = string | number | null;
 type Row = ReadonlyArray<Cell>;
 
 interface Sheet {
-  readonly name: string;
+  /** Written into the XML unescaped, so it must be free of markup characters. */
+  readonly name: 'Visitas' | 'Resumen';
   readonly columnWidths: ReadonlyArray<number>;
   readonly headerRow: boolean;
   readonly rows: ReadonlyArray<Row>;
@@ -86,29 +87,6 @@ export function buildShiftReportWorkbookParts(args: {
 }): Record<string, string> {
   const { content, generatedAt } = args;
   const { timeZone } = content;
-
-  // Drops characters XML 1.0 forbids, then escapes markup.
-  const escapeXml = (text: string) =>
-    Array.from(text)
-      .filter((character) => {
-        // Lone surrogates and most control characters are out.
-        const codePoint = character.codePointAt(0) ?? 0;
-
-        return (
-          codePoint === 0x9 ||
-          codePoint === 0xa ||
-          codePoint === 0xd ||
-          (codePoint >= 0x20 && codePoint <= 0xd7ff) ||
-          (codePoint >= 0xe000 && codePoint <= 0xfffd) ||
-          codePoint >= 0x10000
-        );
-      })
-      .join('')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
 
   const visits = [...content.visits].sort(
     (left, right) =>
@@ -223,7 +201,29 @@ export function buildShiftReportWorkbookParts(args: {
               if (Predicate.isNumber(cell))
                 return `<c r="${reference}"${styleAttribute}><v>${cell}</v></c>`;
 
-              return `<c r="${reference}" t="inlineStr"${styleAttribute}><is><t xml:space="preserve">${escapeXml(cell)}</t></is></c>`;
+              // Drops characters XML 1.0 forbids, then escapes markup.
+              const text = Array.from(cell)
+                .filter((character) => {
+                  // Lone surrogates and most control characters are out.
+                  const codePoint = character.codePointAt(0) ?? 0;
+
+                  return (
+                    codePoint === 0x9 ||
+                    codePoint === 0xa ||
+                    codePoint === 0xd ||
+                    (codePoint >= 0x20 && codePoint <= 0xd7ff) ||
+                    (codePoint >= 0xe000 && codePoint <= 0xfffd) ||
+                    codePoint >= 0x10000
+                  );
+                })
+                .join('')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+
+              return `<c r="${reference}" t="inlineStr"${styleAttribute}><is><t xml:space="preserve">${text}</t></is></c>`;
             })
             .join('');
 
@@ -252,7 +252,7 @@ export function buildShiftReportWorkbookParts(args: {
   const workbookSheets = sheets
     .map(
       (sheet, index) =>
-        `<sheet name="${escapeXml(sheet.name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`
+        `<sheet name="${sheet.name}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`
     )
     .join('');
 

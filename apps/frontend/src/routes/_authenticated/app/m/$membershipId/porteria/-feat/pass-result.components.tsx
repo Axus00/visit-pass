@@ -86,7 +86,7 @@ function ResultCard({
           >
             {title}
           </h2>
-          {subtitle ? (
+          {Predicate.isNotNullish(subtitle) ? (
             <p className="text-sm text-muted-foreground">{subtitle}</p>
           ) : null}
         </div>

@@ -33,7 +33,6 @@ import type { SharedAuthorization } from './authorize.models';
 import {
   buildPassShareText,
   describePassValidity,
-  passPageUrl,
   savePassImage,
   sharePassLink,
 } from './pass-share.utils';
@@ -93,7 +92,7 @@ function PassShareBody({ shared }: { shared: SharedAuthorization }) {
 
   if (Predicate.isUndefined(pass)) return null;
 
-  const url = passPageUrl(window.location.origin, pass.token);
+  const url = `${window.location.origin}/p/${encodeURIComponent(pass.token)}`;
   const shareText = buildPassShareText({
     visitorName: pass.visitorName,
     residentialUnitName: membership.residentialUnitName,
@@ -144,7 +143,10 @@ function PassShareBody({ shared }: { shared: SharedAuthorization }) {
         </div>
         <SheetDescription>
           {VisitPass.VISIT_TYPE_LABELS[shared.type]}
-          {shared.eventName ? ` · ${shared.eventName}` : null} · {validityLabel}
+          {Predicate.isUndefined(shared.eventName)
+            ? null
+            : ` · ${shared.eventName}`}{' '}
+          · {validityLabel}
         </SheetDescription>
       </SheetHeader>
 

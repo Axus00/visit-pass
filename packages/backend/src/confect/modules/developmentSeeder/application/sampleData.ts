@@ -6,6 +6,7 @@ import * as Predicate from 'effect/Predicate';
 import type { Id } from '#convex/_generated/dataModel';
 
 import { DatabaseReader, DatabaseWriter } from '../../../_generated/services';
+import * as AuthorizationsApplication from '../../authorizations/application';
 import * as AuthorizationsDomain from '../../authorizations/domain';
 import * as CalendarDomain from '../../calendar/domain';
 import * as MembershipsApplication from '../../memberships/application';
@@ -16,16 +17,6 @@ import * as VisitsDomain from '../../visits/domain';
 import * as Domain from '../domain';
 
 const MONDAY_TO_FRIDAY: ReadonlyArray<CalendarDomain.Weekday> = [1, 2, 3, 4, 5];
-
-/** A 128-bit base64url Pase token, the same shape real Pases carry. */
-function generatePassToken() {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-
-  return btoa(String.fromCharCode(...bytes))
-    .replaceAll('+', '-')
-    .replaceAll('/', '_')
-    .replaceAll('=', '');
-}
 
 interface SeededUnit {
   readonly residentialUnitId: Id<'residentialUnits'>;
@@ -69,8 +60,17 @@ const seedUnitOnce = Effect.fn('DevelopmentSeeder.seedUnitOnce')(function* <
   });
 
   const apartmentEntries = yield* Effect.forEach(
+    // Apartamento numbers floor by floor in every tower: `101`, `102`, …, `201`, …
     sample.towers.flatMap((tower) =>
-      Domain.apartmentNumbersOf(sample).map((number) => ({ tower, number }))
+      Array.from({ length: sample.floors }, (_, floorIndex) =>
+        Array.from(
+          { length: sample.apartmentsPerFloor },
+          (__, apartmentIndex) => ({
+            tower,
+            number: `${floorIndex + 1}${String(apartmentIndex + 1).padStart(2, '0')}`,
+          })
+        )
+      ).flat()
     ),
     ({ tower, number }) =>
       writer
@@ -98,12 +98,38 @@ const seedUnitOnce = Effect.fn('DevelopmentSeeder.seedUnitOnce')(function* <
       return apartmentId;
     },
     today,
-    at: (days, time) =>
-      Domain.localDateTimeToEpochMillis(
-        CalendarDomain.addDays(today, days),
-        time,
-        timeZone
-      ),
+    // Exact for zones without daylight saving, such as Colombia's.
+    at: (days, time) => {
+      const wallClockAsUtc = Date.parse(
+        `${CalendarDomain.addDays(today, days)}T${time}:00Z`
+      );
+
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        hourCycle: 'h23',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }).formatToParts(wallClockAsUtc);
+
+      const part = (type: Intl.DateTimeFormatPartTypes) =>
+        Number(parts.find((candidate) => candidate.type === type)?.value ?? 0);
+
+      const zoneWallClockAsUtc = Date.UTC(
+        part('year'),
+        part('month') - 1,
+        part('day'),
+        part('hour'),
+        part('minute'),
+        part('second')
+      );
+      const zoneOffsetMillis = zoneWallClockAsUtc - wallClockAsUtc;
+
+      return wallClockAsUtc - zoneOffsetMillis;
+    },
   });
 
   yield* Effect.logInfo('Sample unit seeded', { name: sample.name });
@@ -272,18 +298,22 @@ const populateAlmendros = Effect.fn('DevelopmentSeeder.populateAlmendros')(
       });
 
       const passIds = yield* Effect.forEach(args.visitors, (visitor) =>
-        writer.table('passes').insert({
-          authorizationId,
-          residentialUnitId,
-          apartmentId: args.apartmentId,
-          visitorName: visitor.name,
-          visitorDocument: visitor.document,
-          token: generatePassToken(),
-          status: isCancelled ? 'cancelled' : (visitor.status ?? 'active'),
-          entryCount: visitor.entryCount ?? 0,
-          lastEntryAt: visitor.lastEntryAt,
-          favoriteId: visitor.favoriteId,
-        })
+        AuthorizationsApplication.generatePassToken.pipe(
+          Effect.flatMap((token) =>
+            writer.table('passes').insert({
+              authorizationId,
+              residentialUnitId,
+              apartmentId: args.apartmentId,
+              visitorName: visitor.name,
+              visitorDocument: visitor.document,
+              token,
+              status: isCancelled ? 'cancelled' : (visitor.status ?? 'active'),
+              entryCount: visitor.entryCount ?? 0,
+              lastEntryAt: visitor.lastEntryAt,
+              favoriteId: visitor.favoriteId,
+            })
+          )
+        )
       );
 
       return passIds.map((passId) => ({ passId, authorizationId }));
@@ -409,148 +439,157 @@ const populateAlmendros = Effect.fn('DevelopmentSeeder.populateAlmendros')(
       plannedEnd: at(1, '18:00'),
     });
 
-    const recordVisits = (
-      shiftId: Id<'shifts'>,
-      porterMembershipId: Id<'memberships'>,
-      visits: ReadonlyArray<SampleVisit>
-    ) =>
-      Effect.forEach(
-        visits,
-        ({ pass, exitedAt, ...visit }) =>
-          writer.table('visits').insert({
-            residentialUnitId,
-            ...visit,
-            origin: Predicate.isUndefined(pass) ? 'manual' : 'pass',
-            passId: pass?.passId,
-            authorizationId: pass?.authorizationId,
-            shiftId,
-            entryPorterMembershipId: porterMembershipId,
-            exitedAt,
-            exitPorterMembershipId: Predicate.isUndefined(exitedAt)
-              ? undefined
-              : porterMembershipId,
-            privacyNoticeVersion: VisitsDomain.PRIVACY_NOTICE_VERSION,
-          }),
-        { discard: true }
-      );
+    const visitsByShift: ReadonlyArray<{
+      readonly shiftId: Id<'shifts'>;
+      readonly porterMembershipId: Id<'memberships'>;
+      readonly visits: ReadonlyArray<SampleVisit>;
+    }> = [
+      {
+        shiftId: porteroYesterday,
+        porterMembershipId: porteroPorter,
+        visits: [
+          {
+            visitorName: 'Rosa Elena Pardo',
+            visitorDocument: '41234567',
+            apartmentId: apartment('1', '101'),
+            visitType: 'service',
+            pass: isServiceDayYesterday ? rosaPass : undefined,
+            enteredAt: at(-1, '07:15'),
+            exitedAt: at(-1, '16:00'),
+          },
+          {
+            visitorName: 'Juan Pablo Rincón',
+            visitorDocument: '1098765432',
+            apartmentId: apartment('2', '202'),
+            visitType: 'temporary',
+            enteredAt: at(-1, '08:05'),
+            exitedAt: at(-1, '08:20'),
+          },
+          {
+            visitorName: 'Óscar Iván Beltrán',
+            visitorDocument: '80123456',
+            apartmentId: apartment('1', '203'),
+            visitType: 'service',
+            plate: 'GHT219',
+            enteredAt: at(-1, '09:10'),
+            exitedAt: at(-1, '11:40'),
+          },
+          {
+            visitorName: 'Valentina Ríos',
+            visitorDocument: '1032456789',
+            apartmentId: apartment('1', '101'),
+            visitType: 'temporary',
+            plate: 'KJU482',
+            pass: valentinaPass,
+            enteredAt: at(-1, '10:30'),
+            exitedAt: at(-1, '13:45'),
+          },
+          {
+            visitorName: 'Lucía Méndez',
+            visitorDocument: '52987654',
+            apartmentId: apartment('2', '202'),
+            visitType: 'temporary',
+            plate: 'BCD345',
+            enteredAt: at(-1, '11:50'),
+            exitedAt: at(-1, '15:10'),
+          },
+          {
+            visitorName: 'Hernán Quintero',
+            visitorDocument: '79345678',
+            apartmentId: apartment('1', '101'),
+            visitType: 'temporary',
+            overriddenRejection: 'expired',
+            enteredAt: at(-1, '12:30'),
+            exitedAt: at(-1, '12:55'),
+          },
+          {
+            visitorName: 'Felipe Arango',
+            visitorDocument: '1015432198',
+            apartmentId: apartment('2', '104'),
+            visitType: 'event',
+            enteredAt: at(-1, '14:00'),
+            exitedAt: at(-1, '17:30'),
+          },
+          {
+            visitorName: 'Natalia Cárdenas',
+            visitorDocument: '1022345678',
+            apartmentId: apartment('1', '302'),
+            visitType: 'temporary',
+            plate: 'RTY963',
+            enteredAt: at(-1, '15:20'),
+            exitedAt: at(-1, '16:45'),
+          },
+          // Still inside: nobody registered their Salida.
+          {
+            visitorName: 'Gloria Patricia Nieto',
+            visitorDocument: '51876543',
+            apartmentId: apartment('1', '101'),
+            visitType: 'temporary',
+            enteredAt: at(-1, '16:40'),
+          },
+          {
+            visitorName: 'Ricardo Salcedo',
+            visitorDocument: '91234567',
+            apartmentId: apartment('2', '202'),
+            visitType: 'service',
+            plate: 'MNO678',
+            enteredAt: at(-1, '17:20'),
+          },
+        ],
+      },
+      {
+        shiftId: agentNight,
+        porterMembershipId: agentPorter,
+        visits: [
+          {
+            visitorName: 'Diana Marcela Rojas',
+            visitorDocument: '1030567890',
+            apartmentId: apartment('1', '201'),
+            visitType: 'temporary',
+            enteredAt: at(-3, '19:10'),
+            exitedAt: at(-3, '21:45'),
+          },
+          {
+            visitorName: 'Sergio Londoño',
+            visitorDocument: '80765432',
+            apartmentId: apartment('2', '401'),
+            visitType: 'service',
+            plate: 'WQE741',
+            enteredAt: at(-3, '20:30'),
+            exitedAt: at(-3, '21:00'),
+          },
+          {
+            visitorName: 'Camilo Andrés Pérez',
+            visitorDocument: '1012345678',
+            apartmentId: apartment('1', '101'),
+            visitType: 'temporary',
+            enteredAt: at(-2, '00:15'),
+            exitedAt: at(-2, '01:30'),
+          },
+        ],
+      },
+    ];
 
-    yield* recordVisits(porteroYesterday, porteroPorter, [
-      {
-        visitorName: 'Rosa Elena Pardo',
-        visitorDocument: '41234567',
-        apartmentId: apartment('1', '101'),
-        visitType: 'service',
-        pass: isServiceDayYesterday ? rosaPass : undefined,
-        enteredAt: at(-1, '07:15'),
-        exitedAt: at(-1, '16:00'),
-      },
-      {
-        visitorName: 'Juan Pablo Rincón',
-        visitorDocument: '1098765432',
-        apartmentId: apartment('2', '202'),
-        visitType: 'temporary',
-        enteredAt: at(-1, '08:05'),
-        exitedAt: at(-1, '08:20'),
-      },
-      {
-        visitorName: 'Óscar Iván Beltrán',
-        visitorDocument: '80123456',
-        apartmentId: apartment('1', '203'),
-        visitType: 'service',
-        plate: 'GHT219',
-        enteredAt: at(-1, '09:10'),
-        exitedAt: at(-1, '11:40'),
-      },
-      {
-        visitorName: 'Valentina Ríos',
-        visitorDocument: '1032456789',
-        apartmentId: apartment('1', '101'),
-        visitType: 'temporary',
-        plate: 'KJU482',
-        pass: valentinaPass,
-        enteredAt: at(-1, '10:30'),
-        exitedAt: at(-1, '13:45'),
-      },
-      {
-        visitorName: 'Lucía Méndez',
-        visitorDocument: '52987654',
-        apartmentId: apartment('2', '202'),
-        visitType: 'temporary',
-        plate: 'BCD345',
-        enteredAt: at(-1, '11:50'),
-        exitedAt: at(-1, '15:10'),
-      },
-      {
-        visitorName: 'Hernán Quintero',
-        visitorDocument: '79345678',
-        apartmentId: apartment('1', '101'),
-        visitType: 'temporary',
-        overriddenRejection: 'expired',
-        enteredAt: at(-1, '12:30'),
-        exitedAt: at(-1, '12:55'),
-      },
-      {
-        visitorName: 'Felipe Arango',
-        visitorDocument: '1015432198',
-        apartmentId: apartment('2', '104'),
-        visitType: 'event',
-        enteredAt: at(-1, '14:00'),
-        exitedAt: at(-1, '17:30'),
-      },
-      {
-        visitorName: 'Natalia Cárdenas',
-        visitorDocument: '1022345678',
-        apartmentId: apartment('1', '302'),
-        visitType: 'temporary',
-        plate: 'RTY963',
-        enteredAt: at(-1, '15:20'),
-        exitedAt: at(-1, '16:45'),
-      },
-      // Still inside: nobody registered their Salida.
-      {
-        visitorName: 'Gloria Patricia Nieto',
-        visitorDocument: '51876543',
-        apartmentId: apartment('1', '101'),
-        visitType: 'temporary',
-        enteredAt: at(-1, '16:40'),
-      },
-      {
-        visitorName: 'Ricardo Salcedo',
-        visitorDocument: '91234567',
-        apartmentId: apartment('2', '202'),
-        visitType: 'service',
-        plate: 'MNO678',
-        enteredAt: at(-1, '17:20'),
-      },
-    ]);
-
-    yield* recordVisits(agentNight, agentPorter, [
-      {
-        visitorName: 'Diana Marcela Rojas',
-        visitorDocument: '1030567890',
-        apartmentId: apartment('1', '201'),
-        visitType: 'temporary',
-        enteredAt: at(-3, '19:10'),
-        exitedAt: at(-3, '21:45'),
-      },
-      {
-        visitorName: 'Sergio Londoño',
-        visitorDocument: '80765432',
-        apartmentId: apartment('2', '401'),
-        visitType: 'service',
-        plate: 'WQE741',
-        enteredAt: at(-3, '20:30'),
-        exitedAt: at(-3, '21:00'),
-      },
-      {
-        visitorName: 'Camilo Andrés Pérez',
-        visitorDocument: '1012345678',
-        apartmentId: apartment('1', '101'),
-        visitType: 'temporary',
-        enteredAt: at(-2, '00:15'),
-        exitedAt: at(-2, '01:30'),
-      },
-    ]);
+    yield* Effect.forEach(
+      visitsByShift.flatMap(({ shiftId, porterMembershipId, visits }) =>
+        visits.map((visit) => ({ ...visit, shiftId, porterMembershipId }))
+      ),
+      ({ pass, exitedAt, porterMembershipId, ...visit }) =>
+        writer.table('visits').insert({
+          residentialUnitId,
+          ...visit,
+          origin: Predicate.isUndefined(pass) ? 'manual' : 'pass',
+          passId: pass?.passId,
+          authorizationId: pass?.authorizationId,
+          entryPorterMembershipId: porterMembershipId,
+          exitedAt,
+          exitPorterMembershipId: Predicate.isUndefined(exitedAt)
+            ? undefined
+            : porterMembershipId,
+          privacyNoticeVersion: VisitsDomain.PRIVACY_NOTICE_VERSION,
+        }),
+      { discard: true }
+    );
   }
 );
 
@@ -579,42 +618,38 @@ const populateMirador = Effect.fn('DevelopmentSeeder.populateMirador')(
       endedAt: at(-1, '15:03'),
     });
 
-    const visit = (args: {
-      visitorName: string;
-      visitorDocument: string;
-      apartmentId: Id<'apartments'>;
-      visitType: VisitsDomain.VisitType;
-      plate?: string;
-      enteredAt: number;
-      exitedAt: number;
-    }) =>
-      writer.table('visits').insert({
-        residentialUnitId,
-        ...args,
-        origin: 'manual',
-        shiftId,
-        entryPorterMembershipId: humanPorter,
-        exitPorterMembershipId: humanPorter,
-        privacyNoticeVersion: VisitsDomain.PRIVACY_NOTICE_VERSION,
-      });
-
-    yield* visit({
-      visitorName: 'Mónica Restrepo',
-      visitorDocument: '43123456',
-      apartmentId: apartment('A', '101'),
-      visitType: 'temporary',
-      enteredAt: at(-1, '09:00'),
-      exitedAt: at(-1, '10:30'),
-    });
-    yield* visit({
-      visitorName: 'Esteban Zapata',
-      visitorDocument: '98765432',
-      apartmentId: apartment('A', '203'),
-      visitType: 'service',
-      plate: 'MED123',
-      enteredAt: at(-1, '11:15'),
-      exitedAt: at(-1, '13:00'),
-    });
+    yield* Effect.forEach(
+      [
+        {
+          visitorName: 'Mónica Restrepo',
+          visitorDocument: '43123456',
+          apartmentId: apartment('A', '101'),
+          visitType: 'temporary',
+          enteredAt: at(-1, '09:00'),
+          exitedAt: at(-1, '10:30'),
+        },
+        {
+          visitorName: 'Esteban Zapata',
+          visitorDocument: '98765432',
+          apartmentId: apartment('A', '203'),
+          visitType: 'service',
+          plate: 'MED123',
+          enteredAt: at(-1, '11:15'),
+          exitedAt: at(-1, '13:00'),
+        },
+      ] satisfies ReadonlyArray<SampleVisit>,
+      (visit) =>
+        writer.table('visits').insert({
+          residentialUnitId,
+          ...visit,
+          origin: 'manual',
+          shiftId,
+          entryPorterMembershipId: humanPorter,
+          exitPorterMembershipId: humanPorter,
+          privacyNoticeVersion: VisitsDomain.PRIVACY_NOTICE_VERSION,
+        }),
+      { discard: true }
+    );
   }
 );
 

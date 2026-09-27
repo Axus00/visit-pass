@@ -24,7 +24,7 @@ function MembershipLayout() {
     (candidate) => candidate.membershipId === membershipId
   );
 
-  if (!membership)
+  if (Predicate.isUndefined(membership))
     return (
       <main className="grid min-h-dvh place-items-center bg-background px-6">
         <VisitPass.EmptyState

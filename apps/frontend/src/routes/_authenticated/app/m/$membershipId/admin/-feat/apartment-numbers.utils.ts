@@ -1,3 +1,4 @@
+import * as Predicate from 'effect/Predicate';
 import * as Result from 'effect/Result';
 
 import * as ResidentialUnitsShared from '@repo/backend/shared/residentialUnits';
@@ -7,6 +8,7 @@ export const MAX_APARTMENTS_PER_BATCH = 500;
 
 const RANGE_PATTERN = /^(\d+)-(\d+)$/;
 const SINGLE_PATTERN = /^[\p{L}\p{N}]+$/u;
+const TOO_MANY_MESSAGE = `Puedes agregar hasta ${MAX_APARTMENTS_PER_BATCH} Apartamentos a la vez.`;
 
 /**
  * Reads what the Administrador types in "Agregar apartamentos": numbers and
@@ -31,7 +33,7 @@ export function parseApartmentNumbers(
   for (const token of tokens) {
     const range = RANGE_PATTERN.exec(token);
 
-    if (range) {
+    if (Predicate.isNotNull(range)) {
       const [, startText = '', endText = ''] = range;
       const start = Number(startText);
       const end = Number(endText);
@@ -41,16 +43,15 @@ export function parseApartmentNumbers(
           `El rango ${token} está al revés: escribe primero el número menor.`
         );
 
-      const rangeSize = end - start + 1;
-      const exceedsBatch = numbers.size + rangeSize > MAX_APARTMENTS_PER_BATCH;
-
-      if (exceedsBatch)
-        return Result.fail(
-          `Puedes agregar hasta ${MAX_APARTMENTS_PER_BATCH} Apartamentos a la vez.`
-        );
+      // A single range past the limit fails before it is expanded.
+      if (end - start + 1 > MAX_APARTMENTS_PER_BATCH)
+        return Result.fail(TOO_MANY_MESSAGE);
 
       for (let value = start; value <= end; value += 1)
         numbers.add(String(value).padStart(startText.length, '0'));
+
+      if (numbers.size > MAX_APARTMENTS_PER_BATCH)
+        return Result.fail(TOO_MANY_MESSAGE);
 
       continue;
     }
@@ -68,9 +69,7 @@ export function parseApartmentNumbers(
   }
 
   if (numbers.size > MAX_APARTMENTS_PER_BATCH)
-    return Result.fail(
-      `Puedes agregar hasta ${MAX_APARTMENTS_PER_BATCH} Apartamentos a la vez.`
-    );
+    return Result.fail(TOO_MANY_MESSAGE);
 
   return Result.succeed([...numbers]);
 }

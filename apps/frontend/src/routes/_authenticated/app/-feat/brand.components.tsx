@@ -1,3 +1,4 @@
+import * as Predicate from 'effect/Predicate';
 import { ShieldCheck } from 'lucide-react';
 
 import { cn } from '@repo/ui';
@@ -21,7 +22,7 @@ export function BrandMark({
         <span className="truncate text-lg font-bold tracking-tight">
           {CommonUI.APP_NAME}
         </span>
-        {subtitle ? (
+        {Predicate.isNotNull(subtitle) ? (
           <span className="truncate text-xs font-medium opacity-70">
             {subtitle}
           </span>

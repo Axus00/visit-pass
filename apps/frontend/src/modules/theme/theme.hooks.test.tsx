@@ -19,6 +19,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  setThemePreference('system');
   window.localStorage.clear();
 });
 
@@ -31,7 +32,20 @@ describe('useTheme', () => {
     expect(result.current).toEqual({ preference: 'dark', resolved: 'dark' });
   });
 
-  it('falls back to the system theme when site data is blocked', () => {
+  it('follows a preference chosen in another tab', () => {
+    const { result } = renderHook(() => useTheme());
+
+    act(() => {
+      window.localStorage.setItem('visit-pass:theme', 'dark');
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: 'visit-pass:theme' })
+      );
+    });
+
+    expect(result.current).toEqual({ preference: 'dark', resolved: 'dark' });
+  });
+
+  it('keeps the chosen preference for the session when site data is blocked', () => {
     vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
       throw new DOMException('Blocked', 'SecurityError');
     });
@@ -39,6 +53,6 @@ describe('useTheme', () => {
     const { result } = renderHook(() => useTheme());
     act(() => setThemePreference('dark'));
 
-    expect(result.current).toEqual({ preference: 'system', resolved: 'light' });
+    expect(result.current).toEqual({ preference: 'dark', resolved: 'dark' });
   });
 });

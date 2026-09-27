@@ -1,3 +1,4 @@
+import * as Predicate from 'effect/Predicate';
 import {
   CameraOff,
   Flashlight,
@@ -96,7 +97,7 @@ export function PassScanner({
         </Button>
       ) : null}
 
-      {failureCopy ? (
+      {Predicate.isNotUndefined(failureCopy) ? (
         <div
           role="alert"
           className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center text-white"

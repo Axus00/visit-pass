@@ -4,10 +4,8 @@ import type * as VisitPass from '#modules/visit-pass';
 
 import {
   ANONYMIZED_VISITOR_LABEL,
-  findNewArrivals,
   groupVisitsByDay,
   matchesVisitSearch,
-  newestEntryAt,
   visitPresence,
 } from './visits.utils';
 
@@ -100,28 +98,5 @@ describe('matchesVisitSearch', () => {
 
   it('lets an empty search through', () => {
     expect(matchesVisitSearch(visit(), '  ')).toBe(true);
-  });
-});
-
-describe('arrivals', () => {
-  it('uses the latest Ingreso as the baseline, or 0 without Visitas', () => {
-    expect(newestEntryAt([])).toBe(0);
-    expect(
-      newestEntryAt([{ enteredAt: 5 }, { enteredAt: 9 }, { enteredAt: 7 }])
-    ).toBe(9);
-  });
-
-  it('finds Ingresos after the baseline, newest first, skipping voided ones', () => {
-    const arrivals = findNewArrivals(
-      [
-        { enteredAt: 10, voided: false },
-        { enteredAt: 30, voided: false },
-        { enteredAt: 40, voided: true },
-        { enteredAt: 20, voided: false },
-      ],
-      10
-    );
-
-    expect(arrivals.map((arrival) => arrival.enteredAt)).toEqual([30, 20]);
   });
 });

@@ -43,18 +43,26 @@ export const Route = createFileRoute('/_authenticated/app/superadmin/')({
   component: SuperadminPage,
 });
 
-const nameField = (emptyMessage: string) =>
-  Schema.String.check(
-    Schema.makeFilter((text: string) => text.trim().length > 0 || emptyMessage),
-    Schema.isMaxLength(ResidentialUnitsShared.NAME_MAX_LENGTH, {
-      message: `Usa máximo ${ResidentialUnitsShared.NAME_MAX_LENGTH} caracteres.`,
-    })
-  );
-
 const CreateUnitFormStandardSchema = Forms.toSpanishStandardSchema(
   Schema.Struct({
-    name: nameField('Escribe el nombre de la Unidad residencial.'),
-    city: nameField('Escribe la ciudad.'),
+    name: Schema.String.check(
+      Schema.makeFilter(
+        (text: string) =>
+          text.trim().length > 0 ||
+          'Escribe el nombre de la Unidad residencial.'
+      ),
+      Schema.isMaxLength(ResidentialUnitsShared.NAME_MAX_LENGTH, {
+        message: `Usa máximo ${ResidentialUnitsShared.NAME_MAX_LENGTH} caracteres.`,
+      })
+    ),
+    city: Schema.String.check(
+      Schema.makeFilter(
+        (text: string) => text.trim().length > 0 || 'Escribe la ciudad.'
+      ),
+      Schema.isMaxLength(ResidentialUnitsShared.NAME_MAX_LENGTH, {
+        message: `Usa máximo ${ResidentialUnitsShared.NAME_MAX_LENGTH} caracteres.`,
+      })
+    ),
     administratorEmail: Schema.String.check(
       Schema.makeFilter(
         (email: string) =>
@@ -291,7 +299,7 @@ function CreateUnitCard() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {createdUnit ? (
+          {Predicate.isNotNull(createdUnit) ? (
             <div
               role="status"
               className="flex gap-3 rounded-xl border border-success/30 bg-success/10 p-3 text-sm"

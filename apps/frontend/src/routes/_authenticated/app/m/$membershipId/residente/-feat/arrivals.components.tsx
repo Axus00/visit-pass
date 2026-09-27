@@ -20,11 +20,7 @@ import * as CommonUI from '#modules/common-ui';
 import * as VisitPass from '#modules/visit-pass';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
-import {
-  findNewArrivals,
-  newestEntryAt,
-  visitorDisplayName,
-} from './visits.utils';
+import { visitorDisplayName } from './visits.utils';
 
 /**
  * Puts the arrivals bell in the top bar while the Residente panel is mounted,
@@ -64,13 +60,24 @@ function ArrivalsBell() {
   // Record the baseline on the first load, during render, so the first list is never announced.
   const needsBaseline =
     Predicate.isNull(baseline) && Predicate.isNotNull(loadedVisits);
-  if (needsBaseline) setBaseline(newestEntryAt(loadedVisits));
+  if (needsBaseline)
+    setBaseline(
+      loadedVisits.reduce(
+        (newest, visit) => Math.max(newest, visit.enteredAt),
+        0
+      )
+    );
 
   const arrivals = useMemo(() => {
     const isWaitingForVisits =
       Predicate.isNull(baseline) || Predicate.isNull(loadedVisits);
 
-    return isWaitingForVisits ? [] : findNewArrivals(loadedVisits, baseline);
+    // Newest first; a voided Visita is not an arrival.
+    return isWaitingForVisits
+      ? []
+      : loadedVisits
+          .filter((visit) => visit.enteredAt > baseline && !visit.voided)
+          .sort((a, b) => b.enteredAt - a.enteredAt);
   }, [baseline, loadedVisits]);
   const unseenCount = arrivals.filter(
     (arrival) => arrival.enteredAt > seenUpTo
@@ -92,7 +99,7 @@ function ArrivalsBell() {
   return (
     <Popover
       onOpenChange={(open) => {
-        if (open) setSeenUpTo(newestEntryAt(arrivals));
+        if (open) setSeenUpTo(arrivals[0]?.enteredAt ?? 0);
       }}
     >
       <PopoverTrigger

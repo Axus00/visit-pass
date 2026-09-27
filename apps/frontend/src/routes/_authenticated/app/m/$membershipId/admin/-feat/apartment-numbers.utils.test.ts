@@ -81,4 +81,11 @@ describe('parseApartmentNumbers', () => {
       MAX_APARTMENTS_PER_BATCH
     );
   });
+
+  it('counts overlapping ranges by their unique numbers', () => {
+    expect(parsed('1-300, 200-450')).toHaveLength(450);
+    expect(failure('1-300, 200-501')).toContain(
+      String(MAX_APARTMENTS_PER_BATCH)
+    );
+  });
 });

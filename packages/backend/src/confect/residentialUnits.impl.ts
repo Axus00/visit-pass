@@ -195,14 +195,15 @@ const listApartmentsImpl = FunctionImpl.make(
           (activeResidentCounts.get(apartmentId) ?? 0) + 1
         );
 
-      const compareNaturally = (left: string, right: string) =>
-        left.localeCompare(right, undefined, { numeric: true });
-
       return [...apartments]
         .sort(
           (left, right) =>
-            compareNaturally(left.tower, right.tower) ||
-            compareNaturally(left.number, right.number)
+            left.tower.localeCompare(right.tower, undefined, {
+              numeric: true,
+            }) ||
+            left.number.localeCompare(right.number, undefined, {
+              numeric: true,
+            })
         )
         .map((apartment) => ({
           _id: apartment._id,

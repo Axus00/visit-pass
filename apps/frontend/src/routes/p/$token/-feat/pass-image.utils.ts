@@ -82,30 +82,28 @@ export async function savePassImage({
   });
   const canShareFile =
     'canShare' in navigator && navigator.canShare({ files: [file] });
+  // A share sheet that fails for any reason but a dismissal falls back to a
+  // download, as does a browser that cannot share files at all.
+  const shareOutcome = canShareFile
+    ? await navigator.share({ files: [file], title: 'Pase de visitante' }).then(
+        () => 'shared' as const,
+        (error: unknown) => {
+          const isCancelled =
+            error instanceof DOMException && error.name === 'AbortError';
 
-  if (!canShareFile) {
-    downloadFile(file);
-    return 'downloaded';
-  }
+          return isCancelled ? ('cancelled' as const) : ('failed' as const);
+        }
+      )
+    : ('failed' as const);
 
-  return navigator.share({ files: [file], title: 'Pase de visitante' }).then(
-    () => 'shared' as const,
-    (error: unknown) => {
-      const isCancelled =
-        error instanceof DOMException && error.name === 'AbortError';
-      if (isCancelled) return 'cancelled' as const;
+  if (shareOutcome !== 'failed') return shareOutcome;
 
-      downloadFile(file);
-      return 'downloaded' as const;
-    }
-  );
-}
-
-function downloadFile(file: File) {
   const objectUrl = URL.createObjectURL(file);
   const anchor = document.createElement('a');
   anchor.href = objectUrl;
   anchor.download = file.name;
   anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
+
+  return 'downloaded';
 }

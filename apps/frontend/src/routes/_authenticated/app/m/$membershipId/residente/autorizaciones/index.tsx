@@ -79,14 +79,14 @@ function ResidenteAutorizacionesPage() {
           const nextTab = ResidenteRouteFeat.AUTHORIZATION_TABS.find(
             (candidate) => candidate === next
           );
-          if (nextTab) setTab(nextTab);
+          if (Predicate.isNotUndefined(nextTab)) setTab(nextTab);
         }}
       >
         <TabsList className="w-full sm:w-fit">
           {ResidenteRouteFeat.AUTHORIZATION_TABS.map((candidate) => (
             <TabsTrigger key={candidate} value={candidate} className="px-3">
               {ResidenteRouteFeat.AUTHORIZATION_TAB_LABELS[candidate]}
-              {byTab ? (
+              {Predicate.isNotNull(byTab) ? (
                 <span className="text-xs text-muted-foreground tabular-nums">
                   {byTab[candidate].length}
                 </span>

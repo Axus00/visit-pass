@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import * as Predicate from 'effect/Predicate';
 import type { LucideIcon } from 'lucide-react';
 
 import { Card, cn } from '@repo/ui';
@@ -19,7 +20,7 @@ export function PageHeader({
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex min-w-0 flex-col gap-1">
-        {eyebrow ? (
+        {Predicate.isNotNullish(eyebrow) ? (
           <p className="text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
             {eyebrow}
           </p>
@@ -27,11 +28,11 @@ export function PageHeader({
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           {title}
         </h1>
-        {description ? (
+        {Predicate.isNotNullish(description) ? (
           <p className="text-sm text-muted-foreground">{description}</p>
         ) : null}
       </div>
-      {actions ? (
+      {Predicate.isNotNullish(actions) ? (
         <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>
       ) : null}
     </header>
@@ -69,7 +70,7 @@ export function StatCard({
         >
           {label}
         </p>
-        {Icon ? (
+        {Predicate.isNotUndefined(Icon) ? (
           <span
             className={cn(
               'grid size-9 shrink-0 place-items-center rounded-lg',
@@ -83,7 +84,7 @@ export function StatCard({
         ) : null}
       </div>
       <p className="text-4xl font-bold tracking-tight tabular-nums">{value}</p>
-      {hint ? (
+      {Predicate.isNotNullish(hint) ? (
         <p
           className={cn(
             'text-xs',
@@ -122,7 +123,7 @@ export function EmptyState({
       </span>
       <div className="flex flex-col gap-1">
         <p className="font-medium">{title}</p>
-        {description ? (
+        {Predicate.isNotNullish(description) ? (
           <p className="max-w-sm text-sm text-muted-foreground">
             {description}
           </p>

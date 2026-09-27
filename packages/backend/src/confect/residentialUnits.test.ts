@@ -1,6 +1,7 @@
 import { describe, it } from '@effect/vitest';
 import * as EffectVitestUtils from '@effect/vitest/utils';
 import * as Effect from 'effect/Effect';
+import * as Predicate from 'effect/Predicate';
 
 import refs from './_generated/refs';
 import { DatabaseReader, DatabaseWriter } from './_generated/services';
@@ -58,10 +59,9 @@ describe('residentialUnits', () => {
                 ? world.adminB
                 : world.porterA,
               enteredAt: Date.parse(args.enteredAt),
-              exitedAt:
-                args.exitedAt === undefined
-                  ? undefined
-                  : Date.parse(args.exitedAt),
+              exitedAt: Predicate.isUndefined(args.exitedAt)
+                ? undefined
+                : Date.parse(args.exitedAt),
               privacyNoticeVersion: Visits.PRIVACY_NOTICE_VERSION,
               voidedAt: args.voided ? Date.parse(args.enteredAt) : undefined,
             });

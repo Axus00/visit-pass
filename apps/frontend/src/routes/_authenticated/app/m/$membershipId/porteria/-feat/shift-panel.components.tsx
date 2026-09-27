@@ -300,7 +300,7 @@ function BreakdownCard({
                 aria-hidden="true"
                 className={cn('size-2.5 rounded-full', row.barClassName)}
               />
-              {Icon ? (
+              {Predicate.isNotUndefined(Icon) ? (
                 <Icon
                   className="size-4 text-muted-foreground"
                   aria-hidden="true"

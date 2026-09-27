@@ -46,17 +46,6 @@ const RELATIONSHIPS = [
 
 const RELATIONSHIP_NOTE_MAX_LENGTH = 60;
 
-/** `Familiar`, or `Otro · Jardinero` when the Parentesco has a note. */
-export function describeRelationship(
-  favorite: Pick<FavoriteSummary, 'relationship' | 'relationshipNote'>
-) {
-  const label = VisitPass.RELATIONSHIP_LABELS[favorite.relationship];
-
-  return favorite.relationshipNote
-    ? `${label} · ${favorite.relationshipNote}`
-    : label;
-}
-
 /** Parentesco picker for the Favorito forms. */
 export function RelationshipSelect({
   id,
@@ -267,9 +256,12 @@ export function FavoriteCard({
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <p className="truncate font-semibold">{favorite.visitorName}</p>
           <p className="truncate text-sm text-muted-foreground">
-            {describeRelationship(favorite)}
+            {VisitPass.RELATIONSHIP_LABELS[favorite.relationship]}
+            {Predicate.isUndefined(favorite.relationshipNote)
+              ? null
+              : ` · ${favorite.relationshipNote}`}
           </p>
-          {favorite.visitorDocument ? (
+          {Predicate.isNotUndefined(favorite.visitorDocument) ? (
             <p className="truncate text-xs text-muted-foreground">
               Doc. {favorite.visitorDocument}
             </p>
@@ -363,7 +355,10 @@ export function FavoritesPreviewCard({
                       {favorite.visitorName}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {describeRelationship(favorite)}
+                      {VisitPass.RELATIONSHIP_LABELS[favorite.relationship]}
+                      {Predicate.isUndefined(favorite.relationshipNote)
+                        ? null
+                        : ` · ${favorite.relationshipNote}`}
                     </p>
                   </div>
                   <Button

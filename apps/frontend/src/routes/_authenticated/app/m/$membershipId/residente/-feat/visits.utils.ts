@@ -65,39 +65,24 @@ export function groupVisitsByDay(
   }));
 }
 
-const normalize = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .replace(/[\s-]+/g, '');
-
 /** Accent- and space-insensitive match on the Visitante's name or the plate. */
 export function matchesVisitSearch(
   visit: Pick<VisitPass.VisitSummary, 'anonymized' | 'visitorName' | 'plate'>,
   term: string
 ) {
-  const needle = normalize(term);
+  const [needle = '', ...haystacks] = [
+    term,
+    visitorDisplayName(visit),
+    visit.plate ?? '',
+  ].map((text) =>
+    text
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .replace(/[\s-]+/g, '')
+  );
 
   if (needle.length === 0) return true;
 
-  return [visitorDisplayName(visit), visit.plate ?? ''].some((haystack) =>
-    normalize(haystack).includes(needle)
-  );
-}
-
-/** The latest Ingreso in the list, or `0` when there is none. */
-export function newestEntryAt(
-  visits: ReadonlyArray<Pick<VisitPass.VisitSummary, 'enteredAt'>>
-) {
-  return visits.reduce((newest, visit) => Math.max(newest, visit.enteredAt), 0);
-}
-
-/** Visitas that entered after `baseline`, newest first; voided ones are not arrivals. */
-export function findNewArrivals<
-  Visit extends Pick<VisitPass.VisitSummary, 'enteredAt' | 'voided'>,
->(visits: ReadonlyArray<Visit>, baseline: number): ReadonlyArray<Visit> {
-  return visits
-    .filter((visit) => visit.enteredAt > baseline && !visit.voided)
-    .sort((a, b) => b.enteredAt - a.enteredAt);
+  return haystacks.some((haystack) => haystack.includes(needle));
 }

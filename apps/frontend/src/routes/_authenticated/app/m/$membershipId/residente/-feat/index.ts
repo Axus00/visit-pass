@@ -4,7 +4,6 @@ export {
   AUTHORIZE_FIRST_INPUT_ID,
   AuthorizeVisitCard,
 } from './authorize-visit-card.components';
-export type { FavoriteSummary, SharedAuthorization } from './authorize.models';
 export {
   AUTHORIZATION_TAB_LABELS,
   AUTHORIZATION_TABS,

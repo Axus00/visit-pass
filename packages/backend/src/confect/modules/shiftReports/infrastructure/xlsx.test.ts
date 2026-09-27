@@ -65,16 +65,6 @@ const unzipWorkbook = () =>
     ).map(([path, bytes]) => [path, strFromU8(bytes)])
   );
 
-/** The text of every inline-string or numeric cell, row by row. */
-const readRows = (sheetXml: string) =>
-  [...sheetXml.matchAll(/<row [^>]*>(.*?)<\/row>/g)].map((row) =>
-    [
-      ...(row[1] ?? '').matchAll(
-        /<c [^>]*>(?:<is><t[^>]*>(.*?)<\/t><\/is>|<v>(.*?)<\/v>)<\/c>/g
-      ),
-    ].map((cell) => cell[1] ?? cell[2] ?? '')
-  );
-
 describe('buildShiftReportWorkbookParts', () => {
   it('packs a workbook with a Visitas and a Resumen sheet', () => {
     const files = unzipWorkbook();
@@ -93,7 +83,15 @@ describe('buildShiftReportWorkbookParts', () => {
   });
 
   it('lists Visitas in Ingreso order with voided ones last', () => {
-    const rows = readRows(unzipWorkbook()['xl/worksheets/sheet1.xml'] ?? '');
+    const sheetXml = unzipWorkbook()['xl/worksheets/sheet1.xml'] ?? '';
+    // The text of every inline-string or numeric cell, row by row.
+    const rows = [...sheetXml.matchAll(/<row [^>]*>(.*?)<\/row>/g)].map((row) =>
+      [
+        ...(row[1] ?? '').matchAll(
+          /<c [^>]*>(?:<is><t[^>]*>(.*?)<\/t><\/is>|<v>(.*?)<\/v>)<\/c>/g
+        ),
+      ].map((cell) => cell[1] ?? cell[2] ?? '')
+    );
 
     expect(rows).toEqual([
       [
@@ -142,7 +140,15 @@ describe('buildShiftReportWorkbookParts', () => {
   });
 
   it('summarizes the Turno without counting voided Visitas', () => {
-    const rows = readRows(unzipWorkbook()['xl/worksheets/sheet2.xml'] ?? '');
+    const sheetXml = unzipWorkbook()['xl/worksheets/sheet2.xml'] ?? '';
+    // The text of every inline-string or numeric cell, row by row.
+    const rows = [...sheetXml.matchAll(/<row [^>]*>(.*?)<\/row>/g)].map((row) =>
+      [
+        ...(row[1] ?? '').matchAll(
+          /<c [^>]*>(?:<is><t[^>]*>(.*?)<\/t><\/is>|<v>(.*?)<\/v>)<\/c>/g
+        ),
+      ].map((cell) => cell[1] ?? cell[2] ?? '')
+    );
 
     expect(rows).toEqual([
       ['Reporte de turno'],

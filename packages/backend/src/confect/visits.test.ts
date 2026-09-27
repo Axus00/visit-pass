@@ -373,8 +373,8 @@ describe('visits', () => {
           startDate: PorteriaFixtures.localDateFromToday(0),
           visitors: [{ name: 'Ana' }],
         });
-        const resolve = () =>
-          porterA
+        EffectVitestUtils.strictEqual(
+          yield* porterA
             .query(visits.resolvePass, {
               membershipId: world.porterA,
               token: tokenOf(created),
@@ -386,9 +386,9 @@ describe('visits', () => {
                   ? resolution.reason
                   : resolution.outcome
               )
-            );
-
-        EffectVitestUtils.strictEqual(yield* resolve(), 'admissible');
+            ),
+          'admissible'
+        );
 
         // The Membresía stays active; only its Usuario is soft-deleted.
         yield* confect.run(
@@ -404,7 +404,19 @@ describe('visits', () => {
         );
 
         EffectVitestUtils.strictEqual(
-          yield* resolve(),
+          yield* porterA
+            .query(visits.resolvePass, {
+              membershipId: world.porterA,
+              token: tokenOf(created),
+              now: PorteriaFixtures.wallClockMillis(),
+            })
+            .pipe(
+              Effect.map((resolution) =>
+                resolution.outcome === 'rejected'
+                  ? resolution.reason
+                  : resolution.outcome
+              )
+            ),
           'apartmentWithoutResident'
         );
       }).pipe(Effect.provide(TestConfect.layer))

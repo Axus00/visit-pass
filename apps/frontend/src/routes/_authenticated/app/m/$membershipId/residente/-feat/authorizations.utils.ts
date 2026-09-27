@@ -8,27 +8,6 @@ export const AUTHORIZATION_TAB_LABELS = {
   cancelled: 'Canceladas',
 } as const satisfies Record<AuthorizationTab, string>;
 
-/** Vigente until its last day ends in the unit's time zone, unless cancelled. */
-export function classifyAuthorization(
-  authorization: Pick<VisitPass.AuthorizationSummary, 'status' | 'endDate'>,
-  today: string
-): AuthorizationTab {
-  if (authorization.status === 'cancelled') return 'cancelled';
-  if (authorization.endDate < today) return 'past';
-
-  return 'current';
-}
-
-/** Splits out Pases replaced by a regenerated one, which no longer work. */
-export function partitionReplacedPasses<
-  Pass extends Pick<VisitPass.AuthorizationSummary['passes'][number], 'status'>,
->(passes: ReadonlyArray<Pass>) {
-  return {
-    live: passes.filter((pass) => pass.status !== 'replaced'),
-    replaced: passes.filter((pass) => pass.status === 'replaced'),
-  };
-}
-
 export function formatEntryCount(entryCount: number) {
   if (entryCount === 0) return 'Sin ingresos';
   if (entryCount === 1) return '1 ingreso';
@@ -68,8 +47,9 @@ export const AUTHORIZATION_TABS: ReadonlyArray<AuthorizationTab> = [
 ];
 
 /**
- * Splits Autorizaciones into their tabs: Vigentes soonest first, Pasadas and
- * Canceladas most recent first.
+ * Splits Autorizaciones into their tabs: Vigentes, until their last day ends in
+ * the unit's time zone, soonest first; Pasadas and Canceladas (whatever their
+ * dates) most recent first.
  */
 export function groupAuthorizationsByTab<
   Authorization extends Pick<
@@ -80,20 +60,23 @@ export function groupAuthorizationsByTab<
   authorizations: ReadonlyArray<Authorization>,
   today: string
 ): Record<AuthorizationTab, ReadonlyArray<Authorization>> {
-  const inTab = (tab: AuthorizationTab) =>
-    authorizations.filter(
-      (authorization) => classifyAuthorization(authorization, today) === tab
-    );
+  const notCancelled = authorizations.filter(
+    (authorization) => authorization.status !== 'cancelled'
+  );
 
   return {
-    current: inTab('current').sort(
-      (a, b) =>
-        a.startDate.localeCompare(b.startDate) ||
-        b._creationTime - a._creationTime
-    ),
-    past: inTab('past').sort((a, b) => b.endDate.localeCompare(a.endDate)),
-    cancelled: inTab('cancelled').sort(
-      (a, b) => b._creationTime - a._creationTime
-    ),
+    current: notCancelled
+      .filter((authorization) => authorization.endDate >= today)
+      .sort(
+        (a, b) =>
+          a.startDate.localeCompare(b.startDate) ||
+          b._creationTime - a._creationTime
+      ),
+    past: notCancelled
+      .filter((authorization) => authorization.endDate < today)
+      .sort((a, b) => b.endDate.localeCompare(a.endDate)),
+    cancelled: authorizations
+      .filter((authorization) => authorization.status === 'cancelled')
+      .sort((a, b) => b._creationTime - a._creationTime),
   };
 }

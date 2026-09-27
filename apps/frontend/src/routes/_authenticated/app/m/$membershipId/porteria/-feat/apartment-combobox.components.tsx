@@ -37,7 +37,7 @@ export function ApartmentCombobox({
   return (
     <div
       className="flex flex-col gap-1.5"
-      data-invalid={error ? '' : undefined}
+      data-invalid={Predicate.isNull(error) ? undefined : ''}
     >
       <Label htmlFor={inputId} className="gap-1">
         Apartamento destino
@@ -81,7 +81,9 @@ export function ApartmentCombobox({
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {Predicate.isNull(error) ? null : (
+        <p className="text-xs text-destructive">{error}</p>
+      )}
     </div>
   );
 }

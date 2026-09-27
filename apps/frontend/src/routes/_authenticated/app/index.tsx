@@ -117,10 +117,10 @@ function MembershipList({
                   <p className="truncate font-semibold">
                     {membership.residentialUnitName}
                   </p>
-                  {membership.apartmentLabel ? (
+                  {Predicate.isNotUndefined(membership.apartmentLabel) ? (
                     <p className="truncate text-sm text-muted-foreground">
                       {membership.apartmentLabel}
-                      {membership.occupancyType
+                      {Predicate.isNotUndefined(membership.occupancyType)
                         ? ` · ${VisitPass.OCCUPANCY_LABELS[membership.occupancyType]}`
                         : null}
                     </p>

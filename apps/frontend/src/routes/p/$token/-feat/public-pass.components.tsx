@@ -26,7 +26,6 @@ import {
   type PublicPass,
   type PublicPassState,
   derivePublicPassState,
-  formatBannerDay,
   formatWeekdays,
 } from './public-pass.utils';
 
@@ -73,6 +72,13 @@ export function PublicPassFrame({ children }: { children: ReactNode }) {
 
 const TICKET = tw`overflow-hidden rounded-3xl bg-card shadow-lg ring-1 ring-foreground/10`;
 
+/** `sábado 26 sep` for banners about a specific day. */
+const BANNER_DAY_FORMAT: Intl.DateTimeFormatOptions = {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'short',
+};
+
 type Banner = {
   icon: LucideIcon;
   title: string;
@@ -91,7 +97,7 @@ function describeState(state: PublicPassState): Banner {
   if (state.kind === 'notYetValid')
     return {
       icon: CalendarClock,
-      title: `Válido desde el ${formatBannerDay(state.validFrom)}`,
+      title: `Válido desde el ${VisitPass.formatLocalDate(state.validFrom, BANNER_DAY_FORMAT)}`,
       description: 'Aún no puedes usar este Pase.',
       className: tw`bg-warning/18 text-warning-foreground dark:bg-warning/20 dark:text-warning`,
     };
@@ -99,7 +105,7 @@ function describeState(state: PublicPassState): Banner {
     return {
       icon: Clock,
       title: 'Hoy no es un día permitido',
-      description: `Próximo día válido: ${formatBannerDay(state.nextDate)}.`,
+      description: `Próximo día válido: ${VisitPass.formatLocalDate(state.nextDate, BANNER_DAY_FORMAT)}.`,
       className: tw`bg-warning/18 text-warning-foreground dark:bg-warning/20 dark:text-warning`,
     };
   if (state.kind === 'expired')
@@ -255,7 +261,7 @@ export function PublicPassTicket({ pass }: { pass: PublicPass }) {
               </dd>
             </div>
           ) : null}
-          {pass.eventName ? (
+          {Predicate.isNotUndefined(pass.eventName) ? (
             <div className="col-span-2 flex flex-col gap-0.5">
               <dt className="text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">
                 Evento

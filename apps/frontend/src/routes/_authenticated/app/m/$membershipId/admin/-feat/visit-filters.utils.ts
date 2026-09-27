@@ -28,15 +28,6 @@ export function visitStatusOf(
   return Predicate.isUndefined(visit.exitedAt) ? 'inside' : 'exited';
 }
 
-/** Lowercase without accents, so `méndez` finds `Mendez`. */
-function normalize(text: string) {
-  return text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .trim();
-}
-
 /**
  * Keeps the Visitas matching every filter. The search looks at the Visitante's
  * name, document and plate and the Apartamento, ignoring case, accents and the
@@ -46,6 +37,13 @@ export function filterVisits<Visit extends VisitPass.VisitSummary>(
   visits: ReadonlyArray<Visit>,
   filters: VisitFilters
 ): ReadonlyArray<Visit> {
+  // Lowercase without accents, so `méndez` finds `Mendez`.
+  const normalize = (text: string) =>
+    text
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .trim();
   const query = normalize(filters.search);
   const compactQuery = query.replace(/[\s.-]/g, '');
 

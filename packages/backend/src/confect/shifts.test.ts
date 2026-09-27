@@ -448,14 +448,6 @@ describe('shifts', () => {
         const adminA = yield* PorteriaFixtures.as('adminA');
         const now = PorteriaFixtures.wallClockMillis();
 
-        const plannedShift = (daysAhead: number) => ({
-          residentialUnitId: world.unitA,
-          porterMembershipId: world.porterA,
-          plannedStart: now + daysAhead * 24 * MILLIS_PER_HOUR,
-          plannedEnd: now + daysAhead * 24 * MILLIS_PER_HOUR + MILLIS_PER_HOUR,
-          status: 'scheduled' as const,
-        });
-
         const soonest = yield* adminA.mutation(shifts.schedule, {
           membershipId: world.adminA,
           porterMembershipId: world.porterA,
@@ -471,7 +463,14 @@ describe('shifts', () => {
               Effect.gen(function* () {
                 const writer = yield* DatabaseWriter;
 
-                yield* writer.table('shifts').insert(plannedShift(daysAhead));
+                yield* writer.table('shifts').insert({
+                  residentialUnitId: world.unitA,
+                  porterMembershipId: world.porterA,
+                  plannedStart: now + daysAhead * 24 * MILLIS_PER_HOUR,
+                  plannedEnd:
+                    now + daysAhead * 24 * MILLIS_PER_HOUR + MILLIS_PER_HOUR,
+                  status: 'scheduled',
+                });
               }),
             { discard: true }
           ).pipe(Effect.orDie)

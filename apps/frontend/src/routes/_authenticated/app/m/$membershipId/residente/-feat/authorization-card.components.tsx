@@ -15,7 +15,6 @@ import {
   type AuthorizationTab,
   describePassBadge,
   formatEntryCount,
-  partitionReplacedPasses,
 } from './authorizations.utils';
 import type { PassSummary, SharedAuthorization } from './authorize.models';
 import { describePassValidity } from './pass-share.utils';
@@ -46,7 +45,13 @@ export function AuthorizationCard({
     tab === 'past' ||
     authorization.endDate <
       VisitPass.todayIn(membership.residentialUnitTimeZone, now);
-  const { live, replaced } = partitionReplacedPasses(authorization.passes);
+  // Pases replaced by a regenerated one no longer work.
+  const live = authorization.passes.filter(
+    (pass) => pass.status !== 'replaced'
+  );
+  const replaced = authorization.passes.filter(
+    (pass) => pass.status === 'replaced'
+  );
   const activePasses = live.filter((pass) => pass.status === 'active');
   const visiblePasses = showAllPasses ? live : live.slice(0, COLLAPSED_PASSES);
   const hiddenPassCount = live.length - visiblePasses.length;

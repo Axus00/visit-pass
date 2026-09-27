@@ -33,11 +33,7 @@ import * as VisitPass from '#modules/visit-pass';
 import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
-import {
-  describeReportEmailStatus,
-  describeShiftWindow,
-  shiftElapsedMillis,
-} from './shift-format.utils';
+import { describeShiftWindow, shiftElapsedMillis } from './shift-format.utils';
 import { VisitCard } from './visit-list.components';
 
 /**
@@ -240,7 +236,21 @@ function ShiftReportRow({
   report: VisitPass.ShiftReportSummary;
   timeZone: string;
 }) {
-  const emailStatus = describeReportEmailStatus(report);
+  const emailStatus = Match.value(report.emailStatus).pipe(
+    Match.when('notRequested', () => null),
+    Match.when('pending', () => 'Enviando…'),
+    Match.when('sent', () =>
+      report.recipients.length === 0
+        ? 'Enviado al Administrador'
+        : `Enviado a ${report.recipients.join(', ')}`
+    ),
+    Match.when('failed', () => 'No se pudo enviar'),
+    Match.when(
+      'notConfigured',
+      () => 'Correo no configurado en este entorno — descarga el archivo'
+    ),
+    Match.exhaustive
+  );
   const isEmailProblem =
     report.emailStatus === 'failed' || report.emailStatus === 'notConfigured';
 

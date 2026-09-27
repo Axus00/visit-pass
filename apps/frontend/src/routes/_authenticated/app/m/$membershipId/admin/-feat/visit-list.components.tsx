@@ -18,15 +18,6 @@ import * as VisitPass from '#modules/visit-pass';
 
 import { visitStatusOf } from './visit-filters.utils';
 
-/** Today's Visitas show only the time; older ones carry their date. */
-function formatEntry(epochMillis: number, timeZone: string, today: string) {
-  const isToday = CalendarShared.toLocalDate(epochMillis, timeZone) === today;
-
-  return isToday
-    ? VisitPass.formatTime(epochMillis, timeZone)
-    : VisitPass.formatDateTime(epochMillis, timeZone);
-}
-
 export function VisitStatusBadge({
   visit,
   timeZone,
@@ -86,7 +77,7 @@ function VisitorCell({ visit }: { visit: VisitPass.VisitSummary }) {
           {visit.anonymized
             ? 'Datos anonimizados'
             : (visit.visitorDocument ?? 'Sin documento')}
-          {visit.plate ? ` · ${visit.plate}` : null}
+          {Predicate.isUndefined(visit.plate) ? null : ` · ${visit.plate}`}
         </span>
       </span>
     </span>
@@ -124,6 +115,18 @@ export function VisitList({
   layout?: 'responsive' | 'cards';
 }) {
   const today = VisitPass.todayIn(timeZone, now);
+  // Today's Visitas show only the time; older ones carry their date.
+  const entryLabels = new Map(
+    visits.map((visit) => {
+      const isToday =
+        CalendarShared.toLocalDate(visit.enteredAt, timeZone) === today;
+      const label = isToday
+        ? VisitPass.formatTime(visit.enteredAt, timeZone)
+        : VisitPass.formatDateTime(visit.enteredAt, timeZone);
+
+      return [visit._id, label];
+    })
+  );
   const hasActions = Predicate.isNotUndefined(onVoid);
   const isResponsive = layout === 'responsive';
 
@@ -151,7 +154,7 @@ export function VisitList({
             {visits.map((visit) => (
               <TableRow key={visit._id}>
                 <TableCell className="pl-4 text-muted-foreground tabular-nums">
-                  {formatEntry(visit.enteredAt, timeZone, today)}
+                  {entryLabels.get(visit._id)}
                 </TableCell>
                 <TableCell className="max-w-64">
                   <VisitorCell visit={visit} />
@@ -208,7 +211,7 @@ export function VisitList({
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-12 text-xs text-muted-foreground">
                 <span className="tabular-nums">
-                  {formatEntry(visit.enteredAt, timeZone, today)}
+                  {entryLabels.get(visit._id)}
                 </span>
                 <span>{visit.apartmentLabel}</span>
                 <span>{VisitPass.VISIT_TYPE_LABELS[visit.visitType]}</span>

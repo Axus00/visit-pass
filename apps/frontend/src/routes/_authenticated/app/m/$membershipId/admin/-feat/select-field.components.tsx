@@ -83,7 +83,7 @@ export function SelectField<Value extends string>({
           ))}
         </SelectContent>
       </Select>
-      {description ? (
+      {Predicate.isNotNullish(description) ? (
         <p className="text-xs text-muted-foreground">{description}</p>
       ) : null}
       {Predicate.isNull(error) ? null : (

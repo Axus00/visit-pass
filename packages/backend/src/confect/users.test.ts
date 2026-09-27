@@ -1,9 +1,9 @@
 import { describe, it } from '@effect/vitest';
 import * as EffectVitestUtils from '@effect/vitest/utils';
 import type { User } from '@workos-inc/node';
-import type { GenericId } from 'convex/values';
 import * as Effect from 'effect/Effect';
 import * as Predicate from 'effect/Predicate';
+import * as Record from 'effect/Record';
 import * as Schema from 'effect/Schema';
 
 import { Id } from './_generated/id';
@@ -250,33 +250,27 @@ describe('users', () => {
         const confect = yield* TestConfect.TestConfect;
         const world = yield* TestFixtures.seedTwoUnits;
 
-        const invite = (email: string, role: 'porter' | 'administrator') =>
-          confect
-            .withIdentity(TestFixtures.identityOf('adminA'))
-            .mutation(refs.public.memberships.invite, {
-              membershipId: world.adminA,
-              email,
-              role,
-            });
-
-        const readInvitation = (membershipId: GenericId<'memberships'>) =>
-          confect.run(
-            Effect.gen(function* () {
-              const reader = yield* DatabaseReader;
-              const membership = yield* reader
-                .table('memberships')
-                .get(membershipId);
-
-              return { status: membership.status, userId: membership.userId };
-            }).pipe(Effect.orDie),
-            Invitation
+        const { newUserInvitationId, renamedUserInvitationId } =
+          yield* Effect.all(
+            Record.map(
+              {
+                newUserInvitationId: { email: userEmail, role: 'porter' },
+                renamedUserInvitationId: {
+                  email: 'renamed@example.test',
+                  role: 'administrator',
+                },
+              } as const,
+              ({ email, role }) =>
+                confect
+                  .withIdentity(TestFixtures.identityOf('adminA'))
+                  .mutation(refs.public.memberships.invite, {
+                    membershipId: world.adminA,
+                    email,
+                    role,
+                  })
+            ),
+            { concurrency: 'unbounded' }
           );
-
-        const newUserInvitationId = yield* invite(userEmail, 'porter');
-        const renamedUserInvitationId = yield* invite(
-          'renamed@example.test',
-          'administrator'
-        );
 
         const created = yield* confect.mutation(
           refs.internal.users.upsertFromWorkOS,
@@ -284,7 +278,17 @@ describe('users', () => {
         );
 
         EffectVitestUtils.deepStrictEqual(
-          yield* readInvitation(newUserInvitationId),
+          yield* confect.run(
+            Effect.gen(function* () {
+              const reader = yield* DatabaseReader;
+              const membership = yield* reader
+                .table('memberships')
+                .get(newUserInvitationId);
+
+              return { status: membership.status, userId: membership.userId };
+            }).pipe(Effect.orDie),
+            Invitation
+          ),
           { status: 'active', userId: created._id }
         );
 
@@ -302,7 +306,17 @@ describe('users', () => {
         });
 
         EffectVitestUtils.deepStrictEqual(
-          yield* readInvitation(renamedUserInvitationId),
+          yield* confect.run(
+            Effect.gen(function* () {
+              const reader = yield* DatabaseReader;
+              const membership = yield* reader
+                .table('memberships')
+                .get(renamedUserInvitationId);
+
+              return { status: membership.status, userId: membership.userId };
+            }).pipe(Effect.orDie),
+            Invitation
+          ),
           { status: 'active', userId: created._id }
         );
       }).pipe(Effect.provide(TestConfect.layer))

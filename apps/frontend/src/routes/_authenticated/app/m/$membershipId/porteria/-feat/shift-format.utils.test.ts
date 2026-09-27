@@ -2,11 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import * as VisitPass from '#modules/visit-pass';
 
-import {
-  describeReportEmailStatus,
-  describeShiftWindow,
-  shiftElapsedMillis,
-} from './shift-format.utils';
+import { describeShiftWindow, shiftElapsedMillis } from './shift-format.utils';
 
 const TIME_ZONE = 'America/Bogota';
 /** 26 sep 2026 06:00 in Bogotá (UTC-5). */
@@ -64,37 +60,5 @@ describe('shiftElapsedMillis', () => {
 
   it('is zero for a Turno that has not started', () => {
     expect(shiftElapsedMillis({ plannedStart: SIX_AM }, SIX_AM + HOUR)).toBe(0);
-  });
-});
-
-describe('describeReportEmailStatus', () => {
-  it('shows nothing when no email was requested', () => {
-    expect(
-      describeReportEmailStatus({ emailStatus: 'notRequested', recipients: [] })
-    ).toBeNull();
-  });
-
-  it('names the recipients once sent', () => {
-    expect(
-      describeReportEmailStatus({
-        emailStatus: 'sent',
-        recipients: ['admin@torres.co', 'jefe@torres.co'],
-      })
-    ).toBe('Enviado a admin@torres.co, jefe@torres.co');
-  });
-
-  it('explains pending, failed and unconfigured emails', () => {
-    expect(
-      describeReportEmailStatus({ emailStatus: 'pending', recipients: [] })
-    ).toBe('Enviando…');
-    expect(
-      describeReportEmailStatus({ emailStatus: 'failed', recipients: [] })
-    ).toBe('No se pudo enviar');
-    expect(
-      describeReportEmailStatus({
-        emailStatus: 'notConfigured',
-        recipients: [],
-      })
-    ).toContain('descarga el archivo');
   });
 });

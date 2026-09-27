@@ -1,4 +1,3 @@
-import * as Match from 'effect/Match';
 import * as Predicate from 'effect/Predicate';
 
 import * as VisitPass from '#modules/visit-pass';
@@ -14,7 +13,9 @@ type ShiftTimes = Pick<
  */
 export function describeShiftWindow(shift: ShiftTimes, timeZone: string) {
   const start = shift.startedAt ?? shift.plannedStart;
-  const end = shift.endedAt ?? (shift.startedAt ? undefined : shift.plannedEnd);
+  const end =
+    shift.endedAt ??
+    (Predicate.isUndefined(shift.startedAt) ? shift.plannedEnd : undefined);
 
   if (Predicate.isUndefined(start)) return 'Sin horario';
 
@@ -31,25 +32,4 @@ export function shiftElapsedMillis(shift: ShiftTimes, now: number) {
   if (Predicate.isUndefined(shift.startedAt)) return 0;
 
   return Math.max(0, (shift.endedAt ?? now) - shift.startedAt);
-}
-
-/** What the Portero reads about a Reporte de turno's email; `null` shows nothing. */
-export function describeReportEmailStatus(
-  report: Pick<VisitPass.ShiftReportSummary, 'emailStatus' | 'recipients'>
-) {
-  return Match.value(report.emailStatus).pipe(
-    Match.when('notRequested', () => null),
-    Match.when('pending', () => 'Enviando…'),
-    Match.when('sent', () =>
-      report.recipients.length === 0
-        ? 'Enviado al Administrador'
-        : `Enviado a ${report.recipients.join(', ')}`
-    ),
-    Match.when('failed', () => 'No se pudo enviar'),
-    Match.when(
-      'notConfigured',
-      () => 'Correo no configurado en este entorno — descarga el archivo'
-    ),
-    Match.exhaustive
-  );
 }

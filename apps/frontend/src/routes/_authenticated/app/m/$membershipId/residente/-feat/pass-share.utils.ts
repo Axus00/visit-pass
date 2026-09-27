@@ -10,11 +10,6 @@ export type PassValidity = {
   weekdays: ReadonlyArray<number>;
 };
 
-/** The public page a Pase's QR and shared link point to. */
-export function passPageUrl(origin: string, token: string) {
-  return `${origin}/p/${encodeURIComponent(token)}`;
-}
-
 /** Monday-first weekday summary: `Lun a Vie`, `Todos los días`, `Lun, Mié, Vie`. */
 export function formatWeekdays(weekdays: ReadonlyArray<number>) {
   const mondayFirst = [...new Set(weekdays)].sort(
@@ -65,10 +60,6 @@ export function buildPassShareText({
   return `Hola ${firstName}, te autoricé para ingresar a ${destination}: ${validityLabel}. Muestra este Pase en portería junto con tu documento de identidad: ${url}`;
 }
 
-export function whatsAppShareUrl(text: string) {
-  return `https://wa.me/?text=${encodeURIComponent(text)}`;
-}
-
 /** `María José Peña` → `pase-maria-jose-pena.png`. */
 export function passImageFileName(visitorName: string) {
   const slug = visitorName
@@ -91,7 +82,11 @@ export async function sharePassLink(
   text: string
 ): Promise<'shared' | 'cancelled' | 'whatsApp'> {
   const openWhatsApp = () => {
-    window.open(whatsAppShareUrl(text), '_blank', 'noopener,noreferrer');
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(text)}`,
+      '_blank',
+      'noopener,noreferrer'
+    );
     return 'whatsApp' as const;
   };
   const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
@@ -184,30 +179,28 @@ export async function savePassImage({
   });
   const canShareFile =
     'canShare' in navigator && navigator.canShare({ files: [file] });
+  // A share sheet that fails for any reason but a dismissal falls back to a
+  // download, as does a browser that cannot share files at all.
+  const shareOutcome = canShareFile
+    ? await navigator.share({ files: [file], title: 'Pase de visitante' }).then(
+        () => 'shared' as const,
+        (error: unknown) => {
+          const isCancelled =
+            error instanceof DOMException && error.name === 'AbortError';
 
-  if (!canShareFile) {
-    downloadFile(file);
-    return 'downloaded';
-  }
+          return isCancelled ? ('cancelled' as const) : ('failed' as const);
+        }
+      )
+    : ('failed' as const);
 
-  return navigator.share({ files: [file], title: 'Pase de visitante' }).then(
-    () => 'shared' as const,
-    (error: unknown) => {
-      const isCancelled =
-        error instanceof DOMException && error.name === 'AbortError';
-      if (isCancelled) return 'cancelled' as const;
+  if (shareOutcome !== 'failed') return shareOutcome;
 
-      downloadFile(file);
-      return 'downloaded' as const;
-    }
-  );
-}
-
-function downloadFile(file: File) {
   const objectUrl = URL.createObjectURL(file);
   const anchor = document.createElement('a');
   anchor.href = objectUrl;
   anchor.download = file.name;
   anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
+
+  return 'downloaded';
 }

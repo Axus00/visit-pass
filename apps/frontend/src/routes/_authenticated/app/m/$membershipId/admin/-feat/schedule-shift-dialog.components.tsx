@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { QueryResult, useMutation, useQuery } from '@confect/react';
+import * as Predicate from 'effect/Predicate';
 import * as Result from 'effect/Result';
 import { MoonStar } from 'lucide-react';
 
@@ -55,7 +56,7 @@ export function ScheduleShiftDialog({
         (candidate) => candidate._id === value.porterMembershipId
       );
 
-      if (!porter) {
+      if (Predicate.isUndefined(porter)) {
         toast.error('Elige un Portero activo.');
         return;
       }

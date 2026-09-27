@@ -63,7 +63,7 @@ export function ShiftDetailSheet({
         side={isMobile ? 'bottom' : 'right'}
         className="gap-0 data-[side=bottom]:max-h-[calc(100dvh-2.5rem)] data-[side=bottom]:rounded-t-2xl data-[side=right]:sm:max-w-xl"
       >
-        {shift ? <ShiftDetail shift={shift} /> : null}
+        {Predicate.isNull(shift) ? null : <ShiftDetail shift={shift} />}
       </SheetContent>
     </Sheet>
   );

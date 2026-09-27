@@ -72,7 +72,9 @@ export function ShiftReportItem({
           <p className="flex items-center gap-1.5 text-xs text-destructive">
             <CircleAlert className="size-3.5" aria-hidden="true" />
             No se pudo generar el archivo
-            {report.failureMessage ? `: ${report.failureMessage}` : '.'}
+            {Predicate.isUndefined(report.failureMessage)
+              ? '.'
+              : `: ${report.failureMessage}`}
           </p>
         ) : null}
         {wasEmailRequested ? (

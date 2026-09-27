@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  classifyAuthorization,
   describePassBadge,
   formatEntryCount,
   groupAuthorizationsByTab,
-  partitionReplacedPasses,
 } from './authorizations.utils';
 
 const today = '2026-09-26';
@@ -25,30 +23,6 @@ const authorization = (
   endDate: today,
   _creationTime: 0,
   ...overrides,
-});
-
-describe('classifyAuthorization', () => {
-  it('keeps an Autorización vigente through its last day', () => {
-    expect(classifyAuthorization(authorization({}), today)).toBe('current');
-    expect(
-      classifyAuthorization(authorization({ endDate: '2026-10-01' }), today)
-    ).toBe('current');
-  });
-
-  it('moves it to Pasadas once its last day is over', () => {
-    expect(
-      classifyAuthorization(authorization({ endDate: '2026-09-25' }), today)
-    ).toBe('past');
-  });
-
-  it('files cancelled ones under Canceladas whatever their dates', () => {
-    expect(
-      classifyAuthorization(
-        authorization({ status: 'cancelled', endDate: '2026-09-01' }),
-        today
-      )
-    ).toBe('cancelled');
-  });
 });
 
 describe('groupAuthorizationsByTab', () => {
@@ -92,18 +66,40 @@ describe('groupAuthorizationsByTab', () => {
       'cancelled-first',
     ]);
   });
-});
 
-describe('partitionReplacedPasses', () => {
-  it('separates Pases replaced by a regenerated one', () => {
-    const { live, replaced } = partitionReplacedPasses([
-      { status: 'replaced' as const },
-      { status: 'active' as const },
-      { status: 'used' as const },
-    ]);
+  it('keeps an Autorización vigente through its last day, then moves it to Pasadas', () => {
+    const grouped = groupAuthorizationsByTab(
+      [
+        authorization({ id: 'ends-today' }),
+        authorization({ id: 'ended-yesterday', endDate: '2026-09-25' }),
+      ],
+      today
+    );
 
-    expect(live.map((pass) => pass.status)).toEqual(['active', 'used']);
-    expect(replaced).toHaveLength(1);
+    expect(grouped.current.map((item) => item.id)).toEqual(['ends-today']);
+    expect(grouped.past.map((item) => item.id)).toEqual(['ended-yesterday']);
+  });
+
+  it('files cancelled ones under Canceladas whatever their dates', () => {
+    const grouped = groupAuthorizationsByTab(
+      [
+        authorization({
+          id: 'past',
+          status: 'cancelled',
+          endDate: '2026-09-01',
+        }),
+        authorization({
+          id: 'future',
+          status: 'cancelled',
+          endDate: '2026-10-01',
+        }),
+      ],
+      today
+    );
+
+    expect(grouped.current).toEqual([]);
+    expect(grouped.past).toEqual([]);
+    expect(grouped.cancelled).toHaveLength(2);
   });
 });
 

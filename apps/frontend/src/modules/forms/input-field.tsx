@@ -52,7 +52,7 @@ export function InputField({
   return (
     <div
       className="flex flex-col gap-1.5"
-      data-invalid={error ? '' : undefined}
+      data-invalid={Predicate.isNull(error) ? undefined : ''}
     >
       {Predicate.isUndefined(labelHint) ? (
         labelElement
@@ -83,7 +83,9 @@ export function InputField({
         aria-invalid={Predicate.isNotNull(error)}
         aria-required={required}
       />
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {Predicate.isNull(error) ? null : (
+        <p className="text-xs text-destructive">{error}</p>
+      )}
     </div>
   );
 }
@@ -92,9 +94,9 @@ export function getFieldErrorMessage(field: AnyFieldApi) {
   const firstError = field.state.meta.errors.at(0) as
     { message?: string } | string | undefined;
 
-  if (!firstError) return null;
+  if (Predicate.isUndefined(firstError)) return null;
 
-  return typeof firstError === 'string'
+  return Predicate.isString(firstError)
     ? firstError
     : (firstError.message ?? null);
 }

@@ -8,7 +8,11 @@ import { useEffect, useState } from 'react';
  * keeps `now` at most one rounding step behind real time.
  */
 export function useNow(intervalMs = 60_000) {
-  const [now, setNow] = useState(() => roundDown(Date.now(), intervalMs));
+  const [now, setNow] = useState(() => {
+    const clock = Date.now();
+
+    return clock - (clock % intervalMs);
+  });
 
   useEffect(() => {
     // Each tick schedules the next boundary afresh, so a late or throttled
@@ -19,7 +23,8 @@ export function useNow(intervalMs = 60_000) {
       const untilNextBoundary = intervalMs - (Date.now() % intervalMs);
 
       timer = window.setTimeout(() => {
-        setNow(roundDown(Date.now(), intervalMs));
+        const clock = Date.now();
+        setNow(clock - (clock % intervalMs));
         scheduleNextTick();
       }, untilNextBoundary);
     };
@@ -30,8 +35,4 @@ export function useNow(intervalMs = 60_000) {
   }, [intervalMs]);
 
   return now;
-}
-
-function roundDown(value: number, step: number) {
-  return value - (value % step);
 }

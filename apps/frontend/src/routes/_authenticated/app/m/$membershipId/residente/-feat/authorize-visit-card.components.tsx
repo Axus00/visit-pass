@@ -313,7 +313,7 @@ export function AuthorizeVisitCard({
                                 </ToggleGroupItem>
                               ))}
                             </ToggleGroup>
-                            {error ? (
+                            {Predicate.isNotNull(error) ? (
                               <p className="text-xs text-destructive">
                                 {error}
                               </p>
