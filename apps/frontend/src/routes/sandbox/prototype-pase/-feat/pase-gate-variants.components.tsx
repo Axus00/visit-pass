@@ -109,6 +109,10 @@ function GateHero({ pase, status }: Omit<PageVariantProps, 'saveImage'>) {
               {pase.visitante}
             </p>
             <p className="mt-1 text-lg text-white/70">{pase.apartamento}</p>
+            <p className="mt-2 text-xs font-semibold tracking-[0.05em] text-white/50 uppercase">
+              ID: VP-{pase.token.slice(-4).toUpperCase()} · Autorizado por{' '}
+              {pase.autorizadoPor}
+            </p>
             <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium">
               <Icon name="event" className="text-[18px]" />
               {cuandoCorto(pase)}
