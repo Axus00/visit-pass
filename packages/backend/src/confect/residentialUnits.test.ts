@@ -214,15 +214,18 @@ describe('residentialUnits', () => {
         ).pipe(Effect.orDie)
       );
 
-      const [overview, apartments] = yield* Effect.all([
-        admin.query(refs.public.residentialUnits.getOverview, {
-          membershipId: world.adminA,
-          now: NOW,
-        }),
-        admin.query(refs.public.residentialUnits.listApartments, {
-          membershipId: world.adminA,
-        }),
-      ]);
+      const [overview, apartments] = yield* Effect.all(
+        [
+          admin.query(refs.public.residentialUnits.getOverview, {
+            membershipId: world.adminA,
+            now: NOW,
+          }),
+          admin.query(refs.public.residentialUnits.listApartments, {
+            membershipId: world.adminA,
+          }),
+        ],
+        { concurrency: 'unbounded' }
+      );
 
       EffectVitestUtils.strictEqual(overview.activeResidentCount, 0);
       EffectVitestUtils.strictEqual(overview.porterCount, 0);
@@ -250,37 +253,40 @@ describe('residentialUnits', () => {
       );
 
       const accessDenied = new Memberships.AccessDeniedError();
-      const denials = yield* Effect.all([
-        Effect.result(
-          adminB.query(refs.public.residentialUnits.listApartments, {
-            membershipId: world.residentA,
-          })
-        ),
-        Effect.result(
-          adminB.mutation(refs.public.residentialUnits.createApartments, {
-            membershipId: world.adminA,
-            tower: 'X',
-            numbers: ['1'],
-          })
-        ),
-        Effect.result(
-          confect
-            .withIdentity(TestFixtures.identityOf('residentA'))
-            .mutation(refs.public.residentialUnits.update, {
+      const denials = yield* Effect.all(
+        [
+          Effect.result(
+            adminB.query(refs.public.residentialUnits.listApartments, {
               membershipId: world.residentA,
-              name: 'Renamed',
-              city: 'Cali',
-              visitRetentionMonths: 6,
             })
-        ),
-        Effect.result(
-          confect
-            .withIdentity(TestFixtures.identityOf('revokedA'))
-            .query(refs.public.residentialUnits.listApartments, {
-              membershipId: world.revokedA,
+          ),
+          Effect.result(
+            adminB.mutation(refs.public.residentialUnits.createApartments, {
+              membershipId: world.adminA,
+              tower: 'X',
+              numbers: ['1'],
             })
-        ),
-      ]);
+          ),
+          Effect.result(
+            confect
+              .withIdentity(TestFixtures.identityOf('residentA'))
+              .mutation(refs.public.residentialUnits.update, {
+                membershipId: world.residentA,
+                name: 'Renamed',
+                city: 'Cali',
+                visitRetentionMonths: 6,
+              })
+          ),
+          Effect.result(
+            confect
+              .withIdentity(TestFixtures.identityOf('revokedA'))
+              .query(refs.public.residentialUnits.listApartments, {
+                membershipId: world.revokedA,
+              })
+          ),
+        ],
+        { concurrency: 'unbounded' }
+      );
 
       for (const denial of denials)
         EffectVitestUtils.assertFailure<unknown, unknown>(denial, accessDenied);
@@ -321,16 +327,19 @@ describe('residentialUnits', () => {
       yield* TestFixtures.seedTwoUnits;
       const adminA = confect.withIdentity(TestFixtures.identityOf('adminA'));
 
-      const [listing, creation] = yield* Effect.all([
-        Effect.result(adminA.query(refs.public.residentialUnits.listAll, {})),
-        Effect.result(
-          adminA.mutation(refs.public.residentialUnits.create, {
-            name: 'Nueva',
-            city: 'Cali',
-            administratorEmail: 'admin@example.test',
-          })
-        ),
-      ]);
+      const [listing, creation] = yield* Effect.all(
+        [
+          Effect.result(adminA.query(refs.public.residentialUnits.listAll, {})),
+          Effect.result(
+            adminA.mutation(refs.public.residentialUnits.create, {
+              name: 'Nueva',
+              city: 'Cali',
+              administratorEmail: 'admin@example.test',
+            })
+          ),
+        ],
+        { concurrency: 'unbounded' }
+      );
 
       EffectVitestUtils.assertFailure(
         listing,

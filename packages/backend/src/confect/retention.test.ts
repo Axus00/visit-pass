@@ -315,11 +315,14 @@ const readSnapshot = Effect.gen(function* () {
     Effect.gen(function* () {
       const reader = yield* DatabaseReader;
 
-      const [visits, passes, authorizations] = yield* Effect.all([
-        reader.table('visits').index('by_creation_time').take(100),
-        reader.table('passes').index('by_creation_time').take(100),
-        reader.table('authorizations').index('by_creation_time').take(100),
-      ]);
+      const [visits, passes, authorizations] = yield* Effect.all(
+        [
+          reader.table('visits').index('by_creation_time').take(100),
+          reader.table('passes').index('by_creation_time').take(100),
+          reader.table('authorizations').index('by_creation_time').take(100),
+        ],
+        { concurrency: 'unbounded' }
+      );
 
       return {
         visits: visits.map((visit) => ({

@@ -42,13 +42,16 @@ describe('developmentSeeder', () => {
             .query(refs.public.memberships.listMine, {});
 
         const [agent, human, residente, portero, administrador] =
-          yield* Effect.all([
-            accessOf('agent@example.org'),
-            accessOf('human@example.org'),
-            accessOf('residente@example.org'),
-            accessOf('portero@example.org'),
-            accessOf('administrador@example.org'),
-          ]);
+          yield* Effect.all(
+            [
+              accessOf('agent@example.org'),
+              accessOf('human@example.org'),
+              accessOf('residente@example.org'),
+              accessOf('portero@example.org'),
+              accessOf('administrador@example.org'),
+            ],
+            { concurrency: 'unbounded' }
+          );
 
         const describeAccess = (access: typeof agent): ReadonlyArray<string> =>
           access.memberships
@@ -88,15 +91,21 @@ describe('developmentSeeder', () => {
         const administratorClient = confect.withIdentity(
           TestFixtures.identityOf('administrador@example.org')
         );
-        const [overview, members] = yield* Effect.all([
-          administratorClient.query(refs.public.residentialUnits.getOverview, {
-            membershipId: administratorMembership.membershipId,
-            now: ANY_DAY,
-          }),
-          administratorClient.query(refs.public.memberships.listForUnit, {
-            membershipId: administratorMembership.membershipId,
-          }),
-        ]);
+        const [overview, members] = yield* Effect.all(
+          [
+            administratorClient.query(
+              refs.public.residentialUnits.getOverview,
+              {
+                membershipId: administratorMembership.membershipId,
+                now: ANY_DAY,
+              }
+            ),
+            administratorClient.query(refs.public.memberships.listForUnit, {
+              membershipId: administratorMembership.membershipId,
+            }),
+          ],
+          { concurrency: 'unbounded' }
+        );
 
         EffectVitestUtils.strictEqual(overview.apartmentCount, 40);
         EffectVitestUtils.strictEqual(overview.visitorsInside, 2);

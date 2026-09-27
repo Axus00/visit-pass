@@ -253,8 +253,8 @@ const listMineImpl = FunctionImpl.make(
 // -*******************************************************************************-
 
 /**
- * Open Turnos, then scheduled ones still startable at `now` soonest first,
- * then the latest closed.
+ * Open Turnos latest start first, then scheduled ones still startable at `now`
+ * soonest first, then the latest closed by end.
  */
 const listForUnitImpl = FunctionImpl.make(
   databaseSchema,
@@ -269,23 +269,21 @@ const listForUnitImpl = FunctionImpl.make(
         ['administrator']
       );
 
-      const shiftsWithStatus = (status: Shifts.ShiftStatus, limit: number) =>
-        reader
-          .table('shifts')
-          .index(
-            'by_residentialUnitId_and_status',
-            (q) =>
-              q
-                .eq('residentialUnitId', membership.residentialUnitId)
-                .eq('status', status),
-            'desc'
-          )
-          .take(limit)
-          .pipe(Effect.orDie);
-
       const [openShifts, scheduledShifts, closedShifts] = yield* Effect.all(
         [
-          shiftsWithStatus('open', OPEN_FOR_UNIT_LIMIT),
+          // Latest start first.
+          reader
+            .table('shifts')
+            .index(
+              'by_residentialUnitId_and_status_and_startedAt',
+              (q) =>
+                q
+                  .eq('residentialUnitId', membership.residentialUnitId)
+                  .eq('status', 'open'),
+              'desc'
+            )
+            .take(OPEN_FOR_UNIT_LIMIT)
+            .pipe(Effect.orDie),
           // Soonest planned end first, so the Turnos due next are never
           // crowded out by ones planned far ahead or missed long ago.
           reader
@@ -298,7 +296,20 @@ const listForUnitImpl = FunctionImpl.make(
             )
             .take(SCHEDULED_SCAN_LIMIT)
             .pipe(Effect.orDie),
-          shiftsWithStatus('closed', CLOSED_FOR_UNIT_LIMIT),
+          // Latest end first, so a Turno planned long ago but closed just now
+          // is not crowded out by Turnos created after it.
+          reader
+            .table('shifts')
+            .index(
+              'by_residentialUnitId_and_status_and_endedAt',
+              (q) =>
+                q
+                  .eq('residentialUnitId', membership.residentialUnitId)
+                  .eq('status', 'closed'),
+              'desc'
+            )
+            .take(CLOSED_FOR_UNIT_LIMIT)
+            .pipe(Effect.orDie),
         ],
         { concurrency: 'unbounded' }
       );

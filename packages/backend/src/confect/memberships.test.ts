@@ -37,14 +37,17 @@ describe('memberships', () => {
           ],
         });
 
-        const [revokedAccess, pendingAccess] = yield* Effect.all([
-          confect
-            .withIdentity(TestFixtures.identityOf('revokedA'))
-            .query(refs.public.memberships.listMine, {}),
-          confect
-            .withIdentity(TestFixtures.identityOf('pendingA'))
-            .query(refs.public.memberships.listMine, {}),
-        ]);
+        const [revokedAccess, pendingAccess] = yield* Effect.all(
+          [
+            confect
+              .withIdentity(TestFixtures.identityOf('revokedA'))
+              .query(refs.public.memberships.listMine, {}),
+            confect
+              .withIdentity(TestFixtures.identityOf('pendingA'))
+              .query(refs.public.memberships.listMine, {}),
+          ],
+          { concurrency: 'unbounded' }
+        );
 
         EffectVitestUtils.deepStrictEqual(revokedAccess.memberships, []);
         EffectVitestUtils.deepStrictEqual(pendingAccess.memberships, []);
@@ -198,27 +201,30 @@ describe('memberships', () => {
         apartmentOfOtherUnit,
         malformedEmail,
         duplicate,
-      ] = yield* Effect.all([
-        invite({ email: 'a@example.test', role: 'resident' }),
-        invite({
-          email: 'b@example.test',
-          role: 'resident',
-          apartmentId: world.apartmentA101,
-        }),
-        invite({
-          email: 'c@example.test',
-          role: 'porter',
-          apartmentId: world.apartmentA101,
-        }),
-        invite({
-          email: 'd@example.test',
-          role: 'resident',
-          apartmentId: world.apartmentB101,
-          occupancyType: 'owner',
-        }),
-        invite({ email: 'not-an-email', role: 'porter' }),
-        invite({ email: 'PorterA@Example.test', role: 'porter' }),
-      ]);
+      ] = yield* Effect.all(
+        [
+          invite({ email: 'a@example.test', role: 'resident' }),
+          invite({
+            email: 'b@example.test',
+            role: 'resident',
+            apartmentId: world.apartmentA101,
+          }),
+          invite({
+            email: 'c@example.test',
+            role: 'porter',
+            apartmentId: world.apartmentA101,
+          }),
+          invite({
+            email: 'd@example.test',
+            role: 'resident',
+            apartmentId: world.apartmentB101,
+            occupancyType: 'owner',
+          }),
+          invite({ email: 'not-an-email', role: 'porter' }),
+          invite({ email: 'PorterA@Example.test', role: 'porter' }),
+        ],
+        { concurrency: 'unbounded' }
+      );
 
       EffectVitestUtils.assertFailure(
         residentWithoutApartment,
@@ -297,12 +303,15 @@ describe('memberships', () => {
         );
         EffectVitestUtils.strictEqual(activated, 0);
 
-        const [access, unitMembers] = yield* Effect.all([
-          porter.query(refs.public.memberships.listMine, {}),
-          admin.query(refs.public.memberships.listForUnit, {
-            membershipId: world.adminA,
-          }),
-        ]);
+        const [access, unitMembers] = yield* Effect.all(
+          [
+            porter.query(refs.public.memberships.listMine, {}),
+            admin.query(refs.public.memberships.listForUnit, {
+              membershipId: world.adminA,
+            }),
+          ],
+          { concurrency: 'unbounded' }
+        );
 
         EffectVitestUtils.deepStrictEqual(
           access.memberships.map(({ membershipId }) => membershipId),
@@ -313,22 +322,25 @@ describe('memberships', () => {
           'revoked'
         );
 
-        const [samePorterSeat, residentSeat] = yield* Effect.all([
-          Effect.result(
+        const [samePorterSeat, residentSeat] = yield* Effect.all(
+          [
+            Effect.result(
+              admin.mutation(refs.public.memberships.invite, {
+                membershipId: world.adminA,
+                email: 'Porter.New@Example.test',
+                role: 'porter',
+              })
+            ),
             admin.mutation(refs.public.memberships.invite, {
               membershipId: world.adminA,
-              email: 'Porter.New@Example.test',
-              role: 'porter',
-            })
-          ),
-          admin.mutation(refs.public.memberships.invite, {
-            membershipId: world.adminA,
-            email: 'porter.new@example.test',
-            role: 'resident',
-            apartmentId: world.apartmentA102,
-            occupancyType: 'tenant',
-          }),
-        ]);
+              email: 'porter.new@example.test',
+              role: 'resident',
+              apartmentId: world.apartmentA102,
+              occupancyType: 'tenant',
+            }),
+          ],
+          { concurrency: 'unbounded' }
+        );
 
         EffectVitestUtils.assertFailure(
           samePorterSeat,
@@ -414,46 +426,49 @@ describe('memberships', () => {
       );
 
       const accessDenied = new Memberships.AccessDeniedError();
-      const denials = yield* Effect.all([
-        // Someone else's Membresía, even an Administrador's.
-        Effect.result(
-          adminB.query(refs.public.memberships.listForUnit, {
-            membershipId: world.adminA,
-          })
-        ),
-        // A Residente is not an Administrador.
-        Effect.result(
-          confect
-            .withIdentity(TestFixtures.identityOf('residentA'))
-            .mutation(refs.public.memberships.invite, {
-              membershipId: world.residentA,
-              email: 'friend@example.test',
-              role: 'porter',
+      const denials = yield* Effect.all(
+        [
+          // Someone else's Membresía, even an Administrador's.
+          Effect.result(
+            adminB.query(refs.public.memberships.listForUnit, {
+              membershipId: world.adminA,
             })
-        ),
-        // Revoked and pending Membresías grant nothing.
-        Effect.result(
-          confect
-            .withIdentity(TestFixtures.identityOf('revokedA'))
-            .query(refs.public.memberships.listForUnit, {
-              membershipId: world.revokedA,
+          ),
+          // A Residente is not an Administrador.
+          Effect.result(
+            confect
+              .withIdentity(TestFixtures.identityOf('residentA'))
+              .mutation(refs.public.memberships.invite, {
+                membershipId: world.residentA,
+                email: 'friend@example.test',
+                role: 'porter',
+              })
+          ),
+          // Revoked and pending Membresías grant nothing.
+          Effect.result(
+            confect
+              .withIdentity(TestFixtures.identityOf('revokedA'))
+              .query(refs.public.memberships.listForUnit, {
+                membershipId: world.revokedA,
+              })
+          ),
+          Effect.result(
+            confect
+              .withIdentity(TestFixtures.identityOf('pendingA'))
+              .query(refs.public.memberships.listForUnit, {
+                membershipId: world.pendingA,
+              })
+          ),
+          // Revoking across units reveals nothing either.
+          Effect.result(
+            adminB.mutation(refs.public.memberships.revoke, {
+              membershipId: world.adminA,
+              targetMembershipId: world.residentA,
             })
-        ),
-        Effect.result(
-          confect
-            .withIdentity(TestFixtures.identityOf('pendingA'))
-            .query(refs.public.memberships.listForUnit, {
-              membershipId: world.pendingA,
-            })
-        ),
-        // Revoking across units reveals nothing either.
-        Effect.result(
-          adminB.mutation(refs.public.memberships.revoke, {
-            membershipId: world.adminA,
-            targetMembershipId: world.residentA,
-          })
-        ),
-      ]);
+          ),
+        ],
+        { concurrency: 'unbounded' }
+      );
 
       for (const denial of denials)
         EffectVitestUtils.assertFailure<unknown, unknown>(denial, accessDenied);
@@ -482,20 +497,23 @@ describe('memberships', () => {
 
       EffectVitestUtils.deepStrictEqual(residentAccess.memberships, []);
 
-      const [ownRevocation, otherUnitRevocation] = yield* Effect.all([
-        Effect.result(
-          adminA.mutation(refs.public.memberships.revoke, {
-            membershipId: world.adminA,
-            targetMembershipId: world.adminA,
-          })
-        ),
-        Effect.result(
-          adminA.mutation(refs.public.memberships.revoke, {
-            membershipId: world.adminA,
-            targetMembershipId: world.adminB,
-          })
-        ),
-      ]);
+      const [ownRevocation, otherUnitRevocation] = yield* Effect.all(
+        [
+          Effect.result(
+            adminA.mutation(refs.public.memberships.revoke, {
+              membershipId: world.adminA,
+              targetMembershipId: world.adminA,
+            })
+          ),
+          Effect.result(
+            adminA.mutation(refs.public.memberships.revoke, {
+              membershipId: world.adminA,
+              targetMembershipId: world.adminB,
+            })
+          ),
+        ],
+        { concurrency: 'unbounded' }
+      );
 
       EffectVitestUtils.assertFailure(
         ownRevocation,

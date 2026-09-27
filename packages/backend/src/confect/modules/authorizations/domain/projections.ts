@@ -1,7 +1,10 @@
-import type { PassesDoc } from '../../../_generated/docs';
 import type { PassSummary } from './models';
 
-export function toPassSummary(pass: PassesDoc): PassSummary {
+/**
+ * Projects a loaded Pase, or the fields of one just written, onto its
+ * summary, dropping every other field.
+ */
+export function toPassSummary(pass: PassSummary): PassSummary {
   return {
     _id: pass._id,
     token: pass.token,

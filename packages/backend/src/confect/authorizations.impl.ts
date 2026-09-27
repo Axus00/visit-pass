@@ -108,14 +108,14 @@ const createImpl = FunctionImpl.make(
             })
             .pipe(Effect.orDie);
 
-          return {
+          return Authorizations.toPassSummary({
             _id: passId,
             token,
             visitorName: visitor.name,
             visitorDocument: visitor.document,
             status: 'active',
             entryCount: 0,
-          } satisfies Authorizations.PassSummary;
+          });
         })
       );
 
@@ -386,14 +386,14 @@ const regeneratePassImpl = FunctionImpl.make(
         })
         .pipe(Effect.orDie);
 
-      return {
+      return Authorizations.toPassSummary({
         _id: replacementId,
         token,
         visitorName: pass.visitorName,
         visitorDocument: pass.visitorDocument,
         status: 'active',
         entryCount: 0,
-      } satisfies Authorizations.PassSummary;
+      });
     })
 );
 

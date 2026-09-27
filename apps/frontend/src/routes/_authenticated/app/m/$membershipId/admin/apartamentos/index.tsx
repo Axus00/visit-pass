@@ -28,12 +28,6 @@ export const Route = createFileRoute(
   component: AdminApartmentsPage,
 });
 
-type Tower = {
-  readonly name: string;
-  readonly apartments: ReadonlyArray<AdminRouteFeat.ApartmentSummary>;
-  readonly residentCount: number;
-};
-
 /** `1 Torre`, `2 Torres`: Spanish plurals of the counts on this page. */
 function countOf(count: number, singular: string, plural: string) {
   return count === 1 ? `1 ${singular}` : `${count} ${plural}`;
@@ -41,28 +35,6 @@ function countOf(count: number, singular: string, plural: string) {
 
 const APARTMENT_WORDS = ['Apartamento', 'Apartamentos'] as const;
 const RESIDENT_WORDS = ['Residente activo', 'Residentes activos'] as const;
-
-/** Groups the backend's tower-then-number order into one entry per Torre. */
-function groupByTower(
-  apartments: ReadonlyArray<AdminRouteFeat.ApartmentSummary>
-): ReadonlyArray<Tower> {
-  const towers = new Map<string, Array<AdminRouteFeat.ApartmentSummary>>();
-
-  for (const apartment of apartments)
-    towers.set(apartment.tower, [
-      ...(towers.get(apartment.tower) ?? []),
-      apartment,
-    ]);
-
-  return [...towers].map(([name, towerApartments]) => ({
-    name,
-    apartments: towerApartments,
-    residentCount: towerApartments.reduce(
-      (total, apartment) => total + apartment.activeResidentCount,
-      0
-    ),
-  }));
-}
 
 /** The unit's Apartamentos by Torre, with how many active Residentes each has. */
 function AdminApartmentsPage() {
@@ -112,7 +84,26 @@ function AdminApartmentsPage() {
               />
             );
 
-          const towers = groupByTower(value);
+          // The backend sends tower-then-number order; one entry per Torre.
+          const apartmentsByTower = new Map<
+            string,
+            Array<AdminRouteFeat.ApartmentSummary>
+          >();
+          for (const apartment of value)
+            apartmentsByTower.set(apartment.tower, [
+              ...(apartmentsByTower.get(apartment.tower) ?? []),
+              apartment,
+            ]);
+          const towers = [...apartmentsByTower].map(
+            ([name, towerApartments]) => ({
+              name,
+              apartments: towerApartments,
+              residentCount: towerApartments.reduce(
+                (total, apartment) => total + apartment.activeResidentCount,
+                0
+              ),
+            })
+          );
           const residentCount = towers.reduce(
             (total, tower) => total + tower.residentCount,
             0

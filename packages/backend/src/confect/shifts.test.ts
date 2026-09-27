@@ -499,6 +499,68 @@ describe('shifts', () => {
       }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect(
+    'lists a Turno planned long ago and closed just now among the latest closed',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const adminA = yield* PorteriaFixtures.as('adminA');
+        const porterA = yield* PorteriaFixtures.as('porterA');
+        const now = PorteriaFixtures.wallClockMillis();
+
+        const plannedLongAgo = yield* adminA.mutation(shifts.schedule, {
+          membershipId: world.adminA,
+          porterMembershipId: world.porterA,
+          plannedStart: now - MILLIS_PER_HOUR,
+          plannedEnd: now + 7 * MILLIS_PER_HOUR,
+        });
+
+        // Created after it, but all ended before it.
+        yield* confect.run(
+          Effect.forEach(
+            Array.from({ length: 40 }, (_, index) => index + 1),
+            (hoursAgo) =>
+              Effect.gen(function* () {
+                const writer = yield* DatabaseWriter;
+
+                yield* writer.table('shifts').insert({
+                  residentialUnitId: world.unitA,
+                  porterMembershipId: world.porterA2,
+                  status: 'closed',
+                  startedAt: now - (hoursAgo + 8) * MILLIS_PER_HOUR,
+                  endedAt: now - hoursAgo * MILLIS_PER_HOUR,
+                });
+              }),
+            { discard: true }
+          ).pipe(Effect.orDie)
+        );
+
+        yield* porterA.mutation(shifts.start, {
+          membershipId: world.porterA,
+          shiftId: plannedLongAgo,
+        });
+        yield* porterA.mutation(shifts.end, {
+          membershipId: world.porterA,
+          shiftId: plannedLongAgo,
+        });
+
+        const listed = yield* adminA.query(shifts.listForUnit, {
+          membershipId: world.adminA,
+          now,
+        });
+        const closed = listed.filter((shift) => shift.status === 'closed');
+
+        EffectVitestUtils.strictEqual(closed[0]?._id, plannedLongAgo);
+        EffectVitestUtils.deepStrictEqual(
+          closed.map((shift) => shift.endedAt),
+          closed
+            .map((shift) => shift.endedAt)
+            .toSorted((a, b) => (b ?? 0) - (a ?? 0))
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('keeps Porteros and Administradores to their own functions', () =>
     Effect.gen(function* () {
       const world = yield* PorteriaFixtures.seedPorteria;

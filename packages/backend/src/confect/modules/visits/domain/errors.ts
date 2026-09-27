@@ -21,3 +21,9 @@ export class VisitAlreadyExitedError extends Schema.TaggedError<VisitAlreadyExit
   'Visits/VisitAlreadyExitedError',
   {}
 ) {}
+
+/** The Pase carries no document and the Portero did not complete it at the Ingreso. */
+export class VisitorDocumentRequiredError extends Schema.TaggedError<VisitorDocumentRequiredError>()(
+  'Visits/VisitorDocumentRequiredError',
+  {}
+) {}

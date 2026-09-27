@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
 
 import * as Predicate from 'effect/Predicate';
 import {
@@ -70,9 +70,13 @@ export function AuthorizeVisitCard({
   const relationshipId = useId();
   const weekdaysLabelId = useId();
   const today = VisitPass.todayIn(timeZone);
+  // The type a reset keeps. It feeds `defaultValues` too, because TanStack Form
+  // re-applies changed `defaultValues` to an untouched form on every render.
+  const [defaultType, setDefaultType] =
+    useState<VisitPass.VisitType>('temporary');
 
   const form = Forms.useAppForm({
-    defaultValues: defaultAuthorizeFormValues(today),
+    defaultValues: defaultAuthorizeFormValues(today, defaultType),
     ...authorizeFormValidation(() => VisitPass.todayIn(timeZone)),
     onSubmit: async ({ value, formApi }) => {
       const visitorName = value.visitorName.trim();
@@ -111,6 +115,7 @@ export function AuthorizeVisitCard({
 
       if (Predicate.isNull(shared)) return;
 
+      setDefaultType(value.type);
       formApi.reset(
         defaultAuthorizeFormValues(VisitPass.todayIn(timeZone), value.type)
       );
@@ -444,14 +449,13 @@ export function AuthorizeVisitCard({
               type="button"
               variant="outline"
               size="lg"
-              onClick={() =>
+              onClick={() => {
+                const type = form.state.values.type;
+                setDefaultType(type);
                 form.reset(
-                  defaultAuthorizeFormValues(
-                    VisitPass.todayIn(timeZone),
-                    form.state.values.type
-                  )
-                )
-              }
+                  defaultAuthorizeFormValues(VisitPass.todayIn(timeZone), type)
+                );
+              }}
             >
               Limpiar
             </Button>

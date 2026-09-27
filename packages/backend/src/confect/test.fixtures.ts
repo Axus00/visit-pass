@@ -75,10 +75,10 @@ export const seedTwoUnits = Effect.gen(function* () {
     Effect.gen(function* () {
       const writer = yield* DatabaseWriter;
 
-      const [unitA, unitB] = yield* Effect.all([
-        insertUnit('Unidad A'),
-        insertUnit('Unidad B'),
-      ]);
+      const [unitA, unitB] = yield* Effect.all(
+        [insertUnit('Unidad A'), insertUnit('Unidad B')],
+        { concurrency: 'unbounded' }
+      );
 
       const apartment = (
         residentialUnitId: typeof unitA,

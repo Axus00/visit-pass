@@ -343,10 +343,13 @@ describe('users', () => {
           { email: 'renamed@example.test', status: 'active' }
         );
 
-        const [oldEmailInvitation, newEmailInvitation] = yield* Effect.all([
-          invitePorter(userEmail),
-          Effect.result(invitePorter('renamed@example.test')),
-        ]);
+        const [oldEmailInvitation, newEmailInvitation] = yield* Effect.all(
+          [
+            invitePorter(userEmail),
+            Effect.result(invitePorter('renamed@example.test')),
+          ],
+          { concurrency: 'unbounded' }
+        );
 
         const membersAfterInvite = yield* admin.query(
           refs.public.memberships.listForUnit,

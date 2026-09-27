@@ -43,6 +43,7 @@ export default GroupSpec.make()
           MembershipsDomain.AccessDeniedError,
           ShiftsDomain.NoOpenShiftError,
           VisitsDomain.PassRejectedError,
+          VisitsDomain.VisitorDocumentRequiredError,
         ]),
     }).middleware(RequireUserIdentity)
   )

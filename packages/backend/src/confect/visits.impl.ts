@@ -99,14 +99,18 @@ const registerPassEntryImpl = FunctionImpl.make(
           reason: admission.reason,
         });
 
+      // The Pase's own document wins; the Portero completes a missing one.
+      const visitorDocument = pass.visitorDocument ?? args.visitorDocument;
+      if (Predicate.isUndefined(visitorDocument))
+        return yield* new Visits.VisitorDocumentRequiredError();
+
       const visitId = yield* writer
         .table('visits')
         .insert({
           residentialUnitId: membership.residentialUnitId,
           apartmentId: pass.apartmentId,
           visitorName: pass.visitorName,
-          // The Pase's own document wins; the Portero completes a missing one.
-          visitorDocument: pass.visitorDocument ?? args.visitorDocument,
+          visitorDocument,
           plate: args.plate,
           visitType: authorization.type,
           origin: 'pass',

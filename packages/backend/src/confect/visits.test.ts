@@ -206,7 +206,10 @@ describe('visits', () => {
       const created = yield* authorizeInA(world, {
         type: 'event',
         eventName: 'Cumpleaños',
-        visitors: [{ name: 'Ana' }, { name: 'Luis' }],
+        visitors: [
+          { name: 'Ana', document: '11112222' },
+          { name: 'Luis', document: '33334444' },
+        ],
       });
 
       yield* porterA.mutation(visits.registerPassEntry, {
@@ -585,7 +588,7 @@ describe('visits', () => {
 
       const created = yield* authorizeInA(world, {
         type: 'temporary',
-        visitors: [{ name: 'Ana' }],
+        visitors: [{ name: 'Ana', document: '11112222' }],
       });
       const replacement = yield* residentA.mutation(
         authorizations.regeneratePass,
@@ -740,6 +743,52 @@ describe('visits', () => {
     }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect(
+    'refuses the Ingreso of a Pase without document until the Portero completes it',
+    () =>
+      Effect.gen(function* () {
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const porterA = yield* PorteriaFixtures.as('porterA');
+        yield* openShiftForPorterA(world);
+
+        const created = yield* authorizeInA(world, {
+          type: 'temporary',
+          visitors: [{ name: 'Ana' }],
+        });
+
+        const withoutDocument = yield* Effect.result(
+          porterA.mutation(visits.registerPassEntry, {
+            membershipId: world.porterA,
+            token: tokenOf(created, 0),
+          })
+        );
+        EffectVitestUtils.assertFailure(
+          withoutDocument,
+          new Visits.VisitorDocumentRequiredError()
+        );
+
+        const insideBefore = yield* porterA.query(visits.listInside, {
+          membershipId: world.porterA,
+        });
+        EffectVitestUtils.deepStrictEqual(insideBefore, []);
+
+        // The refused attempt did not use up the single-entry Pase.
+        yield* porterA.mutation(visits.registerPassEntry, {
+          membershipId: world.porterA,
+          token: tokenOf(created, 0),
+          visitorDocument: '55556666',
+        });
+
+        const inside = yield* porterA.query(visits.listInside, {
+          membershipId: world.porterA,
+        });
+        EffectVitestUtils.deepStrictEqual(
+          inside.map((visit) => [visit.visitorName, visit.visitorDocument]),
+          [['Ana', '55556666']]
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('voids a mistaken Visita once and frees its Temporal Pase', () =>
     Effect.gen(function* () {
       const world = yield* PorteriaFixtures.seedPorteria;
@@ -750,7 +799,7 @@ describe('visits', () => {
 
       const created = yield* authorizeInA(world, {
         type: 'temporary',
-        visitors: [{ name: 'Ana' }],
+        visitors: [{ name: 'Ana', document: '11112222' }],
       });
       const visitId = yield* porterA.mutation(visits.registerPassEntry, {
         membershipId: world.porterA,

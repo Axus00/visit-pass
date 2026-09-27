@@ -21,6 +21,8 @@ const MESSAGES_BY_TAG: Record<string, string> = {
   'Visits/VisitNotFoundError': 'La Visita no existe.',
   'Visits/VisitAlreadyExitedError': 'La Salida ya estaba registrada.',
   'Visits/VisitAlreadyVoidedError': 'La Visita ya estaba anulada.',
+  'Visits/VisitorDocumentRequiredError':
+    'Completa el documento de identidad del Visitante antes de registrar el Ingreso.',
   'Shifts/NoOpenShiftError': 'Inicia tu Turno antes de registrar Ingresos.',
   'Shifts/ShiftAlreadyOpenError': 'Ya tienes un Turno abierto.',
   'Shifts/ShiftNotFoundError': 'El Turno no existe.',

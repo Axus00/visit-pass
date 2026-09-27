@@ -80,7 +80,7 @@ const getOverviewImpl = FunctionImpl.make(
           membershipsWithRole('administrator'),
           reader
             .table('shifts')
-            .index('by_residentialUnitId_and_status', (q) =>
+            .index('by_residentialUnitId_and_status_and_startedAt', (q) =>
               q.eq('residentialUnitId', residentialUnitId).eq('status', 'open')
             )
             .take(OPEN_SHIFTS_LIMIT),

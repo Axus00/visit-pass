@@ -537,10 +537,13 @@ describe('shiftReports', () => {
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;
       const world = yield* seedWorld;
-      const [emailFailedId, nothingStoredId] = yield* Effect.all([
-        seedGeneratingReport(world, 'pending'),
-        seedGeneratingReport(world, 'notRequested'),
-      ]);
+      const [emailFailedId, nothingStoredId] = yield* Effect.all(
+        [
+          seedGeneratingReport(world, 'pending'),
+          seedGeneratingReport(world, 'notRequested'),
+        ],
+        { concurrency: 'unbounded' }
+      );
 
       const fileId = yield* confect.action(
         refs.internal.shiftReports.generateFile,

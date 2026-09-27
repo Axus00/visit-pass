@@ -414,12 +414,15 @@ describe('authorizations', () => {
       );
       EffectVitestUtils.assertTrue(regenerated.token !== pass.token);
 
-      const [oldLink, newLink] = yield* Effect.all([
-        confect.query(authorizations.getPublicPass, { token: pass.token }),
-        confect.query(authorizations.getPublicPass, {
-          token: regenerated.token,
-        }),
-      ]);
+      const [oldLink, newLink] = yield* Effect.all(
+        [
+          confect.query(authorizations.getPublicPass, { token: pass.token }),
+          confect.query(authorizations.getPublicPass, {
+            token: regenerated.token,
+          }),
+        ],
+        { concurrency: 'unbounded' }
+      );
       EffectVitestUtils.strictEqual(oldLink?.status, 'replaced');
       EffectVitestUtils.strictEqual(newLink?.status, 'active');
       EffectVitestUtils.strictEqual(newLink?.visitorName, 'Ana');
@@ -509,14 +512,17 @@ describe('authorizations', () => {
           authorizationId: created.authorizationId,
         });
 
-        const [newLink, lastGuestLink] = yield* Effect.all([
-          confect.query(authorizations.getPublicPass, {
-            token: regenerated.token,
-          }),
-          confect.query(authorizations.getPublicPass, {
-            token: created.passes.at(-1)?.token ?? '',
-          }),
-        ]);
+        const [newLink, lastGuestLink] = yield* Effect.all(
+          [
+            confect.query(authorizations.getPublicPass, {
+              token: regenerated.token,
+            }),
+            confect.query(authorizations.getPublicPass, {
+              token: created.passes.at(-1)?.token ?? '',
+            }),
+          ],
+          { concurrency: 'unbounded' }
+        );
         EffectVitestUtils.strictEqual(newLink?.status, 'cancelled');
         EffectVitestUtils.strictEqual(lastGuestLink?.status, 'cancelled');
       }).pipe(Effect.provide(TestConfect.layer))

@@ -12,7 +12,16 @@ export default Table.make(() => ShiftsDomain.ShiftsTableSchema)
     'porterMembershipId',
     'startedAt',
   ])
-  .index('by_residentialUnitId_and_status', ['residentialUnitId', 'status'])
+  .index('by_residentialUnitId_and_status_and_startedAt', [
+    'residentialUnitId',
+    'status',
+    'startedAt',
+  ])
+  .index('by_residentialUnitId_and_status_and_endedAt', [
+    'residentialUnitId',
+    'status',
+    'endedAt',
+  ])
   .index('by_residentialUnitId_and_status_and_plannedEnd', [
     'residentialUnitId',
     'status',
