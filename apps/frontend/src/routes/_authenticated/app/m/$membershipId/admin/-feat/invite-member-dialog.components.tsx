@@ -94,10 +94,9 @@ export function InviteMemberDialog({
       }
 
       toast.success(
-        `Invitaste a ${email} como ${VisitPass.ROLE_LABELS[value.role]}`,
+        `Invitación creada: se activará cuando ${email} inicie sesión.`,
         {
-          description:
-            'Aún no enviamos correos: comparte el enlace de la app. La Membresía se activa cuando esa persona inicie sesión con este correo.',
+          description: `${VisitPass.ROLE_LABELS[value.role]}. Aún no enviamos correos: comparte el enlace de la app.`,
           action: { label: 'Copiar enlace', onClick: () => void copyAppLink() },
           duration: 10_000,
         }
@@ -117,7 +116,7 @@ export function InviteMemberDialog({
       open={open}
       onOpenChange={(next) => (next ? onOpenChange(true) : close())}
       title="Invitar persona"
-      description="Registra el correo con el que la persona iniciará sesión. Si ya tiene cuenta, su Membresía queda activa de inmediato."
+      description="Registra el correo con el que la persona iniciará sesión. La invitación queda pendiente hasta que inicie sesión con ese correo, aunque ya tenga cuenta."
       onSubmit={() => void form.handleSubmit()}
       actions={
         <>

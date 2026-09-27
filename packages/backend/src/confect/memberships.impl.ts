@@ -182,11 +182,17 @@ const listForUnitImpl = FunctionImpl.make(
         [...administrators, ...porters, ...residents],
         (member) =>
           Effect.gen(function* () {
-            const user = Predicate.isUndefined(member.userId)
-              ? null
-              : yield* Users.getOneById(member.userId);
+            // A pending invitation shows only what the Administrador typed, so
+            // it never reveals whether the email has an account.
+            const isLinked =
+              member.status !== 'pending' &&
+              Predicate.isNotUndefined(member.userId);
 
-            // The signed-in Usuario's name, else the name the Administrador typed.
+            const user = isLinked
+              ? yield* Users.getOneById(member.userId)
+              : null;
+
+            // The linked Usuario's name, else the name the Administrador typed.
             const userName = Predicate.isNull(user)
               ? ''
               : [user.firstName, user.lastName]

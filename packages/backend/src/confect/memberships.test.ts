@@ -153,31 +153,67 @@ describe('memberships', () => {
       }).pipe(Effect.provide(TestConfect.layer))
   );
 
-  it.effect('activates at once an invitation to an existing Usuario', () =>
-    Effect.gen(function* () {
-      const confect = yield* TestConfect.TestConfect;
-      const world = yield* TestFixtures.seedTwoUnits;
+  it.effect(
+    'keeps an invitation to an existing Usuario pending and anonymous until they activate it',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* TestFixtures.seedTwoUnits;
+        const admin = confect.withIdentity(TestFixtures.identityOf('adminA'));
+        const outsider = confect.withIdentity(
+          TestFixtures.identityOf('outsider')
+        );
 
-      const invitedId = yield* confect
-        .withIdentity(TestFixtures.identityOf('adminA'))
-        .mutation(refs.public.memberships.invite, {
-          membershipId: world.adminA,
-          email: 'OUTSIDER@example.test',
-          role: 'porter',
-        });
+        const invitedId = yield* admin.mutation(
+          refs.public.memberships.invite,
+          {
+            membershipId: world.adminA,
+            email: 'OUTSIDER@example.test',
+            displayName: 'Portero Invitado',
+            role: 'porter',
+          }
+        );
 
-      const access = yield* confect
-        .withIdentity(TestFixtures.identityOf('outsider'))
-        .query(refs.public.memberships.listMine, {});
+        const invitedMember = Effect.map(
+          admin.query(refs.public.memberships.listForUnit, {
+            membershipId: world.adminA,
+          }),
+          (members) => members.find(({ _id }) => _id === invitedId)
+        );
 
-      EffectVitestUtils.deepStrictEqual(
-        access.memberships.map(({ membershipId, role }) => ({
-          membershipId,
-          role,
-        })),
-        [{ membershipId: invitedId, role: 'porter' }]
-      );
-    }).pipe(Effect.provide(TestConfect.layer))
+        // Nothing tells the Administrador that the email has an account.
+        const [pendingMember, pendingAccess] = yield* Effect.all(
+          [invitedMember, outsider.query(refs.public.memberships.listMine, {})],
+          { concurrency: 'unbounded' }
+        );
+        EffectVitestUtils.deepStrictEqual(
+          { status: pendingMember?.status, name: pendingMember?.name },
+          { status: 'pending', name: 'Portero Invitado' }
+        );
+        EffectVitestUtils.deepStrictEqual(pendingAccess.memberships, []);
+
+        const activated = yield* outsider.mutation(
+          refs.public.memberships.activatePending,
+          {}
+        );
+        EffectVitestUtils.strictEqual(activated, 1);
+
+        const [activeMember, access] = yield* Effect.all(
+          [invitedMember, outsider.query(refs.public.memberships.listMine, {})],
+          { concurrency: 'unbounded' }
+        );
+        EffectVitestUtils.deepStrictEqual(
+          { status: activeMember?.status, name: activeMember?.name },
+          { status: 'active', name: 'outsider Test' }
+        );
+        EffectVitestUtils.deepStrictEqual(
+          access.memberships.map(({ membershipId, role }) => ({
+            membershipId,
+            role,
+          })),
+          [{ membershipId: invitedId, role: 'porter' }]
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
   );
 
   it.effect('rejects invitations that break the Rol rules', () =>
@@ -270,7 +306,7 @@ describe('memberships', () => {
         const admin = confect.withIdentity(TestFixtures.identityOf('adminA'));
         const porter = confect.withIdentity(TestFixtures.identityOf('porterA'));
 
-        // Invited while no Usuario holds the new email, so it waits pending.
+        // Invited before the Usuario takes the new email.
         const pendingId = yield* admin.mutation(
           refs.public.memberships.invite,
           {
@@ -348,6 +384,8 @@ describe('memberships', () => {
             email: 'porter.new@example.test',
           })
         );
+
+        yield* porter.mutation(refs.public.memberships.activatePending, {});
 
         const accessAfterInvite = yield* porter.query(
           refs.public.memberships.listMine,

@@ -2,7 +2,6 @@ import { FunctionImpl, GroupImpl } from '@confect/server';
 import * as Clock from 'effect/Clock';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
-import * as Option from 'effect/Option';
 import * as Predicate from 'effect/Predicate';
 
 import type { Id } from '#convex/_generated/dataModel';
@@ -14,6 +13,7 @@ import * as Calendar from './modules/calendar';
 import * as CommonEmailAddresses from './modules/commonEmailAddresses';
 import * as Memberships from './modules/memberships';
 import * as ResidentialUnits from './modules/residentialUnits';
+import * as Users from './modules/users';
 import residentialUnitsSpec from './residentialUnits.spec';
 
 // Convex has no count operator. These bounds keep every read inside one
@@ -234,38 +234,47 @@ const createApartmentsImpl = FunctionImpl.make(
         ['administrator']
       );
 
-      const createdFlags = yield* Effect.forEach(
-        [...new Set(args.numbers)],
-        (number) =>
-          Effect.gen(function* () {
-            const existing = yield* reader
-              .table('apartments')
-              .index('by_residentialUnitId_and_tower_and_number', (q) =>
-                q
-                  .eq('residentialUnitId', membership.residentialUnitId)
-                  .eq('tower', args.tower)
-                  .eq('number', number)
-              )
-              .first()
-              .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
+      // One past the limit, so a unit already over it is still caught.
+      const existingApartments = yield* reader
+        .table('apartments')
+        .index('by_residentialUnitId_and_tower_and_number', (q) =>
+          q.eq('residentialUnitId', membership.residentialUnitId)
+        )
+        .take(APARTMENTS_PER_UNIT_LIMIT + 1)
+        .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
 
-            if (Option.isSome(existing)) return false;
-
-            yield* writer
-              .table('apartments')
-              .insert({
-                residentialUnitId: membership.residentialUnitId,
-                tower: args.tower,
-                number,
-              })
-              .pipe(Effect.catchTag('DocumentEncodeError', Effect.die));
-
-            return true;
-          }),
-        { concurrency: 'unbounded' }
+      const existingTowerNumbers = new Set(
+        existingApartments
+          .filter((apartment) => apartment.tower === args.tower)
+          .map((apartment) => apartment.number)
+      );
+      const newNumbers = [...new Set(args.numbers)].filter(
+        (number) => !existingTowerNumbers.has(number)
       );
 
-      return createdFlags.filter(Boolean).length;
+      const wouldExceedLimit =
+        existingApartments.length + newNumbers.length >
+        APARTMENTS_PER_UNIT_LIMIT;
+      if (wouldExceedLimit)
+        return yield* new ResidentialUnits.ApartmentLimitReachedError({
+          limit: APARTMENTS_PER_UNIT_LIMIT,
+        });
+
+      yield* Effect.forEach(
+        newNumbers,
+        (number) =>
+          writer
+            .table('apartments')
+            .insert({
+              residentialUnitId: membership.residentialUnitId,
+              tower: args.tower,
+              number,
+            })
+            .pipe(Effect.catchTag('DocumentEncodeError', Effect.die)),
+        { concurrency: 'unbounded', discard: true }
+      );
+
+      return newNumbers.length;
     })
 );
 
@@ -336,15 +345,38 @@ const listAllImpl = FunctionImpl.make(
               { concurrency: 'unbounded' }
             ).pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
 
+            const administratorSummaries = yield* Effect.forEach(
+              administrators.filter(
+                (administrator) => administrator.status !== 'revoked'
+              ),
+              (administrator) =>
+                Effect.gen(function* () {
+                  // An active Administrador may have changed email since the invitation.
+                  const isActiveAndLinked =
+                    administrator.status === 'active' &&
+                    Predicate.isNotUndefined(administrator.userId);
+
+                  const user = isActiveAndLinked
+                    ? yield* Users.getOneById(administrator.userId).pipe(
+                        Users.isActiveOrNull
+                      )
+                    : null;
+
+                  return {
+                    email: user?.email ?? administrator.email,
+                    status: administrator.status,
+                  };
+                }),
+              { concurrency: 'unbounded' }
+            );
+
             return {
               _id: unit._id,
               name: unit.name,
               city: unit.city,
               timeZone: unit.timeZone,
               visitRetentionMonths: unit.visitRetentionMonths,
-              administratorEmails: administrators
-                .filter((administrator) => administrator.status !== 'revoked')
-                .map((administrator) => administrator.email),
+              administrators: administratorSummaries,
               apartmentCount: apartments.length,
             };
           }),
@@ -394,8 +426,8 @@ const createImpl = FunctionImpl.make(
 );
 
 /**
- * Same invitation as `create`: active at once when the Usuario already signed
- * in, else pending until they do.
+ * Same invitation as `create`: pending until the invited Usuario activates it
+ * from their own session, even if they already have an account.
  */
 const inviteAdministratorImpl = FunctionImpl.make(
   databaseSchema,

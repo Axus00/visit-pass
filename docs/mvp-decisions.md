@@ -7,7 +7,7 @@ Decisiones tomadas para construir el MVP completo mientras los tickets de decisi
 - Todo vive en Convex; WorkOS solo autentica. Ver [ADR 0006](adr/0006-own-residential-units-and-memberships-in-convex.md), que difiere el modelo con WorkOS Organizations.
 - Apartamento = torre + número (texto libre, p. ej. `Torre 2 · 402`). Sin interior ni bloque.
 - Una Membresía tiene un solo Rol. Una persona con dos Roles en la misma unidad tiene dos Membresías; un Residente de dos Apartamentos, también.
-- Alta por correo: la Membresía queda `pending` y se activa cuando alguien inicia sesión con ese correo (o de inmediato si la cuenta ya existe). Si inicia sesión con otro correo, no ve nada y la pantalla le pide pedir la invitación con su correo. Aún no se envía correo (depende de #16).
+- Alta por correo: la Membresía queda `pending` y se activa solo cuando la persona con ese correo inicia sesión (o la sincroniza WorkOS), aunque la cuenta ya exista; así una invitación no revela si un correo tiene cuenta ni abre un panel que nadie aceptó. Mientras esté pendiente, el Administrador solo ve el correo y el nombre que escribió. Si inicia sesión con otro correo, no ve nada y la pantalla le pide pedir la invitación con su correo. Aún no se envía correo (depende de #16).
 - Revocar conserva la fila (`revoked`); las Autorizaciones del Apartamento siguen, porque pertenecen al Apartamento. Un Administrador no puede revocarse a sí mismo.
 - Aislamiento: toda función de una unidad recibe `membershipId` y pasa por `requireMembership`; hay tests negativos entre unidades.
 

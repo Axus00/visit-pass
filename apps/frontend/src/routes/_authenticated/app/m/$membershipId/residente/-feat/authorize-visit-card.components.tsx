@@ -87,7 +87,8 @@ export function AuthorizeVisitCard({
       const canReuseSavedFavorite =
         Predicate.isNotNull(savedFavorite) &&
         savedFavorite.visitorName === visitorName &&
-        savedFavorite.visitorDocument === visitorDocument;
+        savedFavorite.visitorDocument === visitorDocument &&
+        savedFavorite.relationship === value.favoriteRelationship;
 
       const favoriteId = await (async () => {
         if (!shouldSaveFavorite) return undefined;
@@ -102,7 +103,12 @@ export function AuthorizeVisitCard({
 
         formApi.setFieldValue(
           'savedFavorite',
-          { id: createdId, visitorName, visitorDocument },
+          {
+            id: createdId,
+            visitorName,
+            visitorDocument,
+            relationship: value.favoriteRelationship,
+          },
           { dontUpdateMeta: true, dontValidate: true }
         );
         return createdId;

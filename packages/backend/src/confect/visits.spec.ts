@@ -121,7 +121,10 @@ export default GroupSpec.make()
     }).middleware(RequireUserIdentity)
   )
   .addFunction(
-    /** Residente: the Apartamento's latest Visitas, documents masked. */
+    /**
+     * Residente: the Apartamento's latest Visitas, documents masked and
+     * without the entry Portero.
+     */
     FunctionSpec.publicQuery({
       name: 'listForApartment',
       args: () => ({ membershipId: Id('memberships') }),

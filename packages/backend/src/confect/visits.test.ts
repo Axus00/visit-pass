@@ -539,56 +539,66 @@ describe('visits', () => {
     }).pipe(Effect.provide(TestConfect.layer))
   );
 
-  it.effect('shows Residentes only their Apartamento, documents masked', () =>
-    Effect.gen(function* () {
-      const world = yield* PorteriaFixtures.seedPorteria;
-      const porterA = yield* PorteriaFixtures.as('porterA');
-      const coResidentA = yield* PorteriaFixtures.as('coResidentA');
-      const residentA102 = yield* PorteriaFixtures.as('residentA102');
-      const adminA = yield* PorteriaFixtures.as('adminA');
-      yield* openShiftForPorterA(world);
+  it.effect(
+    'shows Residentes only their Apartamento, documents masked and no Portero',
+    () =>
+      Effect.gen(function* () {
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const porterA = yield* PorteriaFixtures.as('porterA');
+        const coResidentA = yield* PorteriaFixtures.as('coResidentA');
+        const residentA102 = yield* PorteriaFixtures.as('residentA102');
+        const adminA = yield* PorteriaFixtures.as('adminA');
+        yield* openShiftForPorterA(world);
 
-      yield* porterA.mutation(visits.registerManualEntry, {
-        membershipId: world.porterA,
-        visitorName: 'Luis',
-        visitorDocument: '1012345678',
-        apartmentId: world.apartmentA101,
-        visitType: 'service',
-      });
+        yield* porterA.mutation(visits.registerManualEntry, {
+          membershipId: world.porterA,
+          visitorName: 'Luis',
+          visitorDocument: '1012345678',
+          apartmentId: world.apartmentA101,
+          visitType: 'service',
+        });
 
-      const forApartment = yield* coResidentA.query(visits.listForApartment, {
-        membershipId: world.coResidentA,
-      });
-      EffectVitestUtils.strictEqual(forApartment.length, 1);
-      EffectVitestUtils.strictEqual(
-        forApartment[0]?.visitorDocument,
-        '••••5678'
-      );
-
-      const otherApartment = yield* residentA102.query(
-        visits.listForApartment,
-        { membershipId: world.residentA102 }
-      );
-      EffectVitestUtils.strictEqual(otherApartment.length, 0);
-
-      const forAdministrator = yield* adminA.query(visits.listRecentForUnit, {
-        membershipId: world.adminA,
-      });
-      EffectVitestUtils.strictEqual(
-        forAdministrator[0]?.visitorDocument,
-        '1012345678'
-      );
-
-      const residentReadsUnit = yield* Effect.result(
-        coResidentA.query(visits.listInside, {
+        const forApartment = yield* coResidentA.query(visits.listForApartment, {
           membershipId: world.coResidentA,
-        })
-      );
-      EffectVitestUtils.assertFailure(
-        residentReadsUnit,
-        new Memberships.AccessDeniedError()
-      );
-    }).pipe(Effect.provide(TestConfect.layer))
+        });
+        EffectVitestUtils.strictEqual(forApartment.length, 1);
+        EffectVitestUtils.strictEqual(
+          forApartment[0]?.visitorDocument,
+          '••••5678'
+        );
+        EffectVitestUtils.strictEqual(
+          forApartment[0]?.entryPorterName,
+          undefined
+        );
+
+        const otherApartment = yield* residentA102.query(
+          visits.listForApartment,
+          { membershipId: world.residentA102 }
+        );
+        EffectVitestUtils.strictEqual(otherApartment.length, 0);
+
+        const forAdministrator = yield* adminA.query(visits.listRecentForUnit, {
+          membershipId: world.adminA,
+        });
+        EffectVitestUtils.strictEqual(
+          forAdministrator[0]?.visitorDocument,
+          '1012345678'
+        );
+        EffectVitestUtils.strictEqual(
+          forAdministrator[0]?.entryPorterName,
+          'porterA Test'
+        );
+
+        const residentReadsUnit = yield* Effect.result(
+          coResidentA.query(visits.listInside, {
+            membershipId: world.coResidentA,
+          })
+        );
+        EffectVitestUtils.assertFailure(
+          residentReadsUnit,
+          new Memberships.AccessDeniedError()
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
   );
 
   it.effect('never shows a short document whole to Residentes', () =>

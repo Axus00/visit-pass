@@ -641,9 +641,10 @@ describe('shiftReports', () => {
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;
       const world = yield* seedWorld;
-      const [emailFailedId, nothingStoredId] = yield* Effect.all(
+      const [emailFailedId, nothingStoredId, canceledId] = yield* Effect.all(
         [
           seedGeneratingReport(world, 'pending'),
+          seedGeneratingReport(world, 'notRequested'),
           seedGeneratingReport(world, 'notRequested'),
         ],
         { concurrency: 'unbounded' }
@@ -677,6 +678,14 @@ describe('shiftReports', () => {
           context: { shiftReportId: nothingStoredId },
         }
       );
+      yield* confect.mutation(
+        refs.internal.shiftReports.handleShiftReportWorkflowComplete,
+        {
+          workflowId,
+          result: { kind: 'canceled' },
+          context: { shiftReportId: canceledId },
+        }
+      );
 
       const reports = yield* listForShiftAsAdmin(world);
       const summaries = new Map(
@@ -694,19 +703,21 @@ describe('shiftReports', () => {
       EffectVitestUtils.deepStrictEqual(summaries.get(emailFailedId), {
         status: 'ready',
         emailStatus: 'failed',
-        failureMessage: ShiftReports.deriveShiftReportFailureMessage({
-          reason: 'ShiftReports/ShiftReportEmailError',
-          hasFile: true,
-        }),
+        failureMessage:
+          'No se pudo enviar el correo a la administración. Descarga el archivo y compártelo manualmente.',
         hasDownload: true,
       });
       EffectVitestUtils.deepStrictEqual(summaries.get(nothingStoredId), {
         status: 'failed',
         emailStatus: 'notRequested',
-        failureMessage: ShiftReports.deriveShiftReportFailureMessage({
-          reason: 'Workflows/UnknownError',
-          hasFile: false,
-        }),
+        failureMessage:
+          'No se pudo generar el archivo del reporte. Intenta de nuevo.',
+        hasDownload: false,
+      });
+      EffectVitestUtils.deepStrictEqual(summaries.get(canceledId), {
+        status: 'failed',
+        emailStatus: 'notRequested',
+        failureMessage: 'Se canceló la generación del reporte.',
         hasDownload: false,
       });
     }).pipe(Effect.provide(TestConfect.layer))

@@ -369,7 +369,7 @@ const listInsideImpl = FunctionImpl.make(
 
       return yield* Visits.toVisitSummaries(
         visits.filter((visit) => Predicate.isUndefined(visit.voidedAt)),
-        { maskDocuments: false }
+        { forResident: false }
       );
     })
 );
@@ -397,7 +397,7 @@ const listRecentForUnitImpl = FunctionImpl.make(
         .take(LIST_RECENT_FOR_UNIT_LIMIT)
         .pipe(Effect.orDie);
 
-      return yield* Visits.toVisitSummaries(visits, { maskDocuments: false });
+      return yield* Visits.toVisitSummaries(visits, { forResident: false });
     })
 );
 
@@ -423,7 +423,7 @@ const listForApartmentImpl = FunctionImpl.make(
         .take(Visits.APARTMENT_HISTORY_LIMIT)
         .pipe(Effect.orDie);
 
-      return yield* Visits.toVisitSummaries(visits, { maskDocuments: true });
+      return yield* Visits.toVisitSummaries(visits, { forResident: true });
     })
 );
 
@@ -457,7 +457,7 @@ const listForShiftImpl = FunctionImpl.make(
         .take(LIST_FOR_SHIFT_LIMIT)
         .pipe(Effect.orDie);
 
-      return yield* Visits.toVisitSummaries(visits, { maskDocuments: false });
+      return yield* Visits.toVisitSummaries(visits, { forResident: false });
     })
 );
 

@@ -2,7 +2,17 @@ import * as Predicate from 'effect/Predicate';
 
 import { PASS_REJECTION_LABELS } from './labels.constant';
 
-const MESSAGES_BY_TAG: Record<string, string> = {
+type BackendErrorFields = {
+  _tag?: unknown;
+  reason?: unknown;
+  limit?: unknown;
+};
+
+/** Copy per `_tag`; a function reads the error's own fields into the message. */
+const MESSAGES_BY_TAG: Record<
+  string,
+  string | ((error: BackendErrorFields) => string)
+> = {
   'Authentication/NoUserIdentityFoundError':
     'Tu sesión expiró. Vuelve a iniciar sesión.',
   'Memberships/AccessDeniedError':
@@ -13,6 +23,10 @@ const MESSAGES_BY_TAG: Record<string, string> = {
   'Memberships/CannotRevokeOwnMembershipError':
     'No puedes revocar tu propia Membresía.',
   'ResidentialUnits/ApartmentNotFoundError': 'El Apartamento no existe.',
+  'ResidentialUnits/ApartmentLimitReachedError': ({ limit }) =>
+    Predicate.isNumber(limit)
+      ? `La unidad alcanzó el máximo de ${limit} Apartamentos.`
+      : 'La unidad alcanzó el máximo de Apartamentos permitidos.',
   'ResidentialUnits/ResidentialUnitNotFoundError':
     'La Unidad residencial no existe.',
   'ResidentialUnits/NotSuperadminError': 'Solo un Superadmin puede hacer esto.',
@@ -62,14 +76,17 @@ const FALLBACK_MESSAGE = 'Algo salió mal. Inténtalo de nuevo.';
 
 /** Spanish copy for a typed backend error, keyed by its `_tag` and `reason`. */
 export function describeBackendError(error: unknown): string {
-  const tagged = error as { _tag?: unknown; reason?: unknown } | null;
+  const tagged = error as BackendErrorFields | null;
   const reason = typeof tagged?.reason === 'string' ? tagged.reason : null;
   const tag = typeof tagged?._tag === 'string' ? tagged._tag : null;
 
   const reasonMessage = Predicate.isNull(reason)
     ? undefined
     : MESSAGES_BY_REASON[reason];
-  const tagMessage = Predicate.isNull(tag) ? undefined : MESSAGES_BY_TAG[tag];
+  const tagEntry = Predicate.isNull(tag) ? undefined : MESSAGES_BY_TAG[tag];
+  const tagMessage = Predicate.isFunction(tagEntry)
+    ? tagEntry(tagged ?? {})
+    : tagEntry;
 
   return reasonMessage ?? tagMessage ?? FALLBACK_MESSAGE;
 }

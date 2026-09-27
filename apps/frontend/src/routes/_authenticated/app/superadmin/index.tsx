@@ -92,6 +92,19 @@ type PlatformUnitSummary = Ref.Returns<
   typeof refs.public.residentialUnits.listAll
 >[number];
 
+type AdministratorStatus =
+  PlatformUnitSummary['administrators'][number]['status'];
+
+/** `listAll` leaves revoked Administradores out; the label only covers the type. */
+const ADMINISTRATOR_STATUS_BADGES = {
+  active: { label: 'Activo', variant: 'success' },
+  pending: { label: 'Pendiente', variant: 'warning' },
+  revoked: { label: 'Revocado', variant: 'outline' },
+} as const satisfies Record<
+  AdministratorStatus,
+  { label: string; variant: string }
+>;
+
 type CreatedUnit = {
   readonly name: string;
   readonly administratorEmail: string;
@@ -233,7 +246,7 @@ function UnitList({
               </Badge>
             </div>
             <div className="flex flex-col gap-2 pl-13 text-sm">
-              {unit.administratorEmails.length === 0 ? (
+              {unit.administrators.length === 0 ? (
                 <p className="text-muted-foreground">
                   Sin Administradores ni invitaciones
                 </p>
@@ -242,8 +255,11 @@ function UnitList({
                   aria-label={`Administradores de ${unit.name}`}
                   className="flex flex-col gap-1"
                 >
-                  {unit.administratorEmails.map((email) => (
-                    <li key={email} className="flex items-center gap-2">
+                  {unit.administrators.map(({ email, status }) => (
+                    <li
+                      key={email}
+                      className="flex flex-wrap items-center gap-2"
+                    >
                       <UserCog
                         className="size-4 shrink-0 text-muted-foreground"
                         aria-hidden="true"
@@ -251,10 +267,17 @@ function UnitList({
                       <span className="min-w-0 flex-1 break-all text-muted-foreground">
                         {email}
                       </span>
-                      <RevokeAdministratorInvitationDialog
-                        unit={unit}
-                        email={email}
-                      />
+                      <Badge
+                        variant={ADMINISTRATOR_STATUS_BADGES[status].variant}
+                      >
+                        {ADMINISTRATOR_STATUS_BADGES[status].label}
+                      </Badge>
+                      {status === 'pending' ? (
+                        <RevokeAdministratorInvitationDialog
+                          unit={unit}
+                          email={email}
+                        />
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -308,6 +331,7 @@ function InviteAdministratorDialog({
   const inviteAdministrator = useMutation(
     refs.public.residentialUnits.inviteAdministrator
   );
+  const activatePending = useMutation(refs.public.memberships.activatePending);
 
   const form = Forms.useAppForm({
     defaultValues: { administratorEmail: '', administratorName: '' },
@@ -331,12 +355,15 @@ function InviteAdministratorDialog({
       }
 
       toast.success(
-        `Invitaste a ${administratorEmail} como Administrador de ${unit.name}.`,
+        `Invitación creada: se activará cuando ${administratorEmail} inicie sesión.`,
         {
-          description: `Aún no enviamos correos: compártele el enlace ${window.location.origin}. La Membresía se activa cuando inicie sesión con este correo.`,
+          description: `Administrador de ${unit.name}. Aún no enviamos correos: comparte el enlace de la app, ${window.location.origin}.`,
           duration: 10_000,
         }
       );
+      // Invitations stay pending until the invitee's own session claims them;
+      // when the Superadmin invited their own email, claim it right away.
+      void AppRouteFeat.settleMutation(activatePending({}));
       formApi.reset();
       onOpenChange(false);
     },
@@ -352,7 +379,7 @@ function InviteAdministratorDialog({
       open={open}
       onOpenChange={(next) => (next ? onOpenChange(true) : close())}
       title="Invitar Administrador"
-      description={`Registra el correo con el que el Administrador de ${unit.name} iniciará sesión. Si ya tiene cuenta, su Membresía queda activa de inmediato.`}
+      description={`Registra el correo con el que el Administrador de ${unit.name} iniciará sesión. La invitación queda pendiente hasta que inicie sesión con ese correo, aunque ya tenga cuenta.`}
       onSubmit={() => void form.handleSubmit()}
       actions={
         <>
@@ -445,7 +472,7 @@ function RevokeAdministratorInvitationDialog({
         </>
       }
       title="¿Retirar esta invitación?"
-      description={`Solo se retira si ${email} aún no ha iniciado sesión para aceptarla. Si ya es Administrador activo de ${unit.name}, su Membresía no cambia.`}
+      description={`${email} ya no podrá entrar como Administrador de ${unit.name}. Si inicia sesión antes de que confirmes, la invitación ya estará activa y no se retira.`}
       confirmLabel="Retirar invitación"
       destructive
       onConfirm={handleRevoke}
@@ -455,6 +482,7 @@ function RevokeAdministratorInvitationDialog({
 
 function CreateUnitCard() {
   const create = useMutation(refs.public.residentialUnits.create);
+  const activatePending = useMutation(refs.public.memberships.activatePending);
   const [createdUnit, setCreatedUnit] = useState<CreatedUnit | null>(null);
 
   const form = Forms.useAppForm({
@@ -485,6 +513,9 @@ function CreateUnitCard() {
         return;
       }
 
+      // The first Administrador stays pending until their own session claims
+      // it; when the Superadmin used their own email, claim it right away.
+      void AppRouteFeat.settleMutation(activatePending({}));
       toast.success(`Creaste ${name}.`);
       setCreatedUnit({ name, administratorEmail });
       formApi.reset();
@@ -519,8 +550,8 @@ function CreateUnitCard() {
               />
               <p>
                 <span className="font-medium">{createdUnit.name}</span> quedó
-                creada. Su Administrador entra iniciando sesión (o creando su
-                cuenta) con{' '}
+                creada. La invitación de su Administrador queda pendiente hasta
+                que inicie sesión (o cree su cuenta) con{' '}
                 <span className="font-medium break-all">
                   {createdUnit.administratorEmail}
                 </span>

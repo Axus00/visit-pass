@@ -311,26 +311,16 @@ const terminalizeImpl = FunctionImpl.make(
         return null;
       }
 
-      const outcome = ShiftReports.toTerminalShiftReportOutcome(args.outcome);
-
-      const failureMessage =
-        outcome.type === 'failed'
-          ? ShiftReports.deriveShiftReportFailureMessage({
-              reason: outcome.reason,
-              hasFile: Predicate.isNotUndefined(report.fileId),
-            })
-          : undefined;
-
       yield* writer
         .table('shiftReports')
-        .patch(report._id, {
-          ...ShiftReports.toTerminalShiftReport({
+        .patch(
+          report._id,
+          ShiftReports.toTerminalShiftReport({
             report,
-            outcome,
+            outcome: ShiftReports.toTerminalShiftReportOutcome(args.outcome),
             now: yield* Clock.currentTimeMillis,
-          }),
-          failureMessage,
-        })
+          })
+        )
         .pipe(
           Effect.catchTag(
             ['GetByIdFailure', 'DocumentDecodeError', 'DocumentEncodeError'],

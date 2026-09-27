@@ -56,7 +56,7 @@ export default GroupSpec.make()
     }).middleware(RequireUserIdentity)
   )
   .addFunction(
-    /** Portero: their latest closed Turnos, for reports. */
+    /** Portero: their started Turnos, open and closed, latest start first. */
     FunctionSpec.publicQuery({
       name: 'listMine',
       args: () => ({ membershipId: Id('memberships') }),

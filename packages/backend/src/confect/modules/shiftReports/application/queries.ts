@@ -235,7 +235,7 @@ export const toShiftReportSummaries = Effect.fn(
           downloadUrl,
           emailStatus: report.emailStatus,
           recipients: report.recipients,
-          failureMessage: report.failureMessage,
+          failureMessage: Domain.deriveShiftReportFailureMessage(report),
           completedAt: report.completedAt,
         };
 

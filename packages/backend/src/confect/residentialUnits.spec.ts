@@ -37,7 +37,11 @@ export default GroupSpec.make()
         ...ResidentialUnitsDomain.CreateApartmentsDto.fields,
       }),
       returns: () => Schema.Finite,
-      error: () => MembershipsDomain.AccessDeniedError,
+      error: () =>
+        Schema.Union([
+          MembershipsDomain.AccessDeniedError,
+          ResidentialUnitsDomain.ApartmentLimitReachedError,
+        ]),
     }).middleware(RequireUserIdentity)
   )
   .addFunction(

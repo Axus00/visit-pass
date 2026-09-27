@@ -1,4 +1,3 @@
-import * as Clock from 'effect/Clock';
 import * as Effect from 'effect/Effect';
 import * as Predicate from 'effect/Predicate';
 
@@ -15,11 +14,14 @@ import * as Domain from '../domain';
 const DUPLICATE_SCAN_LIMIT = 200;
 
 /**
- * Creates a Membresía in `residentialUnitId`. It starts `active` when a
- * Usuario already signed in with that email, else `pending` until they do.
- * Fails with `MembershipAlreadyExistsError` when the email, or its Usuario
- * under any earlier email, already holds the same unit, Rol and Apartamento.
- * Callers must have authorized the caller for the unit first.
+ * Creates a `pending` Membresía in `residentialUnitId`, even when a Usuario
+ * with that email exists, so an invitation never reveals whether an email has
+ * an account nor opens a panel its owner did not accept. Only the invitee's
+ * own session (`activatePendingForUser` via `memberships.activatePending`) or
+ * the WorkOS sync activates it. Fails with `MembershipAlreadyExistsError` when
+ * the email, or its Usuario under any earlier email, already holds the same
+ * unit, Rol and Apartamento. Callers must have authorized the caller for the
+ * unit first.
  */
 export const inviteMember = Effect.fn('Memberships.inviteMember')(function* (
   residentialUnitId: Id<'residentialUnits'>,
@@ -116,9 +118,6 @@ export const inviteMember = Effect.fn('Memberships.inviteMember')(function* (
   if (isDuplicate)
     return yield* new Domain.MembershipAlreadyExistsError({ email });
 
-  const now = yield* Clock.currentTimeMillis;
-  const hasAccount = Predicate.isNotNull(user);
-
   return yield* writer
     .table('memberships')
     .insert({
@@ -128,9 +127,7 @@ export const inviteMember = Effect.fn('Memberships.inviteMember')(function* (
       role: invitation.role,
       apartmentId: invitation.apartmentId,
       occupancyType: invitation.occupancyType,
-      status: hasAccount ? 'active' : 'pending',
-      userId: user?._id,
-      activatedAt: hasAccount ? now : undefined,
+      status: 'pending',
     })
     .pipe(Effect.catchTag('DocumentEncodeError', Effect.die));
 });

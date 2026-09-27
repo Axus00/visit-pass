@@ -13,6 +13,8 @@ import * as MembershipsApplication from '../../memberships/application';
 import type * as MembershipsDomain from '../../memberships/domain';
 import * as ResidentialUnitsApplication from '../../residentialUnits/application';
 import * as ResidentialUnitsDomain from '../../residentialUnits/domain';
+import * as UsersApplication from '../../users/application';
+import * as UsersDomain from '../../users/domain';
 import * as VisitsDomain from '../../visits/domain';
 import * as Domain from '../domain';
 
@@ -545,9 +547,10 @@ const populateMirador = Effect.fn('DevelopmentSeeder.populateMirador')(
 );
 
 /**
- * Idempotently seeds the Superadmin and two sample Unidades residenciales.
- * Run it after the development accounts exist so their Membresías start
- * active; otherwise they stay pending until each account signs in.
+ * Idempotently seeds the Superadmin and two sample Unidades residenciales,
+ * then activates the Membresías of the development accounts that exist, since
+ * invitations always start pending. Run it after the development accounts
+ * exist; otherwise their Membresías stay pending until each account signs in.
  */
 export const seedSampleData = Effect.fn('DevelopmentSeeder.seedSampleData')(
   function* () {
@@ -670,6 +673,21 @@ export const seedSampleData = Effect.fn('DevelopmentSeeder.seedSampleData')(
           yield* Effect.logInfo('Sample unit seeded', { name: sample.name });
         }),
       { discard: true }
+    );
+
+    yield* Effect.forEach(
+      Domain.DEVELOPMENT_ACCOUNTS,
+      (account) =>
+        Effect.gen(function* () {
+          const user = yield* UsersApplication.getOneByEmail(
+            account.email
+          ).pipe(UsersDomain.isActiveOrNull);
+
+          if (Predicate.isNull(user)) return;
+
+          yield* MembershipsApplication.activatePendingForUser(user);
+        }),
+      { concurrency: 'unbounded', discard: true }
     );
   }
 );

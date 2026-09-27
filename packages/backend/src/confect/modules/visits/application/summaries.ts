@@ -9,12 +9,12 @@ import * as Domain from '../domain';
 
 /**
  * Projects Visitas for display, loading each Apartamento and entry Portero
- * once. `maskDocuments` hides all but a short suffix of each document, for
- * Residentes.
+ * once. `forResident` hides all but a short suffix of each document and omits
+ * the entry Portero, whose name can fall back to their email.
  */
 export const toVisitSummaries = Effect.fn('Visits.toVisitSummaries')(function* (
   visits: ReadonlyArray<VisitsDoc>,
-  options: { readonly maskDocuments: boolean }
+  options: { readonly forResident: boolean }
 ) {
   const reader = yield* DatabaseReader;
 
@@ -27,7 +27,9 @@ export const toVisitSummaries = Effect.fn('Visits.toVisitSummaries')(function* (
         { concurrency: 'unbounded' }
       ),
       ShiftsApplication.loadMemberNames(
-        visits.map((visit) => visit.entryPorterMembershipId)
+        options.forResident
+          ? []
+          : visits.map((visit) => visit.entryPorterMembershipId)
       ),
     ],
     { concurrency: 'unbounded' }
@@ -43,7 +45,7 @@ export const toVisitSummaries = Effect.fn('Visits.toVisitSummaries')(function* (
   return visits.map((visit): Domain.VisitSummary => {
     const { visitorDocument } = visit;
     const shouldMaskDocument =
-      options.maskDocuments && Predicate.isNotUndefined(visitorDocument);
+      options.forResident && Predicate.isNotUndefined(visitorDocument);
 
     // At most the last four characters and never the first three, so a
     // short document is never shown whole.
@@ -63,7 +65,9 @@ export const toVisitSummaries = Effect.fn('Visits.toVisitSummaries')(function* (
       overriddenRejection: visit.overriddenRejection,
       enteredAt: visit.enteredAt,
       exitedAt: visit.exitedAt,
-      entryPorterName: porterNames.get(visit.entryPorterMembershipId),
+      entryPorterName: options.forResident
+        ? undefined
+        : porterNames.get(visit.entryPorterMembershipId),
       anonymized: Predicate.isNotUndefined(visit.anonymizedAt),
       voided: Predicate.isNotUndefined(visit.voidedAt),
       voidReason: visit.voidReason,

@@ -341,6 +341,10 @@ describe('users', () => {
           workosUser: makeWorkOSUser(),
         });
         const seatId = yield* invitePorter(userEmail);
+        // The next WorkOS sync activates the invitation.
+        yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+          workosUser: makeWorkOSUser(),
+        });
 
         yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
           workosUser: makeWorkOSUser({ email: 'renamed@example.test' }),

@@ -14,8 +14,9 @@ export const OccupancyType = Schema.Literals(['owner', 'tenant']);
 export type OccupancyType = typeof OccupancyType.Type;
 
 /**
- * `pending` waits for a Usuario to sign in with `email`; `revoked` keeps the
- * row so past Visitas still name who registered them.
+ * `pending` waits for the Usuario with `email` to activate it from their own
+ * session; `revoked` keeps the row so past Visitas still name who registered
+ * them.
  */
 export const MembershipStatus = Schema.Literals([
   'pending',
@@ -29,7 +30,7 @@ export const MembershipsTableSchema = Schema.Struct({
   residentialUnitId: Id('residentialUnits'),
   /** Normalized; matched against the Usuario's sign-in email to activate. */
   email: Schema.String,
-  /** Name the Administrador typed, shown until the Usuario signs in. */
+  /** Name the Administrador typed, shown until the Usuario activates it. */
   displayName: Schema.optional(Schema.String),
   userId: Schema.optional(Id('users')),
   role: Role,
@@ -87,7 +88,7 @@ export const MembershipDetail = Schema.Struct({
     'occupancyType',
     'activatedAt',
   ]),
-  /** The signed-in Usuario's name, else the name the Administrador typed. */
+  /** The linked Usuario's name once active, else the name the Administrador typed. */
   name: Schema.optional(Schema.String),
   apartmentLabel: Schema.optional(Schema.String),
 });

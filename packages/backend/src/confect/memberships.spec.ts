@@ -44,8 +44,8 @@ export default GroupSpec.make()
   .addFunction(
     /**
      * Administrador: invites a Residente, Portero or Administrador by email.
-     * The Membresía activates when that email signs in, or at once if it
-     * already has an account.
+     * The Membresía stays pending, even if the email already has an account,
+     * until that Usuario's own session or the WorkOS sync activates it.
      */
     FunctionSpec.publicMutation({
       name: 'invite',

@@ -55,7 +55,8 @@ export type AuthorizeFormValues = {
   favoriteRelationship: VisitPass.Relationship;
   /**
    * The Favorito this form already created, so retrying after the Autorización
-   * failed links it instead of saving a duplicate.
+   * failed links it instead of saving a duplicate, as long as the Visitante and
+   * Parentesco are unchanged.
    */
   savedFavorite: SavedFavorite | null;
 };
@@ -64,6 +65,7 @@ export type SavedFavorite = {
   id: FavoriteId;
   visitorName: string;
   visitorDocument: string;
+  relationship: VisitPass.Relationship;
 };
 
 export function defaultAuthorizeFormValues(

@@ -4,6 +4,7 @@ import * as Predicate from 'effect/Predicate';
 import type {
   ShiftReport,
   ShiftReportEmailStatus,
+  ShiftReportFailureReason,
   ShiftReportStatus,
   TerminalShiftReportOutcome,
 } from './models';
@@ -20,6 +21,7 @@ export function toTerminalShiftReport(args: {
 }): {
   readonly status: ShiftReportStatus;
   readonly emailStatus: ShiftReportEmailStatus;
+  readonly failureReason?: ShiftReportFailureReason;
   readonly completedAt: number;
 } {
   return Match.value(args.outcome).pipe(
@@ -28,7 +30,7 @@ export function toTerminalShiftReport(args: {
       emailStatus: completed.emailStatus,
       completedAt: args.now,
     })),
-    Match.when({ type: 'failed' }, () => {
+    Match.when({ type: 'failed' }, (failed) => {
       const hasFile = Predicate.isNotUndefined(args.report.fileId);
       const wasEmailPending = args.report.emailStatus === 'pending';
 
@@ -37,9 +39,29 @@ export function toTerminalShiftReport(args: {
         emailStatus: wasEmailPending
           ? ('failed' as const)
           : args.report.emailStatus,
+        failureReason: failed.reason,
         completedAt: args.now,
       };
     }),
     Match.exhaustive
   );
+}
+
+/**
+ * The Spanish explanation of a report whose workflow failed, or undefined. A
+ * failed report that is still `ready` stored its file, so only the email went
+ * wrong and the copy points at the download.
+ */
+export function deriveShiftReportFailureMessage(
+  report: Pick<ShiftReport, 'status' | 'failureReason'>
+) {
+  if (Predicate.isUndefined(report.failureReason)) return undefined;
+
+  if (report.failureReason === 'canceled')
+    return 'Se canceló la generación del reporte.';
+
+  if (report.status === 'ready')
+    return 'No se pudo enviar el correo a la administración. Descarga el archivo y compártelo manualmente.';
+
+  return 'No se pudo generar el archivo del reporte. Intenta de nuevo.';
 }

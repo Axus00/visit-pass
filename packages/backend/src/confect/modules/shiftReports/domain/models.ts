@@ -30,6 +30,18 @@ export const ShiftReportEmailStatus = Schema.Literals([
 
 export type ShiftReportEmailStatus = typeof ShiftReportEmailStatus.Type;
 
+/**
+ * Why a report's workflow failed: the classified workflow error tag, or
+ * `canceled`. Copy for it is derived at read time.
+ */
+export const ShiftReportFailureReason = Schema.Literals([
+  'ShiftReports/ShiftReportEmailError',
+  'Workflows/UnknownError',
+  'canceled',
+]);
+
+export type ShiftReportFailureReason = typeof ShiftReportFailureReason.Type;
+
 export const ShiftReportsTableSchema = Schema.Struct({
   residentialUnitId: Id('residentialUnits'),
   shiftId: Id('shifts'),
@@ -40,7 +52,7 @@ export const ShiftReportsTableSchema = Schema.Struct({
   emailStatus: ShiftReportEmailStatus,
   /** Active Administradores of the unit when the email was requested. */
   recipients: Schema.Array(Schema.String),
-  failureMessage: Schema.optional(Schema.String),
+  failureReason: Schema.optional(ShiftReportFailureReason),
   workflowId: Schema.optional(Schema.String),
   completedAt: Schema.optional(Schema.Finite),
 });
@@ -72,9 +84,10 @@ export const ShiftReportSummary = Schema.Struct({
     'status',
     'emailStatus',
     'recipients',
-    'failureMessage',
     'completedAt',
   ]),
+  /** Spanish copy derived from the stored `failureReason`. */
+  failureMessage: Schema.optional(Schema.String),
   porterName: Schema.String,
   downloadUrl: Schema.NullOr(Schema.String),
 });
@@ -175,5 +188,5 @@ export type TerminalShiftReportOutcome =
     }
   | {
       readonly type: 'failed';
-      readonly reason: ShiftReportWorkflowErrorTag | 'canceled';
+      readonly reason: ShiftReportFailureReason;
     };

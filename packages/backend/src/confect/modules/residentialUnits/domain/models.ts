@@ -3,6 +3,7 @@ import * as Schema from 'effect/Schema';
 import * as Struct from 'effect/Struct';
 
 import { Id } from '../../../_generated/id';
+import * as MembershipsDomain from '../../memberships/domain';
 
 export const NAME_MAX_LENGTH = 120;
 export const APARTMENT_PART_MAX_LENGTH = 20;
@@ -90,7 +91,13 @@ export type UnitOverview = typeof UnitOverview.Type;
 /** What the Superadmin sees for every Unidad residencial on the platform. */
 export const PlatformUnitSummary = Schema.Struct({
   ...ResidentialUnitSummary.fields,
-  administratorEmails: Schema.Array(Schema.String),
+  /** Pending and active Administradores, so a stuck invitation shows as pending. */
+  administrators: Schema.Array(
+    Schema.Struct({
+      email: Schema.String,
+      status: MembershipsDomain.MembershipStatus,
+    })
+  ),
   apartmentCount: Schema.Finite,
 });
 

@@ -105,6 +105,78 @@ describe('AuthorizeVisitCard', () => {
     ).toBe('');
   });
 
+  describe('when the Autorización fails after saving the Favorito', () => {
+    const FAVORITE_ID = 'favorite_a';
+    const CREATED = Result.succeed({
+      passes: [{ token: 'token_a', visitorName: 'Ana' }],
+    });
+    const FAILED = Result.fail({ _tag: 'Memberships/AccessDeniedError' });
+
+    const submitWithFavorite = async (card: ReturnType<typeof renderCard>) => {
+      fireEvent.change(screen.getByLabelText(/Nombre del Visitante/), {
+        target: { value: 'Ana' },
+      });
+      fireEvent.click(
+        screen.getByRole('switch', { name: 'Guardar como Favorito' })
+      );
+      card.stubs.mutation
+        .mockResolvedValueOnce(Result.succeed(FAVORITE_ID))
+        .mockResolvedValueOnce(FAILED);
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Crear Autorización' })
+      );
+      await waitFor(() => expect(card.stubs.mutation).toHaveBeenCalledTimes(2));
+    };
+
+    const retry = () =>
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Crear Autorización' })
+      );
+
+    it('links the same Favorito on retry', async () => {
+      const card = renderCard();
+      await submitWithFavorite(card);
+
+      card.stubs.mutation.mockResolvedValueOnce(CREATED);
+      retry();
+
+      await waitFor(() => expect(card.onShared).toHaveBeenCalledOnce());
+      expect(card.stubs.mutation).toHaveBeenCalledTimes(3);
+      expect(card.stubs.mutation).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          visitors: [expect.objectContaining({ favoriteId: FAVORITE_ID })],
+        })
+      );
+    });
+
+    it('saves a new Favorito when the Parentesco changed', async () => {
+      const card = renderCard();
+      await submitWithFavorite(card);
+
+      fireEvent.click(screen.getByRole('combobox', { name: 'Parentesco' }));
+      const friend = await screen.findByRole('option', { name: 'Amigo' });
+      // Base UI commits a mouse selection only after a pointerdown on the item.
+      fireEvent.pointerDown(friend, { pointerType: 'mouse' });
+      fireEvent.click(friend);
+      card.stubs.mutation
+        .mockResolvedValueOnce(Result.succeed('favorite_b'))
+        .mockResolvedValueOnce(CREATED);
+      retry();
+
+      await waitFor(() => expect(card.onShared).toHaveBeenCalledOnce());
+      expect(card.stubs.mutation).toHaveBeenCalledTimes(4);
+      expect(card.stubs.mutation).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({ visitorName: 'Ana', relationship: 'friend' })
+      );
+      expect(card.stubs.mutation).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          visitors: [expect.objectContaining({ favoriteId: 'favorite_b' })],
+        })
+      );
+    });
+  });
+
   describe('when the page stays open past midnight', () => {
     // 23:59:30 on 27 September in Bogotá (UTC-5).
     const ALMOST_MIDNIGHT = Date.UTC(2026, 8, 28, 4, 59, 30);

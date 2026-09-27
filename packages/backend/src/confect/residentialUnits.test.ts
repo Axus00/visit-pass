@@ -191,6 +191,62 @@ describe('residentialUnits', () => {
       }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect(
+    'refuses Apartamentos beyond the limit every listing can read',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* TestFixtures.seedTwoUnits;
+        const admin = confect.withIdentity(TestFixtures.identityOf('adminA'));
+
+        // Unit A already holds 3, so these leave room for exactly one more.
+        yield* confect.run(
+          Effect.gen(function* () {
+            const writer = yield* DatabaseWriter;
+
+            yield* Effect.forEach(
+              Array.from({ length: 1996 }, (_, index) => String(index + 1)),
+              (number) =>
+                writer.table('apartments').insert({
+                  residentialUnitId: world.unitA,
+                  tower: '9',
+                  number,
+                }),
+              { concurrency: 'unbounded', discard: true }
+            );
+          }).pipe(Effect.orDie)
+        );
+
+        const createApartments = (numbers: ReadonlyArray<string>) =>
+          Effect.result(
+            admin.mutation(refs.public.residentialUnits.createApartments, {
+              membershipId: world.adminA,
+              tower: '10',
+              numbers,
+            })
+          );
+
+        const overflow = yield* createApartments(['1', '2']);
+        EffectVitestUtils.assertFailure(
+          overflow,
+          new ResidentialUnits.ApartmentLimitReachedError({ limit: 2000 })
+        );
+
+        const lastOne = yield* createApartments(['1']);
+        EffectVitestUtils.assertSuccess(lastOne, 1);
+
+        // Repeating an existing Apartamento adds nothing, so it still succeeds.
+        const repeated = yield* createApartments(['1']);
+        EffectVitestUtils.assertSuccess(repeated, 0);
+
+        const full = yield* createApartments(['2']);
+        EffectVitestUtils.assertFailure(
+          full,
+          new ResidentialUnits.ApartmentLimitReachedError({ limit: 2000 })
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('stops counting active Membresías whose Usuario was deleted', () =>
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;
@@ -405,35 +461,60 @@ describe('residentialUnits', () => {
           }
         );
 
+        // An active Administrador who changed email lists under the new one.
+        yield* confect.run(
+          Effect.gen(function* () {
+            const reader = yield* DatabaseReader;
+            const writer = yield* DatabaseWriter;
+
+            const { userId } = yield* reader
+              .table('memberships')
+              .get(world.adminA);
+
+            if (Predicate.isUndefined(userId)) return;
+
+            yield* writer
+              .table('users')
+              .patch(userId, { email: 'admina.nuevo@example.test' });
+          }).pipe(Effect.orDie)
+        );
+
         const units = yield* superadmin.query(
           refs.public.residentialUnits.listAll,
           {}
         );
 
         EffectVitestUtils.deepStrictEqual(
-          units.map(({ _id, name, administratorEmails, apartmentCount }) => ({
+          units.map(({ _id, name, administrators, apartmentCount }) => ({
             _id,
             name,
-            administratorEmails,
+            administrators,
             apartmentCount,
           })),
           [
             {
               _id: createdId,
               name: 'Conjunto Nuevo',
-              administratorEmails: ['nuevo.admin@example.test'],
+              administrators: [
+                { email: 'nuevo.admin@example.test', status: 'pending' },
+              ],
               apartmentCount: 0,
             },
             {
               _id: world.unitA,
               name: 'Unidad A',
-              administratorEmails: ['admina@example.test'],
+              // `revokedA` is left out.
+              administrators: [
+                { email: 'admina.nuevo@example.test', status: 'active' },
+              ],
               apartmentCount: 3,
             },
             {
               _id: world.unitB,
               name: 'Unidad B',
-              administratorEmails: ['adminb@example.test'],
+              administrators: [
+                { email: 'adminb@example.test', status: 'active' },
+              ],
               apartmentCount: 1,
             },
           ]
@@ -450,7 +531,7 @@ describe('residentialUnits', () => {
   );
 
   it.effect(
-    'activates at once the first Administrador who has an account',
+    'keeps the first Administrador pending until their own session activates it',
     () =>
       Effect.gen(function* () {
         const confect = yield* TestConfect.TestConfect;
@@ -463,17 +544,36 @@ describe('residentialUnits', () => {
           }
         );
 
-        const createdId = yield* confect
-          .withIdentity(TestFixtures.identityOf('outsider'))
-          .mutation(refs.public.residentialUnits.create, {
+        const outsider = confect.withIdentity(
+          TestFixtures.identityOf('outsider')
+        );
+
+        const createdId = yield* outsider.mutation(
+          refs.public.residentialUnits.create,
+          {
             name: 'Conjunto Propio',
             city: 'Cali',
             administratorEmail: 'outsider@example.test',
-          });
+          }
+        );
 
-        const access = yield* confect
-          .withIdentity(TestFixtures.identityOf('outsider'))
-          .query(refs.public.memberships.listMine, {});
+        // Having an account does not activate the invitation by itself.
+        const beforeActivation = yield* outsider.query(
+          refs.public.memberships.listMine,
+          {}
+        );
+        EffectVitestUtils.deepStrictEqual(beforeActivation.memberships, []);
+
+        const activated = yield* outsider.mutation(
+          refs.public.memberships.activatePending,
+          {}
+        );
+        EffectVitestUtils.strictEqual(activated, 1);
+
+        const access = yield* outsider.query(
+          refs.public.memberships.listMine,
+          {}
+        );
 
         EffectVitestUtils.deepStrictEqual(
           access.memberships.map(({ residentialUnitId, role }) => ({
@@ -528,8 +628,8 @@ describe('residentialUnits', () => {
         );
 
         EffectVitestUtils.deepStrictEqual(
-          units.find(({ _id }) => _id === unitId)?.administratorEmails,
-          ['nuevo.admin@example.test']
+          units.find(({ _id }) => _id === unitId)?.administrators,
+          [{ email: 'nuevo.admin@example.test', status: 'pending' }]
         );
 
         const [revokedTwice, duplicate, invalidEmail] = yield* Effect.all(
@@ -577,7 +677,7 @@ describe('residentialUnits', () => {
   );
 
   it.effect(
-    'invites an Administrador with an account as active, and never revokes active or non-Administrador Membresías',
+    'invites an Administrador with an account as pending, and never revokes active or non-Administrador Membresías',
     () =>
       Effect.gen(function* () {
         const confect = yield* TestConfect.TestConfect;
@@ -591,7 +691,7 @@ describe('residentialUnits', () => {
           TestFixtures.identityOf('outsider')
         );
 
-        // `adminB` has an account, so the Membresía in unit A is active at once.
+        // `adminB` has an account, yet the Membresía in unit A waits for them.
         const invitedId = yield* superadmin.mutation(
           refs.public.residentialUnits.inviteAdministrator,
           {
@@ -599,6 +699,23 @@ describe('residentialUnits', () => {
             administratorEmail: 'adminb@example.test',
           }
         );
+        const pendingStatus = yield* confect.run(
+          Effect.gen(function* () {
+            const reader = yield* DatabaseReader;
+
+            const { status } = yield* reader
+              .table('memberships')
+              .get(invitedId);
+
+            return status;
+          }).pipe(Effect.orDie),
+          Memberships.MembershipStatus
+        );
+        EffectVitestUtils.strictEqual(pendingStatus, 'pending');
+
+        yield* confect
+          .withIdentity(TestFixtures.identityOf('adminB'))
+          .mutation(refs.public.memberships.activatePending, {});
 
         const revocations = yield* Effect.forEach(
           [

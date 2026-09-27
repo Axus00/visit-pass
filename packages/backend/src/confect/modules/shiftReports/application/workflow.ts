@@ -16,6 +16,12 @@ type ShiftReportWorkflowDto = Infer<typeof vShiftReportWorkflowDto>;
 export { ShiftReportWorkflowDto };
 
 /**
+ * Resend answers 429 when its rate limit is hit, so the email step backs off
+ * for about 15 s in total (1 s, 2 s, 4 s, 8 s) instead of the default ~300 ms.
+ */
+const SEND_EMAIL_RETRY = { maxAttempts: 5, initialBackoffMs: 1000, base: 2 };
+
+/**
  * Stores the workbook, records it on the report so it is downloadable at once,
  * then emails it when requested. Steps pass storage ids, never bytes, and each
  * is journaled: a restarted workflow does not regenerate or resend.
@@ -47,8 +53,10 @@ export const shiftReportWorkflow = Effect.fn('shiftReportWorkflow')(function* (
   // `onComplete` persists the email outcome, so this step stays side-effect
   // free on the database.
   return yield* workflowRunner
-    .runAction(refs.internal.shiftReports.sendEmail, {
-      shiftReportId: args.shiftReportId,
-    })
+    .runAction(
+      refs.internal.shiftReports.sendEmail,
+      { shiftReportId: args.shiftReportId },
+      { retry: SEND_EMAIL_RETRY }
+    )
     .pipe(Effect.catchTag('SchemaError', Effect.die));
 });
