@@ -179,7 +179,9 @@ function PorteriaScanPage() {
           )}
         </div>
 
-        <ManualCodeCard onToken={startScan} />
+        {/* Keyed on the Pase in play, so a finished scan never leaves the
+            previous Visitante's code in the field. */}
+        <ManualCodeCard key={token ?? 'idle'} onToken={startScan} />
       </div>
     </>
   );
