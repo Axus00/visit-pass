@@ -113,3 +113,21 @@ El plazo, configurable por Unidad residencial (3 a 24 meses, 12 por defecto), tr
 **Reporte de turno**:
 El listado de las Visitas registradas durante un Turno, exportable a Excel y enviable por correo al Administrador.
 _Avoid_: Bitácora, minuta, log
+
+### Privacidad
+
+**Aviso de privacidad**:
+El texto corto que informa al Visitante quién trata sus datos, para qué, cuánto tiempo y cómo ejercer sus derechos. Cada Unidad residencial tiene versiones numeradas e inmutables, y cada Visita guarda la versión vigente en su Ingreso como prueba de que se informó.
+_Avoid_: Términos, consentimiento, política (la política de tratamiento es el documento completo)
+
+**Marca de retención**:
+Una marca que el Administrador pone sobre un documento de Visitante, por un reclamo en trámite o un requerimiento de autoridad, y que suspende la Anonimización de todos sus registros mientras esté activa.
+_Avoid_: Bloqueo, congelamiento
+
+**Plazo de retención**:
+Los meses que una Unidad residencial conserva los datos de un Visitante en sus Visitas, contados desde el Ingreso. Lo fija el Superadmin por Unidad residencial, entre 3 y 24 meses (12 por defecto).
+_Avoid_: Vigencia, caducidad
+
+**Anonimización**:
+Borrar de una Visita, Pase o Autorización el nombre, el documento y la placa del Visitante y conservar el resto del registro. Así caducan los datos de un Visitante en esos registros, que nunca se borran por completo.
+_Avoid_: Purga (es el proceso que la ejecuta), supresión (es el derecho que ejerce el Visitante)
