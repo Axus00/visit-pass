@@ -153,7 +153,7 @@ const listApartmentsImpl = FunctionImpl.make(
 
       const { membership } = yield* Memberships.requireMembership(
         args.membershipId,
-        ['resident', 'porter', 'administrator']
+        ['porter', 'administrator']
       );
 
       const [apartments, residents] = yield* Effect.all(

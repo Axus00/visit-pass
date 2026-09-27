@@ -1,5 +1,6 @@
 import * as SystemFields from '@confect/core/SystemFields';
 import * as Schema from 'effect/Schema';
+import * as Struct from 'effect/Struct';
 
 import { Id } from '../../../_generated/id';
 
@@ -39,14 +40,16 @@ export const ShiftsDocSchema = SystemFields.extendWithSystemFields(
 // -*******************************************************************************-
 
 export const ShiftSummary = Schema.Struct({
-  _id: Id('shifts'),
-  porterMembershipId: Id('memberships'),
+  ...Struct.pick(ShiftsDocSchema.fields, [
+    '_id',
+    'porterMembershipId',
+    'status',
+    'plannedStart',
+    'plannedEnd',
+    'startedAt',
+    'endedAt',
+  ]),
   porterName: Schema.String,
-  status: ShiftStatus,
-  plannedStart: Schema.optional(Schema.Finite),
-  plannedEnd: Schema.optional(Schema.Finite),
-  startedAt: Schema.optional(Schema.Finite),
-  endedAt: Schema.optional(Schema.Finite),
   closedByAdministrator: Schema.Boolean,
 });
 

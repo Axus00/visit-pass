@@ -1,5 +1,4 @@
 import * as Clock from 'effect/Clock';
-import * as DateTime from 'effect/DateTime';
 import * as Effect from 'effect/Effect';
 import * as Option from 'effect/Option';
 import * as Predicate from 'effect/Predicate';
@@ -158,14 +157,12 @@ export const anonymizeVisitsBatch = Effect.fn('Retention.anonymizeVisitsBatch')(
 /**
  * Deletes, for one page of the unit's Autorizaciones that ended before
  * `cutoffDate`, every Pase never used and never referenced by a Visita (a
- * forced Registro manual keeps the rejected Pase's id). An Autorización left
- * without Pases is deleted too: every Visita that names an Autorización also
- * names one of its Pases, so none can still reference it. A kept Pase whose
- * last Ingreso entered before `visitCutoff` is anonymized like its Visitas; a
- * kept Pase with no Ingreso (only a forced Registro manual names it) counts
- * from the end of its Autorización, the last day it could have admitted
- * anyone. That day is read in UTC; the hours of offset are negligible next to
- * a retention of months.
+ * voided Visita takes its Ingreso off the count but keeps the Pase's id). An
+ * Autorización left without Pases is deleted too: every Visita that names an
+ * Autorización also names one of its Pases, so none can still reference it. A
+ * kept Pase whose last Ingreso entered before `visitCutoff` is anonymized like
+ * its Visitas; every kept Pase had an Ingreso, even one voided since, so it
+ * has a `lastEntryAt`.
  * Autorizaciones that ended more than `PASS_SWEEP_WINDOW_DAYS` before
  * `cutoffDate` were settled by earlier runs and are not read again.
  */
@@ -226,20 +223,12 @@ export const purgeUnusedPassesPage = Effect.fn(
         const deletablePassIds = new Set(
           deletablePasses.map((pass) => pass._id)
         );
-        const authorizationEndMillis = Option.match(
-          DateTime.make(
-            `${CalendarDomain.addDays(authorization.endDate, 1)}T00:00:00Z`
-          ),
-          {
-            onNone: () => Number.POSITIVE_INFINITY,
-            onSome: DateTime.toEpochMillis,
-          }
-        );
         const agedOutPasses = passes.filter(
           (pass) =>
             !deletablePassIds.has(pass._id) &&
             pass.visitorName !== Domain.ANONYMIZED_VISITOR_NAME &&
-            (pass.lastEntryAt ?? authorizationEndMillis) < args.visitCutoff
+            Predicate.isNotUndefined(pass.lastEntryAt) &&
+            pass.lastEntryAt < args.visitCutoff
         );
 
         yield* Effect.all(

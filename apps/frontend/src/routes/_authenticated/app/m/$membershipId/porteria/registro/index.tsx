@@ -81,6 +81,11 @@ export const Route = createFileRoute(
       reason: decoded.reason,
     };
   },
+  /**
+   * The form reads its prefill once, so another prefill (or none) remounts it
+   * instead of keeping the previous Visitante beside the new `token`.
+   */
+  remountDeps: ({ search }) => search,
   component: PorteriaManualEntryPage,
 });
 

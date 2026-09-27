@@ -136,8 +136,8 @@ const createImpl = FunctionImpl.make(
 /**
  * Every active Autorización valid on or after the unit's day of `now`, so a
  * long Servicio never drops out behind newer ones, plus the latest ones in any
- * state; latest created first. Each carries its newest Pases in creation
- * order, so regenerated replacements are never the ones left out.
+ * state; latest created first. Each carries every active Pase, however many
+ * regenerations came after it, plus its newest other Pases, in creation order.
  */
 const listForApartmentImpl = FunctionImpl.make(
   databaseSchema,
@@ -193,18 +193,39 @@ const listForApartmentImpl = FunctionImpl.make(
           Effect.forEach(
             authorizations,
             (authorization) =>
-              reader
-                .table('passes')
-                .index(
-                  'by_authorizationId',
-                  (q) => q.eq('authorizationId', authorization._id),
-                  'desc'
-                )
-                .take(Authorizations.PASSES_PER_AUTHORIZATION_LIMIT)
-                .pipe(
-                  Effect.map((passes) => passes.toReversed()),
-                  Effect.orDie
+              Effect.all(
+                [
+                  reader
+                    .table('passes')
+                    .index('by_authorizationId_and_status', (q) =>
+                      q
+                        .eq('authorizationId', authorization._id)
+                        .eq('status', 'active')
+                    )
+                    .take(Authorizations.MAX_EVENT_VISITORS),
+                  reader
+                    .table('passes')
+                    .index(
+                      'by_authorizationId',
+                      (q) => q.eq('authorizationId', authorization._id),
+                      'desc'
+                    )
+                    .take(Authorizations.PASSES_PER_AUTHORIZATION_LIMIT),
+                ],
+                { concurrency: 'unbounded' }
+              ).pipe(
+                Effect.map(([activePasses, newestPasses]) =>
+                  [
+                    ...new Map(
+                      [...activePasses, ...newestPasses].map((pass) => [
+                        pass._id,
+                        pass,
+                      ])
+                    ).values(),
+                  ].toSorted((a, b) => a._creationTime - b._creationTime)
                 ),
+                Effect.orDie
+              ),
             { concurrency: 'unbounded' }
           ),
           Shifts.loadMemberNames(

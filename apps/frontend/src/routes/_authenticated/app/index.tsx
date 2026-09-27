@@ -1,5 +1,6 @@
 import { Link, Navigate, createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '@workos-inc/authkit-react';
+import * as Predicate from 'effect/Predicate';
 import {
   Building2,
   ChevronRight,
@@ -32,18 +33,19 @@ function AppHubPage() {
   const { user } = useAuth();
   const access = AppRouteFeat.useMyAccess();
 
-  const singleMembership =
-    access !== null && access.memberships.length === 1 && !access.isSuperadmin
-      ? access.memberships[0]
-      : undefined;
+  const hasSingleMembership =
+    Predicate.isNotNull(access) &&
+    access.memberships.length === 1 &&
+    !access.isSuperadmin;
+  const singleMembership = hasSingleMembership
+    ? access.memberships[0]
+    : undefined;
 
-  if (singleMembership) {
-    const membership = singleMembership;
-
+  if (Predicate.isNotUndefined(singleMembership)) {
     return (
       <Navigate
-        to={AppRouteFeat.ROLE_HOME_PATH[membership.role]}
-        params={{ membershipId: membership.membershipId }}
+        to={AppRouteFeat.ROLE_HOME_PATH[singleMembership.role]}
+        params={{ membershipId: singleMembership.membershipId }}
         replace
       />
     );
@@ -63,7 +65,7 @@ function AppHubPage() {
           title="¿Dónde vas a trabajar hoy?"
           description="Elige la Unidad residencial y el Rol con el que quieres entrar."
         />
-        {access === null ? (
+        {Predicate.isNull(access) ? (
           <div className="grid gap-4 sm:grid-cols-2">
             <Skeleton className="h-28" />
             <Skeleton className="h-28" />

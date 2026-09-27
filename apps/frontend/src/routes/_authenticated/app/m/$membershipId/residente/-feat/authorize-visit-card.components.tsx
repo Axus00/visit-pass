@@ -30,9 +30,9 @@ import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId
 import {
   type SharedAuthorization,
   WEEKDAY_TOGGLE_ORDER,
+  authorizeFormValidation,
   buildCreateAuthorizationPayload,
   defaultAuthorizeFormValues,
-  validateAuthorizeForm,
 } from './authorize.models';
 import { RelationshipSelect } from './favorites.components';
 import {
@@ -73,10 +73,7 @@ export function AuthorizeVisitCard({
 
   const form = Forms.useAppForm({
     defaultValues: defaultAuthorizeFormValues(today),
-    validators: {
-      onSubmit: ({ value }) =>
-        validateAuthorizeForm(value, VisitPass.todayIn(timeZone)),
-    },
+    ...authorizeFormValidation(() => VisitPass.todayIn(timeZone)),
     onSubmit: async ({ value, formApi }) => {
       const visitorName = value.visitorName.trim();
       const visitorDocument = value.visitorDocument.trim();

@@ -1,5 +1,6 @@
 import * as SystemFields from '@confect/core/SystemFields';
 import * as Schema from 'effect/Schema';
+import * as Struct from 'effect/Struct';
 
 import { Id } from '../../../_generated/id';
 import * as CalendarDomain from '../../calendar/domain';
@@ -10,7 +11,10 @@ export const EVENT_NAME_MAX_LENGTH = 80;
 export const MAX_EVENT_VISITORS = 100;
 /**
  * Bound for reading one Autorización's Pases newest first: an Evento's guest
- * list plus room for regenerated ones, so the live Pases are the part kept.
+ * list plus room for regenerated ones. Many regenerations can still push an
+ * older active Pase past it, so a reader that needs every active Pase reads
+ * them by status instead; there are at most `MAX_EVENT_VISITORS`, one per
+ * Visitante.
  */
 export const PASSES_PER_AUTHORIZATION_LIMIT = 2 * MAX_EVENT_VISITORS;
 /** A Servicio spans at most this many days. */
@@ -157,15 +161,17 @@ export const CreateAuthorizationDto = Schema.Struct({
 
 export type CreateAuthorizationDto = typeof CreateAuthorizationDto.Type;
 
-export const PassSummary = Schema.Struct({
-  _id: Id('passes'),
-  token: Schema.String,
-  visitorName: Schema.String,
-  visitorDocument: Schema.optional(Schema.String),
-  status: PassStatus,
-  entryCount: Schema.Finite,
-  lastEntryAt: Schema.optional(Schema.Finite),
-});
+export const PassSummary = Schema.Struct(
+  Struct.pick(PassesDocSchema.fields, [
+    '_id',
+    'token',
+    'visitorName',
+    'visitorDocument',
+    'status',
+    'entryCount',
+    'lastEntryAt',
+  ])
+);
 
 export type PassSummary = typeof PassSummary.Type;
 
@@ -177,14 +183,16 @@ export const CreatedAuthorization = Schema.Struct({
 export type CreatedAuthorization = typeof CreatedAuthorization.Type;
 
 export const AuthorizationSummary = Schema.Struct({
-  _id: Id('authorizations'),
-  _creationTime: Schema.Finite,
-  type: AuthorizationType,
-  startDate: CalendarDomain.LocalDate,
-  endDate: CalendarDomain.LocalDate,
-  weekdays: Schema.Array(CalendarDomain.Weekday),
-  eventName: Schema.optional(Schema.String),
-  status: AuthorizationStatus,
+  ...Struct.pick(AuthorizationsDocSchema.fields, [
+    '_id',
+    '_creationTime',
+    'type',
+    'startDate',
+    'endDate',
+    'weekdays',
+    'eventName',
+    'status',
+  ]),
   createdByName: Schema.optional(Schema.String),
   passes: Schema.Array(PassSummary),
 });
@@ -193,31 +201,33 @@ export type AuthorizationSummary = typeof AuthorizationSummary.Type;
 
 /** What anyone holding the link to a Pase sees, without a session. */
 export const PublicPass = Schema.Struct({
-  token: Schema.String,
-  visitorName: Schema.String,
+  ...Struct.pick(PassesTableSchema.fields, ['token', 'visitorName', 'status']),
+  ...Struct.pick(AuthorizationsTableSchema.fields, [
+    'type',
+    'startDate',
+    'endDate',
+    'weekdays',
+    'eventName',
+  ]),
+  authorizationStatus: AuthorizationsTableSchema.fields.status,
   residentialUnitName: Schema.String,
   /** Decides which calendar day is "today" when showing the Pase's state. */
   residentialUnitTimeZone: Schema.String,
   apartmentLabel: Schema.String,
-  type: AuthorizationType,
-  startDate: CalendarDomain.LocalDate,
-  endDate: CalendarDomain.LocalDate,
-  weekdays: Schema.Array(CalendarDomain.Weekday),
-  eventName: Schema.optional(Schema.String),
-  status: PassStatus,
-  authorizationStatus: AuthorizationStatus,
 });
 
 export type PublicPass = typeof PublicPass.Type;
 
-export const FavoriteSummary = Schema.Struct({
-  _id: Id('favorites'),
-  visitorName: Schema.String,
-  visitorDocument: Schema.optional(Schema.String),
-  relationship: Relationship,
-  relationshipNote: Schema.optional(Schema.String),
-  lastAuthorizedAt: Schema.optional(Schema.Finite),
-});
+export const FavoriteSummary = Schema.Struct(
+  Struct.pick(FavoritesDocSchema.fields, [
+    '_id',
+    'visitorName',
+    'visitorDocument',
+    'relationship',
+    'relationshipNote',
+    'lastAuthorizedAt',
+  ])
+);
 
 export type FavoriteSummary = typeof FavoriteSummary.Type;
 

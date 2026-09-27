@@ -6,6 +6,7 @@ import * as Predicate from 'effect/Predicate';
 import * as Result from 'effect/Result';
 import {
   Download,
+  FileDown,
   FileSpreadsheet,
   LoaderCircle,
   Mail,
@@ -40,8 +41,8 @@ import {
 import { VisitCard } from './visit-list.components';
 
 /**
- * A Turno's Visitas and its Reportes de turno: download the Excel or send it
- * to the Administrador. Open it by passing the Turno; `null` closes it.
+ * A Turno's Visitas and its Reportes de turno: generate the Excel to download
+ * from the list, or send it to the Administrador. Open it by passing the Turno; `null` closes it.
  */
 export function ShiftDetailSheet({
   shift,
@@ -199,8 +200,8 @@ function ShiftReportsSection({ shift }: { shift: VisitPass.ShiftSummary }) {
           disabled={Predicate.isNotNull(pendingRequest)}
           onClick={() => void request(false)}
         >
-          <Download data-icon="inline-start" />
-          Descargar Excel
+          <FileDown data-icon="inline-start" />
+          Generar Excel
         </Button>
         <Button
           className="h-12 text-base"

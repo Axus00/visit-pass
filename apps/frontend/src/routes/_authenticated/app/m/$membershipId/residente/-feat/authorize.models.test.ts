@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { FieldApi, FormApi } from '@tanstack/react-form';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   type AuthorizeFormValues,
   type FavoriteId,
+  authorizeFormValidation,
   buildCreateAuthorizationPayload,
   defaultAuthorizeFormValues,
   resolveSharedValidity,
@@ -154,6 +156,92 @@ describe('validateAuthorizeForm', () => {
         today
       )?.fields
     ).toEqual({ 'guests[1].name': 'Escribe el nombre del Visitante.' });
+  });
+});
+
+describe('authorizeFormValidation', () => {
+  const mountForm = (
+    defaultValues: AuthorizeFormValues,
+    onSubmit: () => void
+  ) => {
+    const form = new FormApi({
+      defaultValues,
+      ...authorizeFormValidation(() => today),
+      onSubmit,
+    });
+    form.mount();
+    const field = <TName extends 'type' | 'startDate' | 'endDate' | 'weekdays'>(
+      name: TName
+    ) => {
+      const api = new FieldApi({ form, name });
+      api.mount();
+      return api;
+    };
+    const fields = {
+      type: field('type'),
+      startDate: field('startDate'),
+      endDate: field('endDate'),
+      weekdays: field('weekdays'),
+    };
+
+    return { form, fields };
+  };
+
+  it('clears a range error on Fecha final once Fecha de inicio fixes it, and submits', async () => {
+    const onSubmit = vi.fn();
+    const { form, fields } = mountForm(
+      temporary({
+        type: 'service',
+        startDate: '2026-10-20',
+        endDate: '2026-10-10',
+      }),
+      onSubmit
+    );
+
+    await form.handleSubmit();
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(fields.endDate.state.meta.errors).toHaveLength(1);
+
+    fields.startDate.handleChange('2026-10-01');
+    expect(fields.endDate.state.meta.errors).toEqual([]);
+
+    await form.handleSubmit();
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it('clears a weekday error once the range changes to include an allowed day', async () => {
+    const onSubmit = vi.fn();
+    // Saturday 26 to Sunday 27, allowed only Lunes a viernes.
+    const { form, fields } = mountForm(
+      temporary({ type: 'service', endDate: '2026-09-27' }),
+      onSubmit
+    );
+
+    await form.handleSubmit();
+    expect(fields.weekdays.state.meta.errors).toHaveLength(1);
+
+    fields.endDate.handleChange('2026-09-28');
+    expect(fields.weekdays.state.meta.errors).toEqual([]);
+
+    await form.handleSubmit();
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it('clears a Servicio-only error when the type changes to Temporal', async () => {
+    const onSubmit = vi.fn();
+    const { form, fields } = mountForm(
+      temporary({ type: 'service', weekdays: [] }),
+      onSubmit
+    );
+
+    await form.handleSubmit();
+    expect(fields.weekdays.state.meta.errors).toHaveLength(1);
+
+    fields.type.handleChange('temporary');
+    expect(fields.weekdays.state.meta.errors).toEqual([]);
+
+    await form.handleSubmit();
+    expect(onSubmit).toHaveBeenCalledOnce();
   });
 });
 

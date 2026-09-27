@@ -1,5 +1,4 @@
 import * as Effect from 'effect/Effect';
-import * as Option from 'effect/Option';
 import * as Predicate from 'effect/Predicate';
 
 import type { Id } from '#convex/_generated/dataModel';
@@ -7,9 +6,14 @@ import type { Id } from '#convex/_generated/dataModel';
 import { DatabaseReader } from '../../../_generated/services';
 import * as AuthorizationsDomain from '../../authorizations/domain';
 import * as CalendarDomain from '../../calendar/domain';
+import * as UsersApplication from '../../users/application';
+import * as UsersDomain from '../../users/domain';
 
 /** Voided Visitas may stay open; a live one is the newest, read first. */
 const OPEN_VISITS_PER_PASS_LIMIT = 10;
+
+/** Residentes of one Apartamento read to find one whose Usuario still exists. */
+const ACTIVE_RESIDENTS_PER_APARTMENT_LIMIT = 50;
 
 /**
  * Finds the Pase behind a scanned token and decides whether its Visitante may
@@ -43,7 +47,7 @@ export const evaluatePassByToken = Effect.fn('Visits.evaluatePassByToken')(
       authorization,
       unit,
       apartment,
-      activeResident,
+      activeResidents,
       passesOfAuthorization,
     ] = yield* Effect.all(
       [
@@ -55,7 +59,7 @@ export const evaluatePassByToken = Effect.fn('Visits.evaluatePassByToken')(
           .index('by_apartmentId_and_status', (q) =>
             q.eq('apartmentId', pass.apartmentId).eq('status', 'active')
           )
-          .first(),
+          .take(ACTIVE_RESIDENTS_PER_APARTMENT_LIMIT),
         reader
           .table('passes')
           .index(
@@ -85,25 +89,41 @@ export const evaluatePassByToken = Effect.fn('Visits.evaluatePassByToken')(
         : [passId, ...chainEndingAt(replacedPassId)];
     };
 
-    const openVisits = yield* Effect.forEach(
-      chainEndingAt(pass._id),
-      (passId) =>
-        reader
-          .table('visits')
-          .index(
-            'by_passId_and_exitedAt',
-            (q) => q.eq('passId', passId).eq('exitedAt', undefined),
-            'desc'
-          )
-          .take(OPEN_VISITS_PER_PASS_LIMIT),
+    // An active Membresía always links a Usuario; a deleted one no longer counts.
+    const [residentUsers, openVisits] = yield* Effect.all(
+      [
+        Effect.forEach(
+          activeResidents
+            .map((membership) => membership.userId)
+            .filter(Predicate.isNotUndefined),
+          (userId) =>
+            UsersApplication.getOneById(userId).pipe(
+              UsersDomain.isActiveOrNull
+            ),
+          { concurrency: 'unbounded' }
+        ),
+        Effect.forEach(
+          chainEndingAt(pass._id),
+          (passId) =>
+            reader
+              .table('visits')
+              .index(
+                'by_passId_and_exitedAt',
+                (q) => q.eq('passId', passId).eq('exitedAt', undefined),
+                'desc'
+              )
+              .take(OPEN_VISITS_PER_PASS_LIMIT),
+          { concurrency: 'unbounded' }
+        ).pipe(Effect.orDie),
+      ],
       { concurrency: 'unbounded' }
-    ).pipe(Effect.orDie);
+    );
 
     const admission = AuthorizationsDomain.evaluatePassAdmission({
       pass,
       authorization,
       today: CalendarDomain.toLocalDate(args.now, unit.timeZone),
-      apartmentHasActiveResident: Option.isSome(activeResident),
+      apartmentHasActiveResident: residentUsers.some(Predicate.isNotNull),
       visitorIsInside: openVisits
         .flat()
         .some((visit) => Predicate.isUndefined(visit.voidedAt)),

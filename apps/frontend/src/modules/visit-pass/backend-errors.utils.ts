@@ -1,3 +1,5 @@
+import * as Predicate from 'effect/Predicate';
+
 import { PASS_REJECTION_LABELS } from './labels.constant';
 
 const MESSAGES_BY_TAG: Record<string, string> = {
@@ -58,9 +60,10 @@ export function describeBackendError(error: unknown): string {
   const reason = typeof tagged?.reason === 'string' ? tagged.reason : null;
   const tag = typeof tagged?._tag === 'string' ? tagged._tag : null;
 
-  const reasonMessage =
-    reason === null ? undefined : MESSAGES_BY_REASON[reason];
-  const tagMessage = tag === null ? undefined : MESSAGES_BY_TAG[tag];
+  const reasonMessage = Predicate.isNull(reason)
+    ? undefined
+    : MESSAGES_BY_REASON[reason];
+  const tagMessage = Predicate.isNull(tag) ? undefined : MESSAGES_BY_TAG[tag];
 
   return reasonMessage ?? tagMessage ?? FALLBACK_MESSAGE;
 }

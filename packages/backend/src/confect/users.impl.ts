@@ -49,7 +49,8 @@ const getOneByExternalIdImpl = FunctionImpl.make(
 
 /**
  * Also activates the synced email's Membresías pendientes, so an invitation
- * works even when the person signed in before this webhook arrived.
+ * works even when the person signed in before this webhook arrived, and moves
+ * the Usuario's Membresías onto a changed email.
  */
 const upsertFromWorkOSImpl = FunctionImpl.make(
   databaseSchema,
@@ -131,7 +132,13 @@ const upsertFromWorkOSImpl = FunctionImpl.make(
         Effect.catchTag('NoSuchElementError', Effect.die)
       );
 
-      yield* Memberships.activatePendingForUser(reactivatedUser);
+      yield* Effect.all(
+        [
+          Memberships.syncEmailForUser(reactivatedUser),
+          Memberships.activatePendingForUser(reactivatedUser),
+        ],
+        { concurrency: 'unbounded' }
+      );
 
       return reactivatedUser;
     })

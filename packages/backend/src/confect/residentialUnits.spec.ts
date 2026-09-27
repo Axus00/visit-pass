@@ -20,7 +20,7 @@ export default GroupSpec.make()
     }).middleware(RequireUserIdentity)
   )
   .addFunction(
-    /** Any Rol: the unit's Apartamentos, sorted by tower and number. */
+    /** Portero or Administrador: the unit's Apartamentos, sorted by tower and number. */
     FunctionSpec.publicQuery({
       name: 'listApartments',
       args: () => ({ membershipId: Id('memberships') }),

@@ -1,5 +1,7 @@
 import { type ReactNode, createContext, useContext, useState } from 'react';
 
+import * as Predicate from 'effect/Predicate';
+
 import type * as VisitPass from '#modules/visit-pass';
 
 type MembershipContextValue = {
@@ -43,7 +45,7 @@ export function MembershipProvider({
 function useMembershipContext() {
   const context = useContext(MembershipContext);
 
-  if (context === null)
+  if (Predicate.isNull(context))
     throw new Error('useCurrentMembership needs a MembershipProvider above it');
 
   return context;

@@ -108,6 +108,50 @@ describe('useStableQuery', () => {
     expect(result.current).toMatchObject({ _tag: 'Loading', skipped: true });
   });
 
+  it('reads as Loading when the same args come back after a skip', () => {
+    answer({ membershipId: 'm1', now: 0 }, 'state of m1');
+    const { result, rerender } = renderStableQuery({
+      membershipId: 'm1',
+      now: 0,
+    });
+
+    rerender({ args: 'skip' });
+    rerender({ args: { membershipId: 'm1', now: 60_000 } });
+
+    expect(QueryResult.isLoading(result.current)).toBe(true);
+  });
+
+  it('does not bring back an old identity when the one in between never answered', () => {
+    answer({ membershipId: 'm1', now: 0 }, 'state of m1');
+    const { result, rerender } = renderStableQuery({
+      membershipId: 'm1',
+      now: 0,
+    });
+
+    rerender({ args: { membershipId: 'm2', now: 0 } });
+    rerender({ args: { membershipId: 'm1', now: 60_000 } });
+
+    expect(QueryResult.isLoading(result.current)).toBe(true);
+  });
+
+  it('forgets the previous Success after a Failure', () => {
+    answer({ membershipId: 'm1', now: 0 }, 'state at 0');
+    const { result, rerender } = renderStableQuery({
+      membershipId: 'm1',
+      now: 0,
+    });
+
+    answered.set(
+      JSON.stringify({ membershipId: 'm1', now: 60_000 }),
+      QueryResult.fail('boom')
+    );
+    rerender({ args: { membershipId: 'm1', now: 60_000 } });
+    expect(QueryResult.isFailure(result.current)).toBe(true);
+
+    rerender({ args: { membershipId: 'm1', now: 120_000 } });
+    expect(QueryResult.isLoading(result.current)).toBe(true);
+  });
+
   it('reads as Loading before the first answer', () => {
     const { result } = renderStableQuery({ membershipId: 'm1', now: 0 });
 

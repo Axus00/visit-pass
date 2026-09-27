@@ -308,6 +308,65 @@ describe('users', () => {
       }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect(
+    'moves the Usuario’s Membresías onto a changed email and frees the old one',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* TestFixtures.seedTwoUnits;
+        const admin = confect.withIdentity(TestFixtures.identityOf('adminA'));
+
+        const invitePorter = (email: string) =>
+          admin.mutation(refs.public.memberships.invite, {
+            membershipId: world.adminA,
+            email,
+            role: 'porter',
+          });
+
+        yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+          workosUser: makeWorkOSUser(),
+        });
+        const seatId = yield* invitePorter(userEmail);
+
+        yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+          workosUser: makeWorkOSUser({ email: 'renamed@example.test' }),
+        });
+
+        const members = yield* admin.query(
+          refs.public.memberships.listForUnit,
+          { membershipId: world.adminA }
+        );
+        const seat = members.find(({ _id }) => _id === seatId);
+
+        EffectVitestUtils.deepStrictEqual(
+          { email: seat?.email, status: seat?.status },
+          { email: 'renamed@example.test', status: 'active' }
+        );
+
+        const [oldEmailInvitation, newEmailInvitation] = yield* Effect.all([
+          invitePorter(userEmail),
+          Effect.result(invitePorter('renamed@example.test')),
+        ]);
+
+        const membersAfterInvite = yield* admin.query(
+          refs.public.memberships.listForUnit,
+          { membershipId: world.adminA }
+        );
+
+        EffectVitestUtils.strictEqual(
+          membersAfterInvite.find(({ _id }) => _id === oldEmailInvitation)
+            ?.status,
+          'pending'
+        );
+        EffectVitestUtils.assertFailure(
+          newEmailInvitation,
+          new Memberships.MembershipAlreadyExistsError({
+            email: 'renamed@example.test',
+          })
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('answers the signed-in User through `me`', () =>
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;

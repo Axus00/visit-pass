@@ -127,7 +127,7 @@ describe('residentialUnits', () => {
   );
 
   it.effect(
-    'lists the unit’s Apartamentos in natural order with their Residentes',
+    'lists the unit’s Apartamentos in natural order to staff, never to Residentes',
     () =>
       Effect.gen(function* () {
         const confect = yield* TestConfect.TestConfect;
@@ -155,9 +155,9 @@ describe('residentialUnits', () => {
         EffectVitestUtils.strictEqual(repeated, 1);
 
         const apartments = yield* confect
-          .withIdentity(TestFixtures.identityOf('residentA'))
+          .withIdentity(TestFixtures.identityOf('porterA'))
           .query(refs.public.residentialUnits.listApartments, {
-            membershipId: world.residentA,
+            membershipId: world.porterA,
           });
 
         EffectVitestUtils.deepStrictEqual(
@@ -173,6 +173,19 @@ describe('residentialUnits', () => {
             { label: 'Torre 10 · 902', activeResidentCount: 0 },
             { label: 'Torre 10 · 1001', activeResidentCount: 0 },
           ]
+        );
+
+        const residentListing = yield* Effect.result(
+          confect
+            .withIdentity(TestFixtures.identityOf('residentA'))
+            .query(refs.public.residentialUnits.listApartments, {
+              membershipId: world.residentA,
+            })
+        );
+
+        EffectVitestUtils.assertFailure(
+          residentListing,
+          new Memberships.AccessDeniedError()
         );
       }).pipe(Effect.provide(TestConfect.layer))
   );

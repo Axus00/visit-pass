@@ -1,5 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
+import * as Result from 'effect/Result';
+
 export type ThemePreference = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
 
@@ -7,8 +9,11 @@ const STORAGE_KEY = 'visit-pass:theme';
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 const listeners = new Set<() => void>();
 
+/** The stored preference, or 'system' when site data is blocked. */
 function readPreference(): ThemePreference {
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = Result.getOrNull(
+    Result.try(() => window.localStorage.getItem(STORAGE_KEY))
+  );
   const isKnown =
     stored === 'light' || stored === 'dark' || stored === 'system';
 
@@ -32,8 +37,13 @@ function resolve(preference: ThemePreference): ResolvedTheme {
   return window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light';
 }
 
+/** Stores the preference; a no-op when site data is blocked. */
 export function setThemePreference(preference: ThemePreference) {
-  window.localStorage.setItem(STORAGE_KEY, preference);
+  const stored = Result.try(() =>
+    window.localStorage.setItem(STORAGE_KEY, preference)
+  );
+  if (Result.isFailure(stored)) return;
+
   listeners.forEach((listener) => listener());
 }
 

@@ -33,8 +33,8 @@ const World = Schema.Struct({
   oldVisitB: Id('visits'),
   usedPass: Id('passes'),
   unusedPassOfUsedAuthorization: Id('passes'),
-  forcedEntryPass: Id('passes'),
-  oldForcedEntryPass: Id('passes'),
+  voidedEntryPass: Id('passes'),
+  oldVoidedEntryPass: Id('passes'),
   expiredAuthorization: Id('authorizations'),
   unusedPassOfExpiredAuthorization: Id('passes'),
   recentAuthorization: Id('authorizations'),
@@ -47,8 +47,8 @@ const World = Schema.Struct({
  * Unit A keeps Visitas 3 months, unit B 12. Both get a Visita from 100 days
  * ago; unit A also gets a recent one, a voided old one, Autorizaciones that
  * ended 40 and 5 days ago, a Servicio still running whose Pase's only Ingreso
- * was 100 days ago, and a Servicio that ended 40 days ago whose Pase's only
- * Visita was anonymized while it ran.
+ * was 100 days ago, and two Servicios that ended 40 days ago whose Pase's only
+ * Visita was anonymized while they ran, one of them voided.
  */
 const seedWorld = Effect.gen(function* () {
   const confect = yield* TestConfect.TestConfect;
@@ -185,6 +185,48 @@ const seedWorld = Effect.gen(function* () {
         anonymizedAt: now - 10 * MILLIS_PER_DAY,
       });
 
+      /**
+       * A Pase whose only Ingreso, `daysAgo`, was voided: its count is back to
+       * zero, but the voided Visita still names it and `lastEntryAt` stays.
+       */
+      const insertVoidedEntryPass = Effect.fn(function* (args: {
+        authorizationId: GenericId<'authorizations'>;
+        daysAgo: number;
+        token: string;
+        visitAnonymizedAt?: number;
+      }) {
+        const enteredAt = now - args.daysAgo * MILLIS_PER_DAY;
+        const passId = yield* writer.table('passes').insert({
+          authorizationId: args.authorizationId,
+          residentialUnitId: unitA.unitId,
+          apartmentId: unitA.apartmentId,
+          visitorName: 'Luis',
+          visitorDocument: '11112222',
+          token: args.token,
+          status: 'active',
+          entryCount: 0,
+          lastEntryAt: enteredAt,
+        });
+        yield* insertVisit(unitA, args.daysAgo, {
+          passId,
+          voidedAt: enteredAt,
+          anonymizedAt: args.visitAnonymizedAt,
+        });
+
+        return passId;
+      });
+
+      // Its voided Visita was anonymized 50 days ago, while the Servicio still
+      // ran, so only the Pase sweep can anonymize the Pase now.
+      const oldVoidedEntryPass = yield* insertVoidedEntryPass({
+        authorizationId: yield* insertAuthorization(localDateFromToday(-40), {
+          startDate: localDateFromToday(-200),
+        }),
+        daysAgo: 140,
+        token: 'old-voided',
+        visitAnonymizedAt: now - 50 * MILLIS_PER_DAY,
+      });
+
       const usedAuthorization = yield* insertAuthorization(
         localDateFromToday(-40)
       );
@@ -194,19 +236,11 @@ const seedWorld = Effect.gen(function* () {
         0,
         'unused'
       );
-      // A forced Registro manual names the rejected Pase without using it.
-      const forcedEntryPass = yield* insertPass(usedAuthorization, 0, 'forced');
-
-      // Rejected long ago, then named by a forced Registro manual whose
-      // Visita has already been anonymized.
-      const oldForcedEntryPass = yield* insertPass(
-        yield* insertAuthorization(localDateFromToday(-120)),
-        0,
-        'old-forced'
-      );
-      yield* insertVisit(unitA, 119, {
-        passId: oldForcedEntryPass,
-        anonymizedAt: now - 20 * MILLIS_PER_DAY,
+      // Its Ingreso on the Autorización's last day was voided.
+      const voidedEntryPass = yield* insertVoidedEntryPass({
+        authorizationId: usedAuthorization,
+        daysAgo: 40,
+        token: 'voided',
       });
 
       const expiredAuthorization = yield* insertAuthorization(
@@ -232,14 +266,12 @@ const seedWorld = Effect.gen(function* () {
         oldVoidedVisitA: yield* insertVisit(unitA, 100, {
           voidedAt: now - 99 * MILLIS_PER_DAY,
         }),
-        recentVisitA: yield* insertVisit(unitA, 10, {
-          passId: forcedEntryPass,
-        }),
+        recentVisitA: yield* insertVisit(unitA, 10),
         oldVisitB: yield* insertVisit(unitB, 100),
         usedPass,
         unusedPassOfUsedAuthorization,
-        forcedEntryPass,
-        oldForcedEntryPass,
+        voidedEntryPass,
+        oldVoidedEntryPass,
         expiredAuthorization,
         unusedPassOfExpiredAuthorization,
         recentAuthorization,
@@ -380,8 +412,8 @@ describe('retention', () => {
           snapshot.passes.map((pass) => pass._id).sort(),
           [
             world.usedPass,
-            world.forcedEntryPass,
-            world.oldForcedEntryPass,
+            world.voidedEntryPass,
+            world.oldVoidedEntryPass,
             world.unusedPassOfRecentAuthorization,
             world.runningServicePass,
             world.endedServicePass,
@@ -423,13 +455,13 @@ describe('retention', () => {
           passes.get(world.endedServicePass),
           anonymized
         );
-        // Never used, its Autorización ended before the Visita retention.
+        // No Ingreso counts, but its voided one aged out after the Servicio.
         EffectVitestUtils.deepStrictEqual(
-          passes.get(world.oldForcedEntryPass),
+          passes.get(world.oldVoidedEntryPass),
           anonymized
         );
-        // Its Visita is recent.
-        EffectVitestUtils.deepStrictEqual(passes.get(world.forcedEntryPass), {
+        // Its voided Ingreso is within the Visita retention.
+        EffectVitestUtils.deepStrictEqual(passes.get(world.voidedEntryPass), {
           visitorName: 'Luis',
           visitorDocument: '11112222',
         });

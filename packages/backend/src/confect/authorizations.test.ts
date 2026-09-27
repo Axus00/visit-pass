@@ -297,6 +297,90 @@ describe('authorizations', () => {
       }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect(
+    'lists an older active Pase however many regenerations came after it',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const residentA = yield* PorteriaFixtures.as('residentA');
+        const today = PorteriaFixtures.localDateFromToday(0);
+
+        const anaPass = yield* confect.run(
+          Effect.gen(function* () {
+            const writer = yield* DatabaseWriter;
+
+            const authorizationId = yield* writer
+              .table('authorizations')
+              .insert({
+                residentialUnitId: world.unitA,
+                apartmentId: world.apartmentA101,
+                createdByMembershipId: world.residentA,
+                type: 'event',
+                startDate: today,
+                endDate: today,
+                weekdays: Authorizations.ALL_WEEKDAYS,
+                eventName: 'Cumpleaños',
+                status: 'active',
+              });
+            const insertPass = (
+              visitorName: string,
+              index: number,
+              status: 'active' | 'replaced'
+            ) =>
+              writer.table('passes').insert({
+                authorizationId,
+                residentialUnitId: world.unitA,
+                apartmentId: world.apartmentA101,
+                visitorName,
+                token: `${visitorName}-${index}`,
+                status,
+                entryCount: 0,
+              });
+
+            const anaPassId = yield* insertPass('Ana', 0, 'active');
+            // Luis's Pase was regenerated more times than one read holds.
+            yield* Effect.forEach(
+              Array.from(
+                { length: Authorizations.PASSES_PER_AUTHORIZATION_LIMIT },
+                (_, index) => index
+              ),
+              (index) => insertPass('Luis', index, 'replaced')
+            );
+            yield* insertPass(
+              'Luis',
+              Authorizations.PASSES_PER_AUTHORIZATION_LIMIT,
+              'active'
+            );
+
+            return anaPassId;
+          }).pipe(Effect.orDie),
+          Id('passes')
+        );
+
+        const [listed] = yield* residentA.query(
+          authorizations.listForApartment,
+          {
+            membershipId: world.residentA,
+            now: PorteriaFixtures.wallClockMillis(),
+          }
+        );
+        const passes = listed?.passes ?? [];
+
+        EffectVitestUtils.strictEqual(passes[0]?._id, anaPass);
+        EffectVitestUtils.deepStrictEqual(
+          passes
+            .filter((pass) => pass.status === 'active')
+            .map((pass) => pass.visitorName),
+          ['Ana', 'Luis']
+        );
+        EffectVitestUtils.strictEqual(
+          passes.length,
+          Authorizations.PASSES_PER_AUTHORIZATION_LIMIT + 1
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('replaces a regenerated Pase so the old link is rejected', () =>
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;

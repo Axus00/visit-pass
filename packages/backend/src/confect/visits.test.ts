@@ -3,6 +3,7 @@ import * as EffectVitestUtils from '@effect/vitest/utils';
 import * as Effect from 'effect/Effect';
 
 import refs from './_generated/refs';
+import { DatabaseReader, DatabaseWriter } from './_generated/services';
 import * as Authorizations from './modules/authorizations';
 import * as Calendar from './modules/calendar';
 import * as Memberships from './modules/memberships';
@@ -350,6 +351,58 @@ describe('visits', () => {
         EffectVitestUtils.assertFailure(
           manualEntry,
           new Shifts.NoOpenShiftError()
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'rejects Pases of an Apartamento whose only Residente was deleted',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const porterA = yield* PorteriaFixtures.as('porterA');
+        const residentA102 = yield* PorteriaFixtures.as('residentA102');
+
+        const created = yield* residentA102.mutation(authorizations.create, {
+          membershipId: world.residentA102,
+          type: 'temporary',
+          startDate: PorteriaFixtures.localDateFromToday(0),
+          visitors: [{ name: 'Ana' }],
+        });
+        const resolve = () =>
+          porterA
+            .query(visits.resolvePass, {
+              membershipId: world.porterA,
+              token: tokenOf(created),
+              now: PorteriaFixtures.wallClockMillis(),
+            })
+            .pipe(
+              Effect.map((resolution) =>
+                resolution.outcome === 'rejected'
+                  ? resolution.reason
+                  : resolution.outcome
+              )
+            );
+
+        EffectVitestUtils.strictEqual(yield* resolve(), 'admissible');
+
+        // The Membresía stays active; only its Usuario is soft-deleted.
+        yield* confect.run(
+          Effect.gen(function* () {
+            const reader = yield* DatabaseReader;
+            const writer = yield* DatabaseWriter;
+
+            const user = yield* reader
+              .table('users')
+              .get('by_externalId', 'residentA102');
+            yield* writer.table('users').patch(user._id, { deletedAt: 0 });
+          }).pipe(Effect.orDie)
+        );
+
+        EffectVitestUtils.strictEqual(
+          yield* resolve(),
+          'apartmentWithoutResident'
         );
       }).pipe(Effect.provide(TestConfect.layer))
   );

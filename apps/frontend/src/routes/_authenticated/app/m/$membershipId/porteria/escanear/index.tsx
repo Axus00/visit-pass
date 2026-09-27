@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { QueryResult } from '@confect/react';
+import { QueryResult, useQuery } from '@confect/react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import * as Match from 'effect/Match';
 import * as Predicate from 'effect/Predicate';
@@ -38,7 +38,7 @@ function PorteriaScanPage() {
   const [heldResolution, setHeldResolution] =
     useState<PorteriaRouteFeat.PassResolution | null>(null);
 
-  const liveResolution = VisitPass.useStableQuery(
+  const liveResolution = useQuery(
     refs.public.visits.resolvePass,
     Predicate.isNull(scan)
       ? 'skip'

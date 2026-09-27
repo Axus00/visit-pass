@@ -1,4 +1,5 @@
 import type * as Ref from '@confect/core/Ref';
+import { revalidateLogic } from '@tanstack/react-form';
 import * as Predicate from 'effect/Predicate';
 import * as Result from 'effect/Result';
 
@@ -165,7 +166,7 @@ const REASON_FIELD = {
 >;
 
 /**
- * Form-level check run on submit: field rules for the fields the chosen type
+ * Form-level check: field rules for the fields the chosen type
  * shows, then the backend's own validity rules. Returns TanStack Form's
  * `{ fields }` shape, or `undefined` when the form can be sent.
  */
@@ -217,6 +218,22 @@ export function validateAuthorizeForm(
   return Object.keys(allFields).length === 0
     ? undefined
     : { fields: allFields };
+}
+
+/**
+ * The authorize form's `validationLogic` and `validators`: `validateAuthorizeForm`
+ * runs on the first submit, then on every change, so fixing any field a
+ * cross-field rule involves (type, dates, weekdays) clears the error that rule
+ * left on another field. `today` is read on each run.
+ */
+export function authorizeFormValidation(today: () => string) {
+  return {
+    validationLogic: revalidateLogic(),
+    validators: {
+      onDynamic: ({ value }: { value: AuthorizeFormValues }) =>
+        validateAuthorizeForm(value, today()),
+    },
+  };
 }
 
 /** The validity the backend stores for a valid payload, for the share sheet. */

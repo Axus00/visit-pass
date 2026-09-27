@@ -1,5 +1,6 @@
 import * as SystemFields from '@confect/core/SystemFields';
 import * as Schema from 'effect/Schema';
+import * as Struct from 'effect/Struct';
 
 import { Id } from '../../../_generated/id';
 import * as AuthorizationsDomain from '../../authorizations/domain';
@@ -96,26 +97,26 @@ export const VoidVisitDto = Schema.Struct({
 
 export type VoidVisitDto = typeof VoidVisitDto.Type;
 
+/** `visitorDocument` is masked (`••••1234`) outside portería and administración. */
 export const VisitSummary = Schema.Struct({
-  _id: Id('visits'),
-  visitorName: Schema.String,
-  /** Masked (`••••1234`) outside portería and administración. */
-  visitorDocument: Schema.optional(Schema.String),
-  plate: Schema.optional(Schema.String),
-  apartmentId: Id('apartments'),
+  ...Struct.pick(VisitsDocSchema.fields, [
+    '_id',
+    'visitorName',
+    'visitorDocument',
+    'plate',
+    'apartmentId',
+    'visitType',
+    'origin',
+    'overriddenRejection',
+    'enteredAt',
+    'exitedAt',
+    'voidReason',
+  ]),
   apartmentLabel: Schema.String,
-  visitType: VisitType,
-  origin: VisitOrigin,
-  overriddenRejection: Schema.optional(
-    AuthorizationsDomain.PassRejectionReason
-  ),
-  enteredAt: Schema.Finite,
-  exitedAt: Schema.optional(Schema.Finite),
   entryPorterName: Schema.optional(Schema.String),
   anonymized: Schema.Boolean,
   /** Voided Visitas stay listed but out of counts and reports. */
   voided: Schema.Boolean,
-  voidReason: Schema.optional(Schema.String),
 });
 
 export type VisitSummary = typeof VisitSummary.Type;
@@ -123,16 +124,20 @@ export type VisitSummary = typeof VisitSummary.Type;
 /** The Pase details the Portero checks against the Visitante in front of them. */
 export const ResolvedPass = Schema.Struct({
   passId: Id('passes'),
-  visitorName: Schema.String,
-  visitorDocument: Schema.optional(Schema.String),
-  apartmentId: Id('apartments'),
+  ...Struct.pick(AuthorizationsDomain.PassesTableSchema.fields, [
+    'visitorName',
+    'visitorDocument',
+    'apartmentId',
+    'entryCount',
+  ]),
+  ...Struct.pick(AuthorizationsDomain.AuthorizationsTableSchema.fields, [
+    'type',
+    'startDate',
+    'endDate',
+    'weekdays',
+    'eventName',
+  ]),
   apartmentLabel: Schema.String,
-  type: AuthorizationsDomain.AuthorizationType,
-  startDate: Schema.String,
-  endDate: Schema.String,
-  weekdays: Schema.Array(Schema.Finite),
-  eventName: Schema.optional(Schema.String),
-  entryCount: Schema.Finite,
 });
 
 export type ResolvedPass = typeof ResolvedPass.Type;

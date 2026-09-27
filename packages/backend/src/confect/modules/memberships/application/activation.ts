@@ -77,3 +77,43 @@ export const activatePendingForUser = Effect.fn(
 
   return activatedCounts.reduce((total, count) => total + count, 0);
 });
+
+/**
+ * Rewrites `email` on every Membresía linked to `user` that still carries an
+ * earlier address, so the Administrador sees the current one and the old
+ * address is free to invite again. Idempotent: answers how many it rewrote.
+ * Runs whenever the WorkOS webhook syncs the Usuario.
+ */
+export const syncEmailForUser = Effect.fn('Memberships.syncEmailForUser')(
+  function* (user: Pick<UsersDoc, '_id' | 'email'>) {
+    const reader = yield* DatabaseReader;
+    const writer = yield* DatabaseWriter;
+
+    const userMemberships = yield* reader
+      .table('memberships')
+      .index('by_userId', (q) => q.eq('userId', user._id))
+      .take(MEMBERSHIPS_PER_USER_LIMIT)
+      .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
+
+    const staleMemberships = userMemberships.filter(
+      (membership) => membership.email !== user.email
+    );
+
+    yield* Effect.forEach(
+      staleMemberships,
+      (membership) =>
+        writer
+          .table('memberships')
+          .patch(membership._id, { email: user.email })
+          .pipe(
+            Effect.catchTag(
+              ['GetByIdFailure', 'DocumentDecodeError', 'DocumentEncodeError'],
+              Effect.die
+            )
+          ),
+      { concurrency: 'unbounded', discard: true }
+    );
+
+    return staleMemberships.length;
+  }
+);

@@ -1,4 +1,5 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router';
+import * as Predicate from 'effect/Predicate';
 import { ShieldAlert } from 'lucide-react';
 
 import * as CommonUI from '#modules/common-ui';
@@ -16,7 +17,7 @@ function MembershipLayout() {
   const { membershipId } = Route.useParams();
   const access = AppRouteFeat.useMyAccess();
 
-  if (access === null)
+  if (Predicate.isNull(access))
     return <CommonUI.GlobalSpinner message="Cargando tu Membresía" />;
 
   const membership = access.memberships.find(
