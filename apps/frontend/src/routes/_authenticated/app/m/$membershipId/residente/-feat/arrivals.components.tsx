@@ -55,6 +55,7 @@ function ArrivalsBell() {
   const loadedVisits = QueryResult.isSuccess(visits) ? visits.value : null;
   const [baseline, setBaseline] = useState<number | null>(null);
   const [seenUpTo, setSeenUpTo] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
   const announcedIds = useRef(new Set<string>());
 
   // Record the baseline on the first load, during render, so the first list is never announced.
@@ -98,7 +99,9 @@ function ArrivalsBell() {
 
   return (
     <Popover
+      open={isOpen}
       onOpenChange={(open) => {
+        setIsOpen(open);
         if (open) setSeenUpTo(arrivals[0]?.enteredAt ?? 0);
       }}
     >
@@ -163,6 +166,7 @@ function ArrivalsBell() {
           params={{ membershipId: membership.membershipId }}
           variant="outline"
           size="sm"
+          onClick={() => setIsOpen(false)}
         >
           Ver historial
         </CommonUI.NavLinkButton>
