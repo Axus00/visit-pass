@@ -66,13 +66,12 @@ function ArrivalsBell() {
     Predicate.isNull(baseline) && Predicate.isNotNull(loadedVisits);
   if (needsBaseline) setBaseline(newestEntryAt(loadedVisits));
 
-  const arrivals = useMemo(
-    () =>
-      Predicate.isNull(baseline) || Predicate.isNull(loadedVisits)
-        ? []
-        : findNewArrivals(loadedVisits, baseline),
-    [baseline, loadedVisits]
-  );
+  const arrivals = useMemo(() => {
+    const isWaitingForVisits =
+      Predicate.isNull(baseline) || Predicate.isNull(loadedVisits);
+
+    return isWaitingForVisits ? [] : findNewArrivals(loadedVisits, baseline);
+  }, [baseline, loadedVisits]);
   const unseenCount = arrivals.filter(
     (arrival) => arrival.enteredAt > seenUpTo
   ).length;

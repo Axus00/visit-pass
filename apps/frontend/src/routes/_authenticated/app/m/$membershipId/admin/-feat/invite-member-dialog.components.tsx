@@ -63,6 +63,8 @@ export function InviteMemberDialog({
   const apartments = QueryResult.isSuccess(apartmentsResult)
     ? apartmentsResult.value
     : [];
+  const hasNoApartments =
+    QueryResult.isSuccess(apartmentsResult) && apartments.length === 0;
 
   const form = Forms.useAppForm({
     defaultValues: DEFAULT_VALUES,
@@ -189,8 +191,7 @@ export function InviteMemberDialog({
                       }))}
                       error={Forms.getFieldErrorMessage(field)}
                       description={
-                        QueryResult.isSuccess(apartmentsResult) &&
-                        apartments.length === 0
+                        hasNoApartments
                           ? 'Aún no hay Apartamentos: agrégalos primero en Apartamentos.'
                           : undefined
                       }

@@ -57,7 +57,9 @@ export function filterVisits<Visit extends VisitPass.VisitSummary>(
     const matchesOrigin =
       filters.origin === 'all' || visit.origin === filters.origin;
 
-    if (!matchesStatus || !matchesType || !matchesOrigin) return false;
+    const matchesEveryFilter = matchesStatus && matchesType && matchesOrigin;
+
+    if (!matchesEveryFilter) return false;
     if (query.length === 0) return true;
 
     const haystack = normalize(

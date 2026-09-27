@@ -78,6 +78,9 @@ export function VisitCard({
 }) {
   const isForced = Predicate.isNotUndefined(visit.overriddenRejection);
   const hasPlate = Predicate.isNotUndefined(visit.plate);
+  const showsForcedBadge = isForced && !visit.voided;
+  const hasVoidReason =
+    visit.voided && Predicate.isNotUndefined(visit.voidReason);
 
   return (
     <li
@@ -113,7 +116,7 @@ export function VisitCard({
               {visit.visitorName}
             </p>
             {visit.voided ? <Badge variant="secondary">Anulada</Badge> : null}
-            {isForced && !visit.voided ? (
+            {showsForcedBadge ? (
               <Badge variant="warning">Ingreso forzado</Badge>
             ) : null}
           </div>
@@ -130,7 +133,7 @@ export function VisitCard({
               {hasPlate ? ` · ${visit.plate}` : null}
             </span>
           </p>
-          {visit.voided && Predicate.isNotUndefined(visit.voidReason) ? (
+          {hasVoidReason ? (
             <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
               <Ban className="size-3.5 shrink-0" aria-hidden="true" />
               <span className="truncate">{visit.voidReason}</span>

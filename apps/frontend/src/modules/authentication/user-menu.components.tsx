@@ -23,6 +23,8 @@ import { getUserDisplayName } from './user.utils';
 export function UserAvatarMenu({ user }: { user: AuthUser }) {
   if (!user) return null;
 
+  const hasName = Boolean(user.firstName || user.lastName);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -40,7 +42,7 @@ export function UserAvatarMenu({ user }: { user: AuthUser }) {
         <div className="px-2 py-2">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">
-              {user.firstName || user.lastName
+              {hasName
                 ? getUserDisplayName(user.firstName, user.lastName)
                 : 'Sesión iniciada'}
             </p>
@@ -122,10 +124,10 @@ function UserSessionInfo({
   className?: string;
   textClassName?: string;
 }) {
-  const displayName =
-    user.firstName || user.lastName
-      ? getUserDisplayName(user.firstName, user.lastName)
-      : 'Sesión iniciada';
+  const hasName = Boolean(user.firstName || user.lastName);
+  const displayName = hasName
+    ? getUserDisplayName(user.firstName, user.lastName)
+    : 'Sesión iniciada';
 
   return (
     <div className={cn('flex min-w-0 items-center gap-2', className)}>

@@ -12,7 +12,7 @@ import * as Domain from '../domain';
 const RESEND_EMAILS_URL = 'https://api.resend.com/emails';
 
 /** Resend accepts at most this many addresses in `to`. */
-export const RESEND_MAX_RECIPIENTS = 50;
+const RESEND_MAX_RECIPIENTS = 50;
 
 /** Keeps `String.fromCharCode` below the engine's argument limit. */
 const BASE64_CHUNK_SIZE = 0x8000;
@@ -31,29 +31,12 @@ const ResendEmailRequestJson = Schema.fromJsonString(
 );
 
 /**
- * Splits recipients into Resend-sized requests. Each request gets its own
- * idempotency key, so a retry after a partial failure resends only the
- * requests Resend has not accepted yet.
- */
-export function toResendRequests(
-  to: ReadonlyArray<string>,
-  idempotencyKey: string
-): ReadonlyArray<{
-  readonly to: ReadonlyArray<string>;
-  readonly idempotencyKey: string;
-}> {
-  return Arr.chunksOf(to, RESEND_MAX_RECIPIENTS).map((recipients, index) => ({
-    to: recipients,
-    idempotencyKey: `${idempotencyKey}/recipients-${index}`,
-  }));
-}
-
-/**
  * Sends through Resend's REST API, because `@convex-dev/resend` cannot attach
  * files. Reads `RESEND_API_KEY` and `SHIFT_REPORT_FROM_EMAIL` per call and
  * answers `notConfigured` without either. More than `RESEND_MAX_RECIPIENTS`
  * recipients go out as several emails, one request after another to respect
- * Resend's rate limit.
+ * Resend's rate limit. Each request gets its own idempotency key, so a retry
+ * after a partial failure resends only the requests Resend has not accepted.
  */
 export const resendShiftReportMailerLayer = Layer.succeed(
   Application.ShiftReportMailer,
@@ -83,12 +66,12 @@ export const resendShiftReportMailerLayer = Layer.succeed(
       ];
 
       yield* Effect.forEach(
-        toResendRequests(args.to, args.idempotencyKey),
-        (request) =>
+        Arr.chunksOf(args.to, RESEND_MAX_RECIPIENTS),
+        (recipients, index) =>
           Effect.gen(function* () {
             const body = yield* Schema.encodeEffect(ResendEmailRequestJson)({
               from,
-              to: request.to,
+              to: recipients,
               subject: args.subject,
               text: args.text,
               attachments,
@@ -102,7 +85,7 @@ export const resendShiftReportMailerLayer = Layer.succeed(
                   headers: {
                     Authorization: `Bearer ${apiKey}`,
                     'Content-Type': 'application/json',
-                    'Idempotency-Key': request.idempotencyKey,
+                    'Idempotency-Key': `${args.idempotencyKey}/recipients-${index}`,
                   },
                   body,
                 }),

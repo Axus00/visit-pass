@@ -23,8 +23,9 @@ function ResidenteFavoritosPage() {
     membershipId: membership.membershipId,
   });
   const share = ResidenteRouteFeat.usePassShare();
-  const { authorize, pendingFavoriteId } =
-    ResidenteRouteFeat.useAuthorizeFavorite(share.show);
+  const { authorize, isAuthorizing } = ResidenteRouteFeat.useAuthorizeFavorite(
+    share.show
+  );
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   const addButton = (
@@ -57,7 +58,7 @@ function ResidenteFavoritosPage() {
               <ResidenteRouteFeat.FavoriteCard
                 key={favorite._id}
                 favorite={favorite}
-                isAuthorizing={pendingFavoriteId === favorite._id}
+                isAuthorizing={isAuthorizing}
                 onAuthorize={() => void authorize(favorite)}
               />
             ))}

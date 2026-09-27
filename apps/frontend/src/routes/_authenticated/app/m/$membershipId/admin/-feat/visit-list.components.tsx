@@ -195,36 +195,46 @@ export function VisitList({
       </div>
 
       <ul className={cn('flex flex-col divide-y', isResponsive && 'md:hidden')}>
-        {visits.map((visit) => (
-          <li key={visit._id} className="flex flex-col gap-2 px-4 py-3">
-            <div className="flex items-start justify-between gap-3">
-              <VisitorCell visit={visit} />
-              <VisitStatusBadge visit={visit} timeZone={timeZone} />
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-12 text-xs text-muted-foreground">
-              <span className="tabular-nums">
-                {formatEntry(visit.enteredAt, timeZone, today)}
-              </span>
-              <span>{visit.apartmentLabel}</span>
-              <span>{VisitPass.VISIT_TYPE_LABELS[visit.visitType]}</span>
-              {showPorter && visit.entryPorterName ? (
-                <span>Portero: {visit.entryPorterName}</span>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 pl-12 text-xs">
-              <OriginCell visit={visit} />
-              {hasActions && !visit.voided ? (
-                <Button variant="ghost" size="xs" onClick={() => onVoid(visit)}>
-                  <Ban aria-hidden="true" />
-                  Anular
-                </Button>
-              ) : null}
-            </div>
-            <div className="pl-12">
-              <VoidReason visit={visit} />
-            </div>
-          </li>
-        ))}
+        {visits.map((visit) => {
+          const showsPorterName =
+            showPorter && Predicate.isNotUndefined(visit.entryPorterName);
+          const canVoid = hasActions && !visit.voided;
+
+          return (
+            <li key={visit._id} className="flex flex-col gap-2 px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <VisitorCell visit={visit} />
+                <VisitStatusBadge visit={visit} timeZone={timeZone} />
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-12 text-xs text-muted-foreground">
+                <span className="tabular-nums">
+                  {formatEntry(visit.enteredAt, timeZone, today)}
+                </span>
+                <span>{visit.apartmentLabel}</span>
+                <span>{VisitPass.VISIT_TYPE_LABELS[visit.visitType]}</span>
+                {showsPorterName ? (
+                  <span>Portero: {visit.entryPorterName}</span>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 pl-12 text-xs">
+                <OriginCell visit={visit} />
+                {canVoid ? (
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => onVoid(visit)}
+                  >
+                    <Ban aria-hidden="true" />
+                    Anular
+                  </Button>
+                ) : null}
+              </div>
+              <div className="pl-12">
+                <VoidReason visit={visit} />
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </>
   );

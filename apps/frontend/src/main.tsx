@@ -64,6 +64,12 @@ function AppToaster() {
   );
 }
 
+// Disposable preview hosts, and the dev server opened by IP from another device
+// on the LAN, cannot share WorkOS's session cookies. Persist their session
+// across reloads so direct /signout can end it.
+const persistsSessionLocally =
+  env.VITE_PR_PREVIEW === 'true' || import.meta.env.DEV;
+
 // Render the app
 const rootElement = document.getElementById('root')!;
 if (!rootElement.innerHTML) {
@@ -79,14 +85,7 @@ if (!rootElement.innerHTML) {
         <AuthKitProvider
           clientId={env.VITE_WORKOS_CLIENT_ID}
           redirectUri={`${window.location.origin}/callback`}
-          // Disposable preview hosts, and the dev server opened by IP from
-          // another device on the LAN, cannot share WorkOS's session cookies.
-          // Persist their session across reloads so direct /signout can end it.
-          devMode={
-            env.VITE_PR_PREVIEW === 'true' || import.meta.env.DEV
-              ? true
-              : undefined
-          }
+          devMode={persistsSessionLocally ? true : undefined}
         >
           <ConvexProviderWithAuth
             client={convex}

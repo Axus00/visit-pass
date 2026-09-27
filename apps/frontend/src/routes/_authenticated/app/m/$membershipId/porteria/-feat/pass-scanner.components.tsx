@@ -23,7 +23,7 @@ const STATUS_COPY: Partial<
       'Este dispositivo o navegador no ofrece cámara aquí. Ingresa el código del Pase abajo.',
   },
   failed: {
-    title: 'No se pudo abrir la cámara',
+    title: 'No se pudo leer con la cámara',
     description:
       'Cierra otras apps que la estén usando y vuelve a intentarlo, o ingresa el código del Pase abajo.',
   },
@@ -42,6 +42,7 @@ export function PassScanner({
     usePassScanner(onCode);
   const failureCopy = STATUS_COPY[status];
   const isLive = status === 'scanning' || status === 'starting';
+  const canToggleTorch = hasTorch && status === 'scanning';
 
   return (
     <div className="relative isolate aspect-[3/4] max-h-[62dvh] w-full overflow-hidden rounded-2xl bg-black sm:aspect-video sm:max-h-[70dvh]">
@@ -82,7 +83,7 @@ export function PassScanner({
         />
       ) : null}
 
-      {hasTorch && status === 'scanning' ? (
+      {canToggleTorch ? (
         <Button
           variant="secondary"
           size="icon-lg"

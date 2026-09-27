@@ -20,6 +20,7 @@ export function PassDetails({
     .filter(Predicate.isNotUndefined)
     .join(', ');
   const isService = pass.type === 'service';
+  const showsWeekdays = isService && weekdayLabels.length > 0;
 
   return (
     <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -44,7 +45,7 @@ export function PassDetails({
       </DetailRow>
       <DetailRow label="Vigencia">
         {VisitPass.formatLocalDateRange(pass.startDate, pass.endDate)}
-        {isService && weekdayLabels.length > 0 ? (
+        {showsWeekdays ? (
           <span className="block text-xs text-muted-foreground">
             {weekdayLabels}
           </span>

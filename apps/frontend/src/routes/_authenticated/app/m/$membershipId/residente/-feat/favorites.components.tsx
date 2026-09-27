@@ -224,7 +224,10 @@ export function AddFavoriteDialog({
   );
 }
 
-/** Favorito tile for the Favoritos page: authorize, or delete after confirming. */
+/**
+ * Favorito tile for the Favoritos page: authorize, or delete after confirming.
+ * `isAuthorizing` disables Autorizar while any one-tap authorization runs.
+ */
 export function FavoriteCard({
   favorite,
   isAuthorizing,
@@ -319,7 +322,7 @@ export function FavoritesPreviewCard({
   const favorites = useQuery(refs.public.authorizations.listFavorites, {
     membershipId: membership.membershipId,
   });
-  const { authorize, pendingFavoriteId } = useAuthorizeFavorite(onShared);
+  const { authorize, isAuthorizing } = useAuthorizeFavorite(onShared);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   return (
@@ -367,7 +370,7 @@ export function FavoritesPreviewCard({
                   <Button
                     size="sm"
                     variant="secondary"
-                    disabled={pendingFavoriteId === favorite._id}
+                    disabled={isAuthorizing}
                     onClick={() => void authorize(favorite)}
                   >
                     Autorizar

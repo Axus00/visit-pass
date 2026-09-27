@@ -161,6 +161,7 @@ function ShiftReportsSection({ shift }: { shift: VisitPass.ShiftSummary }) {
     membershipId,
     shiftId: shift._id,
   });
+  const hasReports = QueryResult.isSuccess(reports) && reports.value.length > 0;
   const [pendingRequest, setPendingRequest] = useState<
     'download' | 'email' | null
   >(null);
@@ -212,7 +213,7 @@ function ShiftReportsSection({ shift }: { shift: VisitPass.ShiftSummary }) {
           Enviar al Administrador
         </Button>
       </div>
-      {QueryResult.isSuccess(reports) && reports.value.length > 0 ? (
+      {hasReports ? (
         <ul className="flex flex-col gap-2">
           {reports.value.map((report) => (
             <ShiftReportRow

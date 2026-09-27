@@ -12,8 +12,8 @@ import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import {
-  type CreateAuthorizationPayload,
-  type CreateFavoritePayload,
+  type CreateAuthorizationDto,
+  type CreateFavoriteDto,
   type FavoriteSummary,
   type SharedAuthorization,
   resolveSharedValidity,
@@ -28,7 +28,7 @@ export function useCreateAuthorization() {
   const create = useMutation(refs.public.authorizations.create);
 
   return async (
-    payload: CreateAuthorizationPayload
+    payload: CreateAuthorizationDto
   ): Promise<SharedAuthorization | null> => {
     const result = await AppRouteFeat.settleMutation(
       create({
@@ -54,19 +54,20 @@ export function useCreateAuthorization() {
 
 /**
  * One tap: a Temporal Autorización for today with the Favorito's data, handed
- * to `onShared` for the share sheet. `pendingFavoriteId` disables its button.
+ * to `onShared` for the share sheet. `isAuthorizing` stays `true` while any
+ * one-tap authorization runs; disable every one-tap button with it.
  */
 export function useAuthorizeFavorite(
   onShared: (shared: SharedAuthorization) => void
 ) {
   const membership = MembershipRouteFeat.useCurrentMembership();
   const createAuthorization = useCreateAuthorization();
-  const [pendingFavoriteId, setPendingFavoriteId] = useState<
-    FavoriteSummary['_id'] | null
-  >(null);
+  const [pendingFavoriteIds, setPendingFavoriteIds] = useState<
+    ReadonlySet<FavoriteSummary['_id']>
+  >(() => new Set());
 
   const authorize = async (favorite: FavoriteSummary) => {
-    setPendingFavoriteId(favorite._id);
+    setPendingFavoriteIds((ids) => new Set(ids).add(favorite._id));
     const shared = await createAuthorization({
       type: 'temporary',
       startDate: VisitPass.todayIn(membership.residentialUnitTimeZone),
@@ -78,12 +79,16 @@ export function useAuthorizeFavorite(
         },
       ],
     });
-    setPendingFavoriteId(null);
+    setPendingFavoriteIds((ids) => {
+      const remaining = new Set(ids);
+      remaining.delete(favorite._id);
+      return remaining;
+    });
 
     if (Predicate.isNotNull(shared)) onShared(shared);
   };
 
-  return { authorize, pendingFavoriteId };
+  return { authorize, isAuthorizing: pendingFavoriteIds.size > 0 };
 }
 
 /** Saves a Favorito; resolves to its id, or `null` after toasting the failure. */
@@ -91,7 +96,7 @@ export function useCreateFavorite() {
   const membership = MembershipRouteFeat.useCurrentMembership();
   const createFavorite = useMutation(refs.public.authorizations.createFavorite);
 
-  return async (favorite: CreateFavoritePayload) => {
+  return async (favorite: CreateFavoriteDto) => {
     const result = await AppRouteFeat.settleMutation(
       createFavorite({
         membershipId: membership.membershipId,

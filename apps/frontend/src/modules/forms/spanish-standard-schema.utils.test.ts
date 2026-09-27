@@ -1,3 +1,4 @@
+import * as Predicate from 'effect/Predicate';
 import * as Schema from 'effect/Schema';
 import { describe, expect, it } from 'vitest';
 
@@ -16,7 +17,10 @@ const NoteForm = toSpanishStandardSchema(
 async function messagesFor(value: unknown) {
   const result = await NoteForm['~standard'].validate(value);
 
-  return 'issues' in result && result.issues
+  const hasIssues =
+    'issues' in result && Predicate.isNotUndefined(result.issues);
+
+  return hasIssues
     ? result.issues.map((issue) => [
         issue.path
           ?.map((segment) =>

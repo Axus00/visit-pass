@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import * as Predicate from 'effect/Predicate';
 import * as Result from 'effect/Result';
+import zxingReaderWasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url';
 
 export type ScannerStatus =
   'starting' | 'scanning' | 'denied' | 'unavailable' | 'failed';
@@ -18,8 +19,23 @@ type NativeBarcodeDetector = {
 };
 
 const DETECTION_INTERVAL_MS = 200;
+/** One second of failed reads means the detector is broken, not a bad frame. */
+const MAX_CONSECUTIVE_DETECT_FAILURES = 5;
 
-/** The browser's own detector when it reads QR codes, else the WASM ponyfill. */
+/**
+ * Serves the ponyfill's WASM from our own origin instead of jsDelivr. Kept at
+ * module scope so every mount reuses the cached ZXing module.
+ */
+const ZXING_MODULE_OVERRIDES = {
+  locateFile: (path: string, prefix: string) =>
+    path.endsWith('.wasm') ? zxingReaderWasmUrl : prefix + path,
+};
+
+/**
+ * The browser's own detector when it reads QR codes, else the WASM ponyfill.
+ * The ponyfill's WASM loads before this resolves, so a failed download rejects
+ * here instead of inside every `detect` call.
+ */
 async function createQrDetector(): Promise<QrDetector> {
   const Native = (globalThis as { BarcodeDetector?: NativeBarcodeDetector })
     .BarcodeDetector;
@@ -32,17 +48,30 @@ async function createQrDetector(): Promise<QrDetector> {
       return new Native({ formats: ['qr_code'] });
   }
 
-  const { BarcodeDetector } = await import('barcode-detector/ponyfill');
+  const { BarcodeDetector, prepareZXingModule, purgeZXingModule } =
+    await import('barcode-detector/ponyfill');
+
+  await prepareZXingModule({
+    overrides: ZXING_MODULE_OVERRIDES,
+    fireImmediately: true,
+  }).catch((error: unknown) => {
+    // Drop the rejected module so the next mount downloads it again.
+    purgeZXingModule();
+    throw error;
+  });
 
   return new BarcodeDetector({ formats: ['qr_code'] });
 }
 
 function toFailureStatus(error: unknown): ScannerStatus {
   const name = Predicate.hasProperty(error, 'name') ? error.name : null;
+  const isPermissionError =
+    name === 'NotAllowedError' || name === 'SecurityError';
+  const isMissingCamera =
+    name === 'NotFoundError' || name === 'OverconstrainedError';
 
-  if (name === 'NotAllowedError' || name === 'SecurityError') return 'denied';
-  if (name === 'NotFoundError' || name === 'OverconstrainedError')
-    return 'unavailable';
+  if (isPermissionError) return 'denied';
+  if (isMissingCamera) return 'unavailable';
 
   return 'failed';
 }
@@ -51,7 +80,8 @@ function toFailureStatus(error: unknown): ScannerStatus {
  * Streams the rear camera into `videoRef` and reads QR codes about five times
  * a second. `onCode` returns `true` to accept a code, which stops the camera;
  * a refused code is ignored until a different one shows up. The camera also
- * stops on unmount.
+ * stops on unmount, and after repeated read failures with status `failed` so
+ * the Portero falls back to typing the code.
  */
 export function usePassScanner(onCode: (rawValue: string) => boolean) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -145,32 +175,49 @@ export function usePassScanner(onCode: (rawValue: string) => boolean) {
       setStatus('scanning');
       const detector = detectorResult.success;
 
-      const detectOnce = async () => {
+      const detectOnce = async (failedReadsInARow: number) => {
         if (isStopped) return;
 
         const isVideoReady =
           video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
-        const codes = isVideoReady
-          ? await detector.detect(video).catch(() => [])
-          : [];
+        const detectResult = isVideoReady
+          ? await detector
+              .detect(video)
+              .then(Result.succeed, (error: unknown) => Result.fail(error))
+          : Result.succeed([]);
+
+        if (isStopped) return;
+        const nextFailedReadsInARow = Result.isFailure(detectResult)
+          ? failedReadsInARow + 1
+          : 0;
+        const isDetectorBroken =
+          nextFailedReadsInARow >= MAX_CONSECUTIVE_DETECT_FAILURES;
+
+        if (isDetectorBroken) {
+          stop();
+          setStatus('failed');
+          return;
+        }
+
+        const codes = Result.getOrElse(detectResult, () => []);
         const rawValue = codes[0]?.rawValue ?? null;
         const isNewCode =
           Predicate.isNotNull(rawValue) && rawValue !== refusedValue;
+        const isAccepted = isNewCode && onCodeRef.current(rawValue);
 
-        if (isStopped) return;
-        if (isNewCode && onCodeRef.current(rawValue)) {
+        if (isAccepted) {
           stop();
           return;
         }
         if (isNewCode) refusedValue = rawValue;
 
         timer = window.setTimeout(
-          () => void detectOnce(),
+          () => void detectOnce(nextFailedReadsInARow),
           DETECTION_INTERVAL_MS
         );
       };
 
-      void detectOnce();
+      void detectOnce(0);
     };
 
     void run();

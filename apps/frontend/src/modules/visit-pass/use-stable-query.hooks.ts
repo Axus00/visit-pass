@@ -45,11 +45,10 @@ export function useStableQuery<Query extends Ref.AnyPublicQuery>(
   const isSkipped = args === 'skip';
   const isSameIdentity =
     Predicate.isNotNull(kept) && kept.identity === identity;
+  const isKeptResult = isSameIdentity && kept.result === result;
   const nextKept = ((): KeptSuccess<Query> | null => {
     if (QueryResult.isSuccess(result))
-      return isSameIdentity && kept.result === result
-        ? kept
-        : { identity, result };
+      return isKeptResult ? kept : { identity, result };
 
     const canBridgeLoading =
       QueryResult.isLoading(result) && !isSkipped && isSameIdentity;

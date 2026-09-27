@@ -31,7 +31,7 @@ import {
   type SharedAuthorization,
   WEEKDAY_TOGGLE_ORDER,
   authorizeFormValidation,
-  buildCreateAuthorizationPayload,
+  buildCreateAuthorizationDto,
   defaultAuthorizeFormValues,
 } from './authorize.models';
 import { RelationshipSelect } from './favorites.components';
@@ -111,7 +111,7 @@ export function AuthorizeVisitCard({
       if (Predicate.isNull(favoriteId)) return;
 
       const shared = await createAuthorization(
-        buildCreateAuthorizationPayload(value, favoriteId)
+        buildCreateAuthorizationDto(value, favoriteId)
       );
 
       if (Predicate.isNull(shared)) return;

@@ -11,7 +11,7 @@ import * as VisitPass from '#modules/visit-pass';
 
 import type { PassValidity } from './pass-share.utils';
 
-export type CreateAuthorizationPayload = Omit<
+export type CreateAuthorizationDto = Omit<
   Ref.Args<typeof refs.public.authorizations.create>,
   'membershipId'
 >;
@@ -92,10 +92,10 @@ const optionalText = (value: string) => {
 };
 
 /** The `authorizations.create` payload for the form, without `membershipId`. */
-export function buildCreateAuthorizationPayload(
+export function buildCreateAuthorizationDto(
   values: AuthorizeFormValues,
   favoriteId?: FavoriteId
-): CreateAuthorizationPayload {
+): CreateAuthorizationDto {
   if (values.type === 'event')
     return {
       type: 'event',
@@ -218,7 +218,7 @@ export function validateAuthorizeForm(
   if (isMissingStartDate) return { fields };
 
   const validity = AuthorizationsShared.resolveAuthorizationValidity(
-    buildCreateAuthorizationPayload(values),
+    buildCreateAuthorizationDto(values),
     today
   );
   const allFields: FieldErrors = Result.isFailure(validity)
@@ -253,7 +253,7 @@ export function authorizeFormValidation(today: () => string) {
 
 /** The validity the backend stores for a valid payload, for the share sheet. */
 export function resolveSharedValidity(
-  payload: CreateAuthorizationPayload,
+  payload: CreateAuthorizationDto,
   today: string
 ): PassValidity {
   const validity = AuthorizationsShared.resolveAuthorizationValidity(
@@ -272,7 +272,7 @@ export function resolveSharedValidity(
   };
 }
 
-export type CreateFavoritePayload = Omit<
+export type CreateFavoriteDto = Omit<
   Ref.Args<typeof refs.public.authorizations.createFavorite>,
   'membershipId'
 >;

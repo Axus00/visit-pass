@@ -128,9 +128,10 @@ export function CreateApartmentsDialog({
         <form.Subscribe selector={(state) => state.values.numbers}>
           {(numbers) => {
             const parsed = parseApartmentNumbers(numbers);
+            const hasNoPreview =
+              numbers.trim().length === 0 || Result.isFailure(parsed);
 
-            if (numbers.trim().length === 0 || Result.isFailure(parsed))
-              return null;
+            if (hasNoPreview) return null;
 
             const preview = parsed.success.slice(0, PREVIEW_LIMIT).join(', ');
             const remaining = parsed.success.length - PREVIEW_LIMIT;

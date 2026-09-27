@@ -24,7 +24,9 @@ const spanishCheckHook: SchemaIssue.CheckHook = (issue) => {
     representation?.id === 'effect/schema/isMaxLength' &&
     Predicate.isNotUndefined(maxLength);
 
-  if (isMinLengthCheck && minLength <= 1) return 'Este campo es obligatorio.';
+  const isRequiredCheck = isMinLengthCheck && minLength <= 1;
+
+  if (isRequiredCheck) return 'Este campo es obligatorio.';
   if (isMinLengthCheck) return `Escribe al menos ${minLength} caracteres.`;
   if (isMaxLengthCheck) return `Escribe máximo ${maxLength} caracteres.`;
 

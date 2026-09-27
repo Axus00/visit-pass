@@ -5,7 +5,7 @@ import {
   type AuthorizeFormValues,
   type FavoriteId,
   authorizeFormValidation,
-  buildCreateAuthorizationPayload,
+  buildCreateAuthorizationDto,
   defaultAuthorizeFormValues,
   resolveSharedValidity,
   validateAuthorizeForm,
@@ -34,10 +34,10 @@ describe('defaultAuthorizeFormValues', () => {
   });
 });
 
-describe('buildCreateAuthorizationPayload', () => {
+describe('buildCreateAuthorizationDto', () => {
   it('sends one trimmed Visitante for Temporal, dropping an empty document', () => {
     expect(
-      buildCreateAuthorizationPayload(
+      buildCreateAuthorizationDto(
         temporary({ visitorName: '  Juan  ', visitorDocument: '   ' })
       )
     ).toEqual({
@@ -51,14 +51,14 @@ describe('buildCreateAuthorizationPayload', () => {
     const favoriteId = 'favorite-1' as FavoriteId;
 
     expect(
-      buildCreateAuthorizationPayload(temporary(), favoriteId).visitors[0]
+      buildCreateAuthorizationDto(temporary(), favoriteId).visitors[0]
         ?.favoriteId
     ).toBe(favoriteId);
   });
 
   it('sends the guest list and event name for Evento', () => {
     expect(
-      buildCreateAuthorizationPayload(
+      buildCreateAuthorizationDto(
         temporary({
           type: 'event',
           eventName: ' Cumpleaños ',
@@ -81,14 +81,12 @@ describe('buildCreateAuthorizationPayload', () => {
 
   it('sends a cleared Servicio end date as missing', () => {
     expect(
-      buildCreateAuthorizationPayload(
-        temporary({ type: 'service', endDate: '' })
-      )
+      buildCreateAuthorizationDto(temporary({ type: 'service', endDate: '' }))
     ).toHaveProperty('endDate', undefined);
   });
 
   it('sends the range and weekdays for Servicio', () => {
-    const payload = buildCreateAuthorizationPayload(
+    const payload = buildCreateAuthorizationDto(
       temporary({ type: 'service', endDate: '2026-10-31', weekdays: [2, 4] })
     );
 
@@ -297,14 +295,14 @@ describe('authorizeFormValidation', () => {
 describe('resolveSharedValidity', () => {
   it('covers only the start day for Temporal', () => {
     expect(
-      resolveSharedValidity(buildCreateAuthorizationPayload(temporary()), today)
+      resolveSharedValidity(buildCreateAuthorizationDto(temporary()), today)
     ).toMatchObject({ type: 'temporary', startDate: today, endDate: today });
   });
 
   it('keeps the sorted, deduplicated Servicio weekdays', () => {
     expect(
       resolveSharedValidity(
-        buildCreateAuthorizationPayload(
+        buildCreateAuthorizationDto(
           temporary({
             type: 'service',
             endDate: '2026-10-31',

@@ -64,6 +64,9 @@ function ProfilePage() {
   const me = useQuery(refs.public.users.me, {});
   const access = AppRouteFeat.useMyAccess();
   const storedUser = QueryResult.isSuccess(me) ? me.value : null;
+  const hasLastSignIn =
+    Predicate.isNotNull(storedUser) &&
+    Predicate.isNotNull(storedUser.lastSignInAt);
 
   const firstName = user?.firstName ?? storedUser?.firstName ?? null;
   const lastName = user?.lastName ?? storedUser?.lastName ?? null;
@@ -108,8 +111,7 @@ function ProfilePage() {
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <p className="text-xl font-semibold">{displayName}</p>
               <p className="break-all text-muted-foreground">{email}</p>
-              {Predicate.isNotNull(storedUser) &&
-              Predicate.isNotNull(storedUser.lastSignInAt) ? (
+              {hasLastSignIn ? (
                 <p className="text-xs text-muted-foreground">
                   Último inicio de sesión:{' '}
                   {VisitPass.formatDateTime(

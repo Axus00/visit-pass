@@ -44,6 +44,8 @@ export function VisitRow({
   withDay?: boolean;
 }) {
   const presence = visitPresence(visit);
+  const showsVoidReason =
+    presence === 'voided' && Predicate.isNotUndefined(visit.voidReason);
   const badge = PRESENCE_BADGE[presence];
   const entryDay = CalendarShared.toLocalDate(visit.enteredAt, timeZone);
   const entryTime = VisitPass.formatTime(visit.enteredAt, timeZone);
@@ -111,7 +113,7 @@ export function VisitRow({
             </>
           )}
         </p>
-        {presence === 'voided' && visit.voidReason ? (
+        {showsVoidReason ? (
           <p className="text-xs text-destructive">
             Anulada: {visit.voidReason}
           </p>
