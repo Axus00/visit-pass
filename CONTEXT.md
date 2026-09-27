@@ -111,8 +111,16 @@ _Avoid_: Bitácora, minuta, log
 ### Privacidad
 
 **Aviso de privacidad**:
-El texto corto que informa al Visitante quién trata sus datos, para qué, cuánto tiempo y cómo ejercer sus derechos. Cada Unidad residencial tiene versiones numeradas e inmutables, y cada Visita guarda la versión vigente en su Ingreso como prueba de que se informó.
-_Avoid_: Términos, consentimiento, política (la política de tratamiento es el documento completo)
+El texto corto que informa al Visitante quién trata sus datos, para qué, cuánto tiempo y cómo ejercer sus derechos. Cada Unidad residencial tiene versiones numeradas e inmutables, compartidas con su Política de tratamiento, y cada Visita guarda la versión vigente en su Ingreso como prueba de que se informó.
+_Avoid_: Términos, consentimiento, política (la Política de tratamiento es el documento completo)
+
+**Política de tratamiento**:
+El documento público y completo con el que una Unidad residencial, como Responsable, declara cómo trata los datos de Visitantes y Membresías: finalidades, derechos, quién atiende las solicitudes y cómo, y el Plazo de retención. La aprueba un órgano de la copropiedad y comparte versión con el Aviso de privacidad, que la enlaza.
+_Avoid_: Términos, aviso (es el texto corto), política de privacidad (es la de Visit Pass sobre las cuentas de Usuario)
+
+**Contrato de transmisión**:
+El acuerdo firmado entre una Unidad residencial (Responsable) y Visit Pass (Encargado) que fija cómo Visit Pass trata los datos por cuenta de la copropiedad: sub-encargados, incidentes y devolución o supresión al terminar. Sin un Contrato de transmisión registrado, la Unidad residencial no opera.
+_Avoid_: Términos de servicio, contrato de encargo, DPA
 
 **Marca de retención**:
 Una marca que el Administrador pone sobre un documento de Visitante, por un reclamo en trámite o un requerimiento de autoridad, y que suspende la Anonimización de todos sus registros mientras esté activa.
