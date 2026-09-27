@@ -11,8 +11,12 @@ Una copropiedad (conjunto o edificio) con su propia portería, apartamentos y pe
 _Avoid_: Conjunto, edificio, copropiedad, tenant, organización
 
 **Apartamento**:
-Una vivienda dentro de una Unidad residencial, identificada por torre y número. Destino de toda visita.
+Una vivienda dentro de una Unidad residencial, identificada por su Agrupación (si la unidad tiene más de una) y su número. Destino de toda visita.
 _Avoid_: Unidad (ambiguo con Unidad residencial), casa, inmueble
+
+**Agrupación**:
+El primer nivel con que una Unidad residencial divide sus Apartamentos, nombrado por la unidad como Torre, Bloque, Interior o Manzana. Es opcional en un edificio de una sola torre.
+_Avoid_: Torre (como término genérico), sector
 
 ### Personas
 
@@ -21,10 +25,17 @@ Una cuenta con sesión, identificada por WorkOS. Por sí sola no pertenece a nin
 _Avoid_: Cuenta, perfil
 
 **Membresía**:
-La pertenencia de un Usuario a una Unidad residencial con un Rol. Un Usuario puede tener varias membresías en distintas unidades.
+La pertenencia de un Usuario a una Unidad residencial con un solo Rol y, si es Residente, un solo Apartamento. Quien tiene dos Roles o dos Apartamentos tiene dos Membresías, también dentro de una misma unidad.
 
 **Membresía pendiente**:
-Una Membresía que el Administrador creó con un correo y un Rol, y que se activa cuando un Usuario inicia sesión con ese correo. Revocar una Membresía la conserva para el historial; las Autorizaciones del Apartamento siguen vigentes.
+Una Membresía que el Administrador creó con un correo y un Rol, y que se activa solo cuando el Usuario con ese mismo correo la acepta. Si no la acepta en 30 días, caduca; si responde "No soy yo", queda rechazada.
+
+**Invitación**:
+El correo que avisa a una persona de su Membresía pendiente y la lleva a aceptarla o rechazarla. El Administrador puede reenviarla o retirarla.
+_Avoid_: Invitación para un Visitante (eso es una Autorización), alta
+
+**Membresía revocada**:
+Una Membresía que el Administrador terminó. Se conserva para el historial y no se reactiva: volver a invitar crea otra. Cambiar el Rol o el Apartamento de alguien es revocar e invitar de nuevo. Si era la última Membresía activa de su Apartamento, las Autorizaciones vigentes del Apartamento se cancelan.
 
 **Rol**:
 El papel de una Membresía dentro de su Unidad residencial: Residente, Portero o Administrador.
@@ -63,7 +74,7 @@ La relación del Favorito con el Residente: familiar, amigo u otro (con texto li
 
 **Autorización**:
 El permiso que un Residente concede por adelantado para que uno o varios Visitantes entren a un Apartamento. Pertenece al Apartamento, no al Residente que la creó: cualquier Residente activo del Apartamento la ve y la cancela. Tiene un Tipo de autorización, una fecha o rango de fechas y uno o varios Pases.
-_Avoid_: Invitación, reserva, pre-registro
+_Avoid_: Invitación (es para una Membresía, no para un Visitante), reserva, pre-registro
 
 **Tipo de autorización**:
 Temporal (un Visitante, un día, un Ingreso), Evento (una lista de invitados para un mismo día, un Pase y un Ingreso por cada uno) o Servicio (un Visitante recurrente con rango de fechas y días de la semana, con varios Ingresos por día permitido).

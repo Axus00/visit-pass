@@ -11,6 +11,14 @@ Decisiones tomadas para construir el MVP completo mientras los tickets de decisi
 - Revocar conserva la fila (`revoked`); las Autorizaciones del Apartamento siguen, porque pertenecen al Apartamento. Un Administrador no puede revocarse a sí mismo.
 - Aislamiento: toda función de una unidad recibe `membershipId` y pasa por `requireMembership`; hay tests negativos entre unidades.
 
+**Corregido por [#7](https://github.com/Axus00/visit-pass/issues/7)** (ver ADR 0008, que reemplaza a ADR 0006). Pendiente de implementar:
+
+- Cada Unidad residencial es una WorkOS Organization; la Unidad activa sale de `org_id`. Las Membresías siguen locales (un Rol y un Apartamento) y son la autoridad; la membresía de WorkOS es el acceso a la unidad y refleja la unión de Roles.
+- Apartamento = Agrupación opcional + número; la palabra de la Agrupación (Torre, Bloque, Interior, Manzana o ninguna) la fija el Superadmin y la cambia el Administrador. Renombrar siempre; borrar solo sin uso, si no, desactivar.
+- Invitación por correo propio (Resend) con Unidad, Rol y Apartamento; caduca a los 30 días; reenviar y retirar.
+- Aceptación explícita (Aceptar / No soy yo) desde el enlace o al iniciar sesión, con el correo de la sesión igual al invitado. Registro libre; sin Membresías se ve "Sin Unidades residenciales".
+- Revocar la última Membresía activa de un Apartamento cancela sus Autorizaciones vigentes; revocar a un Portero cierra su Turno abierto "por administración". Cambiar Rol o Apartamento es revocar e invitar; el Tipo de ocupación se edita.
+
 ## #8 Autorización, Pase y Visita
 
 Implementado según `CONTEXT.md`: Temporal (un Ingreso), Evento (un Pase por invitado), Servicio (rango + días, varios Ingresos por día). Motivos de rechazo: no encontrado, cancelado, reemplazado, ya usado, aún no válido, vencido, día no permitido, Apartamento sin Residente activo, Visitante ya dentro. El Portero puede forzar el ingreso con un Registro manual, que guarda el motivo que se ignoró. El Residente cancela Autorizaciones y regenera Pases (el anterior queda reemplazado); no se editan. El Portero completa el documento en el Ingreso si el Pase no lo trae. Una Visita registrada por error se anula con motivo.
