@@ -174,10 +174,14 @@ export async function savePassImage({
     maxTextWidth
   );
 
-  const file = dataUrlToFile(
-    canvas.toDataURL('image/png'),
-    passImageFileName(visitorName)
+  const dataUrl = canvas.toDataURL('image/png');
+  const bytes = Uint8Array.from(
+    atob(dataUrl.slice(dataUrl.indexOf(',') + 1)),
+    (char) => char.charCodeAt(0)
   );
+  const file = new File([bytes], passImageFileName(visitorName), {
+    type: 'image/png',
+  });
   const canShareFile =
     'canShare' in navigator && navigator.canShare({ files: [file] });
 
@@ -197,13 +201,6 @@ export async function savePassImage({
       return 'downloaded' as const;
     }
   );
-}
-
-function dataUrlToFile(dataUrl: string, fileName: string) {
-  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
-  const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
-
-  return new File([bytes], fileName, { type: 'image/png' });
 }
 
 function downloadFile(file: File) {

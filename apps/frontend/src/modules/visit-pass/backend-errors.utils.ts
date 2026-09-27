@@ -51,6 +51,8 @@ const MESSAGES_BY_REASON: Record<string, string> = {
   notAPorter: 'La Membresía elegida no es de un Portero activo.',
   shiftNotStarted:
     'El Turno aún no ha comenzado; genera el Reporte cuando esté en curso o cerrado.',
+  noRecipients:
+    'La unidad no tiene Administradores activos con correo; genera el Excel para descargarlo.',
   ...PASS_REJECTION_LABELS,
 };
 

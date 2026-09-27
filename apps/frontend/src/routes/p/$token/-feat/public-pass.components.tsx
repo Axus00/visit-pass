@@ -28,7 +28,6 @@ import {
   derivePublicPassState,
   formatBannerDay,
   formatWeekdays,
-  publicPassUrl,
 } from './public-pass.utils';
 
 /**
@@ -147,7 +146,7 @@ export function PublicPassTicket({ pass }: { pass: PublicPass }) {
     state.kind === 'valid' ||
     state.kind === 'notYetValid' ||
     state.kind === 'notToday';
-  const url = publicPassUrl(window.location.origin, pass.token);
+  const url = `${window.location.origin}/p/${encodeURIComponent(pass.token)}`;
   const isService = pass.type === 'service';
   const validityLabel = isService
     ? `${VisitPass.formatLocalDateRange(pass.startDate, pass.endDate)} · ${formatWeekdays(pass.weekdays)}`

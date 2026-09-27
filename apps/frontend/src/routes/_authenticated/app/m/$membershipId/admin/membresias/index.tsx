@@ -8,13 +8,6 @@ import { Link2, MailQuestion, UserPlus, UserX, Users } from 'lucide-react';
 
 import refs from '@repo/backend/refs';
 import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
   Badge,
   Button,
   Card,
@@ -79,8 +72,6 @@ function AdminMembershipsPage() {
   const [roleTab, setRoleTab] = useState<RoleTab>('all');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const [membershipToRevoke, setMembershipToRevoke] =
-    useState<AdminRouteFeat.MembershipDetail | null>(null);
 
   const memberships = useQuery(refs.public.memberships.listForUnit, {
     membershipId: membership.membershipId,
@@ -170,7 +161,6 @@ function AdminMembershipsPage() {
                     key={member._id}
                     member={member}
                     isCurrent={member._id === membership.membershipId}
-                    onRevoke={() => setMembershipToRevoke(member)}
                   />
                 ))}
               </ul>
@@ -183,10 +173,6 @@ function AdminMembershipsPage() {
         open={isInviteOpen}
         onOpenChange={setIsInviteOpen}
       />
-      <RevokeMembershipDialog
-        member={membershipToRevoke}
-        onClose={() => setMembershipToRevoke(null)}
-      />
     </>
   );
 }
@@ -194,11 +180,9 @@ function AdminMembershipsPage() {
 function MembershipRow({
   member,
   isCurrent,
-  onRevoke,
 }: {
   member: AdminRouteFeat.MembershipDetail;
   isCurrent: boolean;
-  onRevoke: () => void;
 }) {
   const displayName = member.name ?? member.email;
   const isPending = member.status === 'pending';
@@ -258,77 +242,56 @@ function MembershipRow({
             Copiar enlace de la app
           </Button>
         ) : null}
-        {canRevoke ? (
-          <Button variant="ghost" size="sm" onClick={onRevoke}>
-            <UserX aria-hidden="true" />
-            Revocar
-          </Button>
-        ) : null}
+        {canRevoke ? <RevokeMembershipDialog member={member} /> : null}
       </div>
     </li>
   );
 }
 
+/** "Revocar" button that confirms, then revokes the Membresía. */
 function RevokeMembershipDialog({
   member,
-  onClose,
 }: {
-  member: AdminRouteFeat.MembershipDetail | null;
-  onClose: () => void;
+  member: AdminRouteFeat.MembershipDetail;
 }) {
   const membership = MembershipRouteFeat.useCurrentMembership();
   const revoke = useMutation(refs.public.memberships.revoke);
-  const [isRevoking, setIsRevoking] = useState(false);
+  const displayName = member.name ?? member.email;
+  const apartmentSuffix = member.apartmentLabel
+    ? ` en ${member.apartmentLabel}`
+    : '';
 
   const handleRevoke = async () => {
-    if (Predicate.isNull(member)) return;
-
-    setIsRevoking(true);
     const result = await AppRouteFeat.settleMutation(
       revoke({
         membershipId: membership.membershipId,
         targetMembershipId: member._id,
       })
     );
-    setIsRevoking(false);
 
     if (Result.isFailure(result)) {
       toast.error(VisitPass.describeBackendError(result.failure));
-      return;
+      return false;
     }
 
-    toast.success(`Revocaste la Membresía de ${member.name ?? member.email}.`);
-    onClose();
+    toast.success(`Revocaste la Membresía de ${displayName}.`);
+    return true;
   };
 
   return (
-    <AlertDialog
-      open={Predicate.isNotNull(member)}
-      onOpenChange={(open) => (open ? undefined : onClose())}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>¿Revocar esta Membresía?</AlertDialogTitle>
-          <AlertDialogDescription>
-            {member
-              ? `${member.name ?? member.email} dejará de tener acceso como ${VisitPass.ROLE_LABELS[member.role]}${member.apartmentLabel ? ` en ${member.apartmentLabel}` : ''}. `
-              : null}
-            La Membresía queda en el historial, así que las Visitas pasadas
-            siguen mostrando quién las registró, y las Autorizaciones del
-            Apartamento no se cancelan.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <Button
-            variant="destructive"
-            disabled={isRevoking}
-            onClick={() => void handleRevoke()}
-          >
-            Revocar
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <MembershipRouteFeat.ConfirmActionDialog
+      trigger={<Button variant="ghost" size="sm" />}
+      triggerContent={
+        <>
+          <UserX aria-hidden="true" />
+          Revocar
+        </>
+      }
+      title="¿Revocar esta Membresía?"
+      description={`${displayName} dejará de tener acceso como ${VisitPass.ROLE_LABELS[member.role]}${apartmentSuffix}. La Membresía queda en el historial, así que las Visitas pasadas siguen mostrando quién las registró, y las Autorizaciones del Apartamento no se cancelan.`}
+      confirmLabel="Revocar"
+      destructive
+      onConfirm={handleRevoke}
+    />
   );
 }

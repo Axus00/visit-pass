@@ -9,24 +9,12 @@ import {
   CalendarPlus,
   ChevronRight,
   CircleStop,
+  type LucideIcon,
   Trash2,
 } from 'lucide-react';
 
 import refs from '@repo/backend/refs';
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  Badge,
-  Button,
-  Card,
-  Skeleton,
-  toast,
-} from '@repo/ui';
+import { Badge, Button, Card, Skeleton, toast } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
 import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
@@ -41,10 +29,7 @@ export const Route = createFileRoute(
   component: AdminShiftsPage,
 });
 
-type PendingAction = {
-  readonly kind: 'forceClose' | 'cancel';
-  readonly shift: VisitPass.ShiftSummary;
-};
+type ShiftAction = 'forceClose' | 'cancel';
 
 /** Plans Turnos and follows them: in progress, scheduled and closed. */
 function AdminShiftsPage() {
@@ -52,9 +37,6 @@ function AdminShiftsPage() {
   const now = VisitPass.useNow();
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
-  const [pendingAction, setPendingAction] = useState<PendingAction | null>(
-    null
-  );
 
   const shifts = VisitPass.useStableQuery(refs.public.shifts.listForUnit, {
     membershipId: membership.membershipId,
@@ -132,16 +114,7 @@ function AdminShiftsPage() {
                     now={now}
                     onOpen={() => setSelectedShiftId(shift._id)}
                     action={
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setPendingAction({ kind: 'forceClose', shift })
-                        }
-                      >
-                        <CircleStop aria-hidden="true" />
-                        Cerrar turno
-                      </Button>
+                      <ShiftActionDialog kind="forceClose" shift={shift} />
                     }
                   />
                 )}
@@ -156,18 +129,7 @@ function AdminShiftsPage() {
                     shift={shift}
                     now={now}
                     onOpen={() => setSelectedShiftId(shift._id)}
-                    action={
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setPendingAction({ kind: 'cancel', shift })
-                        }
-                      >
-                        <Trash2 aria-hidden="true" />
-                        Cancelar
-                      </Button>
-                    }
+                    action={<ShiftActionDialog kind="cancel" shift={shift} />}
                   />
                 )}
               />
@@ -196,10 +158,6 @@ function AdminShiftsPage() {
       <TurnosRouteFeat.ShiftDetailSheet
         shift={selectedShift}
         onClose={() => setSelectedShiftId(null)}
-      />
-      <ShiftActionDialog
-        action={pendingAction}
-        onClose={() => setPendingAction(null)}
       />
     </>
   );
@@ -302,6 +260,9 @@ function ShiftRow({
 
 const ACTION_COPY = {
   forceClose: {
+    trigger: 'Cerrar turno',
+    triggerVariant: 'outline',
+    icon: CircleStop,
     title: '¿Cerrar este Turno?',
     description:
       'Úsalo cuando el Portero olvidó cerrar su Turno. Queda cerrado ahora y marcado como cerrado por administración.',
@@ -309,6 +270,9 @@ const ACTION_COPY = {
     success: 'Turno cerrado.',
   },
   cancel: {
+    trigger: 'Cancelar',
+    triggerVariant: 'ghost',
+    icon: Trash2,
     title: '¿Cancelar este Turno programado?',
     description:
       'El Turno aún no empieza, así que se elimina de la programación.',
@@ -316,70 +280,64 @@ const ACTION_COPY = {
     success: 'Turno programado cancelado.',
   },
 } as const satisfies Record<
-  PendingAction['kind'],
-  { title: string; description: string; confirm: string; success: string }
+  ShiftAction,
+  {
+    trigger: string;
+    triggerVariant: 'outline' | 'ghost';
+    icon: LucideIcon;
+    title: string;
+    description: string;
+    confirm: string;
+    success: string;
+  }
 >;
 
+/** Row button that confirms, then force-closes or cancels one Turno. */
 function ShiftActionDialog({
-  action,
-  onClose,
+  kind,
+  shift,
 }: {
-  action: PendingAction | null;
-  onClose: () => void;
+  kind: ShiftAction;
+  shift: VisitPass.ShiftSummary;
 }) {
   const membership = MembershipRouteFeat.useCurrentMembership();
   const forceClose = useMutation(refs.public.shifts.forceClose);
   const cancelScheduled = useMutation(refs.public.shifts.cancelScheduled);
-  const [isRunning, setIsRunning] = useState(false);
-  const copy = ACTION_COPY[action?.kind ?? 'cancel'];
+  const copy = ACTION_COPY[kind];
+  const Icon = copy.icon;
 
   const handleConfirm = async () => {
-    if (Predicate.isNull(action)) return;
-
     const args = {
       membershipId: membership.membershipId,
-      shiftId: action.shift._id,
+      shiftId: shift._id,
     };
-
-    setIsRunning(true);
     const result = await AppRouteFeat.settleMutation(
-      action.kind === 'forceClose' ? forceClose(args) : cancelScheduled(args)
+      kind === 'forceClose' ? forceClose(args) : cancelScheduled(args)
     );
-    setIsRunning(false);
 
     if (Result.isFailure(result)) {
       toast.error(VisitPass.describeBackendError(result.failure));
-      return;
+      return false;
     }
 
     toast.success(copy.success);
-    onClose();
+    return true;
   };
 
   return (
-    <AlertDialog
-      open={Predicate.isNotNull(action)}
-      onOpenChange={(open) => (open ? undefined : onClose())}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{copy.title}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {action ? `Turno de ${action.shift.porterName}. ` : null}
-            {copy.description}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Volver</AlertDialogCancel>
-          <Button
-            variant="destructive"
-            disabled={isRunning}
-            onClick={() => void handleConfirm()}
-          >
-            {copy.confirm}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <MembershipRouteFeat.ConfirmActionDialog
+      trigger={<Button variant={copy.triggerVariant} size="sm" />}
+      triggerContent={
+        <>
+          <Icon aria-hidden="true" />
+          {copy.trigger}
+        </>
+      }
+      title={copy.title}
+      description={`Turno de ${shift.porterName}. ${copy.description}`}
+      confirmLabel={copy.confirm}
+      destructive
+      onConfirm={handleConfirm}
+    />
   );
 }

@@ -39,7 +39,7 @@ function AdminShiftReportsPage() {
       <VisitPass.PageHeader
         eyebrow="Portería"
         title="Reportes de turno"
-        description="El Excel con las Visitas de cada Turno. Los Porteros los generan al cerrar su Turno; tú puedes generarlos desde Turnos."
+        description="El Excel con las Visitas de cada Turno. Los Porteros los generan desde Turnos y reportes cuando lo necesitan; tú puedes generarlos desde Turnos."
         actions={goToShifts}
       />
 

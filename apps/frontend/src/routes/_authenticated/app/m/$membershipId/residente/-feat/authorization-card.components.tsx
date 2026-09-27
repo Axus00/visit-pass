@@ -18,7 +18,6 @@ import {
   partitionReplacedPasses,
 } from './authorizations.utils';
 import type { PassSummary, SharedAuthorization } from './authorize.models';
-import { ConfirmActionDialog } from './confirm-action-dialog.components';
 import { describePassValidity } from './pass-share.utils';
 
 const COLLAPSED_PASSES = 5;
@@ -176,7 +175,7 @@ export function AuthorizationCard({
                   >
                     <Share2 />
                   </Button>
-                  <ConfirmActionDialog
+                  <MembershipRouteFeat.ConfirmActionDialog
                     trigger={
                       <Button
                         variant="ghost"
@@ -226,7 +225,7 @@ export function AuthorizationCard({
       ) : null}
 
       {isCurrent ? (
-        <ConfirmActionDialog
+        <MembershipRouteFeat.ConfirmActionDialog
           trigger={
             <Button variant="destructive" size="sm" className="self-start" />
           }

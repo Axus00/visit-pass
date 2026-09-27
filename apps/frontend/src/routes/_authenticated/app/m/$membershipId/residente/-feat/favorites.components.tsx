@@ -36,7 +36,6 @@ import {
   validateVisitorDocument,
   validateVisitorName,
 } from './authorize.models';
-import { ConfirmActionDialog } from './confirm-action-dialog.components';
 import { useAuthorizeFavorite, useCreateFavorite } from './use-authorize.hooks';
 
 const RELATIONSHIPS = [
@@ -276,7 +275,7 @@ export function FavoriteCard({
             </p>
           ) : null}
         </div>
-        <ConfirmActionDialog
+        <MembershipRouteFeat.ConfirmActionDialog
           trigger={
             <Button
               variant="ghost"

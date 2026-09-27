@@ -79,7 +79,3 @@ export function formatBannerDay(localDate: string) {
     month: 'short',
   });
 }
-
-export function publicPassUrl(origin: string, token: string) {
-  return `${origin}/p/${encodeURIComponent(token)}`;
-}

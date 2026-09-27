@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import * as Predicate from 'effect/Predicate';
 import {
   CalendarClock,
@@ -12,22 +10,7 @@ import {
 } from 'lucide-react';
 
 import * as ShiftsShared from '@repo/backend/shared/shifts';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-  Badge,
-  Button,
-  Card,
-  cn,
-  tw,
-} from '@repo/ui';
+import { Badge, Button, Card, cn, tw } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
@@ -163,9 +146,12 @@ function OpenShiftCard({
   const { residentialUnitTimeZone } =
     MembershipRouteFeat.useCurrentMembership();
   const now = VisitPass.useNow(30_000);
-  const { endShift, isPending } = useShiftActions();
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const { endShift } = useShiftActions();
   const startedAt = shift.startedAt ?? now;
+  const stillInsideNotice =
+    stillInside > 0
+      ? ` Aún hay ${stillInside} ${stillInside === 1 ? 'Visitante' : 'Visitantes'} dentro; sus Salidas se pueden registrar en el siguiente Turno.`
+      : '';
 
   return (
     <Card className="gap-4 bg-navy px-5 py-5 text-navy-foreground ring-0">
@@ -192,47 +178,27 @@ function OpenShiftCard({
           Desde las {VisitPass.formatTime(startedAt, residentialUnitTimeZone)}
         </p>
       </div>
-      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <AlertDialogTrigger
-          render={
-            <Button
-              variant="secondary"
-              className={cn(
-                LARGE_BUTTON,
-                'bg-white/10 text-current hover:bg-white/20'
-              )}
-            />
-          }
-        >
-          <LogOut data-icon="inline-start" />
-          Terminar turno
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Terminar tu Turno?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se marcará la hora de fin y no podrás registrar más Ingresos hasta
-              iniciar otro Turno.
-              {stillInside > 0
-                ? ` Aún hay ${stillInside} ${stillInside === 1 ? 'Visitante' : 'Visitantes'} dentro; sus Salidas se pueden registrar en el siguiente Turno.`
-                : null}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="h-11">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="h-11"
-              disabled={isPending}
-              onClick={async () => {
-                const hasEnded = await endShift(shift._id);
-                if (hasEnded) setIsConfirmOpen(false);
-              }}
-            >
-              Terminar turno
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <MembershipRouteFeat.ConfirmActionDialog
+        trigger={
+          <Button
+            variant="secondary"
+            className={cn(
+              LARGE_BUTTON,
+              'bg-white/10 text-current hover:bg-white/20'
+            )}
+          />
+        }
+        triggerContent={
+          <>
+            <LogOut data-icon="inline-start" />
+            Terminar turno
+          </>
+        }
+        title="¿Terminar tu Turno?"
+        description={`Se marcará la hora de fin y no podrás registrar más Ingresos hasta iniciar otro Turno.${stillInsideNotice}`}
+        confirmLabel="Terminar turno"
+        onConfirm={() => endShift(shift._id)}
+      />
     </Card>
   );
 }

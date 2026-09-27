@@ -12,8 +12,7 @@ import { Button, Card, toast } from '@repo/ui';
 import * as Forms from '#modules/forms';
 import * as VisitPass from '#modules/visit-pass';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
-
-import * as PorteriaRouteFeat from '../-feat';
+import * as PorteriaRouteFeat from '#routes/_authenticated/app/m/$membershipId/porteria/-feat';
 
 export const Route = createFileRoute(
   '/_authenticated/app/m/$membershipId/porteria/escanear/'

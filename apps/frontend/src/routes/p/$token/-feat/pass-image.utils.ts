@@ -3,18 +3,6 @@ import * as Predicate from 'effect/Predicate';
 // Mirrors the Residente share sheet's image (`residente/-feat/pass-share.utils.ts`);
 // promote both to `#modules/visit-pass` together.
 
-/** `María José Peña` → `pase-maria-jose-pena.png`. */
-export function passImageFileName(visitorName: string) {
-  const slug = visitorName
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-  return `pase-${slug || 'visitante'}.png`;
-}
-
 const IMAGE_WIDTH = 600;
 const IMAGE_QR_SIZE = 512;
 const IMAGE_QR_TOP = 116;
@@ -77,10 +65,21 @@ export async function savePassImage({
     maxTextWidth
   );
 
-  const file = dataUrlToFile(
-    canvas.toDataURL('image/png'),
-    passImageFileName(visitorName)
+  // `María José Peña` → `pase-maria-jose-pena.png`.
+  const fileSlug = visitorName
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  const dataUrl = canvas.toDataURL('image/png');
+  const bytes = Uint8Array.from(
+    atob(dataUrl.slice(dataUrl.indexOf(',') + 1)),
+    (char) => char.charCodeAt(0)
   );
+  const file = new File([bytes], `pase-${fileSlug || 'visitante'}.png`, {
+    type: 'image/png',
+  });
   const canShareFile =
     'canShare' in navigator && navigator.canShare({ files: [file] });
 
@@ -100,13 +99,6 @@ export async function savePassImage({
       return 'downloaded' as const;
     }
   );
-}
-
-function dataUrlToFile(dataUrl: string, fileName: string) {
-  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
-  const bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
-
-  return new File([bytes], fileName, { type: 'image/png' });
 }
 
 function downloadFile(file: File) {

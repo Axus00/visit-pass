@@ -15,8 +15,8 @@ const ADMINISTRATORS_PER_UNIT_LIMIT = 100;
 
 /**
  * Inserts a `generating` report for a started Turno the caller may report on. The
- * caller starts its workflow; the email is only `pending` when the unit has an
- * active Administrador to receive it.
+ * caller starts its workflow. With `sendEmail`, the email is `pending`, and the
+ * request fails with `noRecipients` when no active Administrador can receive it.
  */
 export const requestShiftReport = Effect.fn('ShiftReports.requestShiftReport')(
   function* (args: {
@@ -88,7 +88,12 @@ export const requestShiftReport = Effect.fn('ShiftReports.requestShiftReport')(
       { concurrency: 'unbounded' }
     );
 
-    const isEmailDeliverable = args.sendEmail && recipients.length > 0;
+    const hasNoRecipients = args.sendEmail && recipients.length === 0;
+
+    if (hasNoRecipients)
+      return yield* new Domain.ShiftReportNotAllowedError({
+        reason: 'noRecipients',
+      });
 
     return yield* writer
       .table('shiftReports')
@@ -103,8 +108,8 @@ export const requestShiftReport = Effect.fn('ShiftReports.requestShiftReport')(
           timeZone: unit.timeZone,
         }),
         status: 'generating',
-        emailStatus: isEmailDeliverable ? 'pending' : 'notRequested',
-        recipients: isEmailDeliverable ? recipients : [],
+        emailStatus: args.sendEmail ? 'pending' : 'notRequested',
+        recipients,
       })
       .pipe(Effect.catchTag('DocumentEncodeError', Effect.die));
   }

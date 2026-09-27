@@ -451,6 +451,102 @@ describe('shiftReports', () => {
   );
 
   it.effect(
+    'refuses to email a report when no active Administrador can receive it',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* seedWorld;
+
+        // Unit A's only Administrador is still pending, and its other one is
+        // active but its Usuario was deleted.
+        yield* confect.run(
+          Effect.gen(function* () {
+            const writer = yield* DatabaseWriter;
+
+            yield* writer
+              .table('memberships')
+              .patch(world.adminA, { status: 'pending' });
+
+            const deletedUserId = yield* writer.table('users').insert({
+              externalId: 'deletedAdmin',
+              identityTokenIdentifier:
+                identityOf('deletedAdmin').tokenIdentifier,
+              email: 'deleted.user@example.test',
+              firstName: 'Deleted',
+              lastName: 'Admin',
+              profilePictureUrl: null,
+              lastSignInAt: null,
+              locale: null,
+              externalCreatedAt: 0,
+              externalUpdatedAt: 0,
+              deletedAt: 0,
+            });
+            yield* writer.table('memberships').insert({
+              residentialUnitId: world.unitA,
+              email: 'deleted.membership@example.test',
+              userId: deletedUserId,
+              role: 'administrator',
+              status: 'active',
+              activatedAt: 0,
+            });
+          }).pipe(Effect.orDie)
+        );
+
+        const emailed = yield* Effect.result(
+          confect
+            .withIdentity(identityOf('porterA'))
+            .mutation(refs.public.shiftReports.request, {
+              membershipId: world.porterA,
+              shiftId: world.shiftA,
+              sendEmail: true,
+            })
+        );
+        EffectVitestUtils.assertFailure(
+          emailed,
+          new ShiftReports.ShiftReportNotAllowedError({
+            reason: 'noRecipients',
+          })
+        );
+
+        const reports = yield* confect.run(
+          Effect.gen(function* () {
+            const reader = yield* DatabaseReader;
+
+            const shiftReports = yield* reader
+              .table('shiftReports')
+              .index('by_shiftId', (q) => q.eq('shiftId', world.shiftA))
+              .collect();
+            const unsentId = yield* ShiftReports.requestShiftReport({
+              membershipId: world.porterA,
+              shiftId: world.shiftA,
+              sendEmail: false,
+            }).pipe(
+              Effect.provideService(
+                Authentication.CurrentUserIdentity,
+                identityOf('porterA')
+              )
+            );
+            const unsent = yield* reader.table('shiftReports').get(unsentId);
+
+            return {
+              countAfterRefusal: shiftReports.length,
+              unsentEmailStatus: unsent.emailStatus,
+            };
+          }).pipe(Effect.orDie),
+          Schema.Struct({
+            countAfterRefusal: Schema.Finite,
+            unsentEmailStatus: ShiftReports.ShiftReportEmailStatus,
+          })
+        );
+
+        EffectVitestUtils.deepStrictEqual(reports, {
+          countAfterRefusal: 0,
+          unsentEmailStatus: 'notRequested',
+        });
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
     'stores the file, skips an unconfigured email and completes once',
     () =>
       Effect.gen(function* () {
