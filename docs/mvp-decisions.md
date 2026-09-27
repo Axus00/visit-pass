@@ -38,6 +38,17 @@ Implementado según `CONTEXT.md`: Temporal (un Ingreso), Evento (un Pase por inv
 - Los Pases que vencieron sin usarse se purgan a los 30 días; los archivos de Reporte de turno, también a los 30 días.
 - Pendiente para abogado y producto: contrato Responsable–Encargado, política de tratamiento pública y herramientas de consulta/rectificación/supresión.
 
+**Corregido por [#11](https://github.com/Axus00/visit-pass/issues/11#issuecomment-5857000044)** (ver también ADR 0007). Pendiente de implementar:
+
+- El Plazo de retención lo fija solo el Superadmin, no el Administrador.
+- El Aviso de privacidad es una plantilla rellenada con los datos legales de la unidad (razón social, NIT, dirección, ciudad, teléfono, correo, plazo), obligatorios para operar. Cada unidad guarda versiones inmutables con el texto renderizado, y la Visita referencia la versión, el medio y el Portero.
+- Los Pases no usados se anonimizan a los 30 días (no se borran), y `/p/<token>` muestra "Este Pase ya no está disponible".
+- Los archivos de Reporte de turno se borran a los 7 días, no a los 30.
+- Las Visitas anonimizadas desaparecen del historial del Residente, que nunca ve el documento.
+- El Reporte de turno lleva los documentos enmascarados, y las listas del Portero también.
+- El Registro manual pide el tipo de documento y tiene el interruptor "Menor de edad" (documento opcional).
+- Marca de retención por documento, que la purga respeta, y registro de purga sin datos personales.
+
 ## #12 Superadmin
 
 - Tabla `superadmins` por correo. Se concede con `npx convex run residentialUnits:grantSuperadmin '{"email":"..."}'`.

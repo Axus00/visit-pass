@@ -104,12 +104,6 @@ _Avoid_: Check-out
 El periodo de trabajo de un Portero en una Unidad residencial: un horario planeado por el Administrador más la marcación real de inicio y fin que hace el Portero.
 _Avoid_: Jornada, horario (es solo la parte planeada)
 
-**Aviso de privacidad**:
-El texto versionado que informa al Visitante quién trata sus datos, para qué y cómo ejercer sus derechos. Se muestra en el formulario del Portero y en el Pase; cada Visita guarda la versión mostrada.
-
-**Retención**:
-El plazo, configurable por Unidad residencial (3 a 24 meses, 12 por defecto), tras el cual una Visita se anonimiza. Los Pases vencidos que nunca se usaron se purgan a los 30 días.
-
 **Reporte de turno**:
 El listado de las Visitas registradas durante un Turno, exportable a Excel y enviable por correo al Administrador.
 _Avoid_: Bitácora, minuta, log
