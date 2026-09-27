@@ -39,13 +39,12 @@ const EMPTY_TAB_COPY = {
 
 function ResidenteAutorizacionesPage() {
   const membership = MembershipRouteFeat.useCurrentMembership();
+  const now = VisitPass.useNow();
   const authorizations = useQuery(refs.public.authorizations.listForApartment, {
     membershipId: membership.membershipId,
+    now,
   });
-  const today = VisitPass.todayIn(
-    membership.residentialUnitTimeZone,
-    VisitPass.useNow()
-  );
+  const today = VisitPass.todayIn(membership.residentialUnitTimeZone, now);
   const [tab, setTab] =
     useState<ResidenteRouteFeat.AuthorizationTab>('current');
   const share = ResidenteRouteFeat.usePassShare();

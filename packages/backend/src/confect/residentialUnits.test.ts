@@ -43,6 +43,7 @@ describe('residentialUnits', () => {
             unitB?: boolean;
             enteredAt: string;
             exitedAt?: string;
+            voided?: boolean;
           }) =>
             writer.table('visits').insert({
               residentialUnitId: args.unitB ? world.unitB : world.unitA,
@@ -62,6 +63,7 @@ describe('residentialUnits', () => {
                   ? undefined
                   : Date.parse(args.exitedAt),
               privacyNoticeVersion: Visits.PRIVACY_NOTICE_VERSION,
+              voidedAt: args.voided ? Date.parse(args.enteredAt) : undefined,
             });
 
           // Today in Bogotá, gone.
@@ -71,6 +73,8 @@ describe('residentialUnits', () => {
           });
           // Today in Bogotá, still inside.
           yield* visit({ enteredAt: '2026-09-26T11:00:00Z' });
+          // Today in Bogotá and open, but registered by mistake.
+          yield* visit({ enteredAt: '2026-09-26T12:00:00Z', voided: true });
           // 23:00 yesterday in Bogotá although already the 26th in UTC.
           yield* visit({ enteredAt: '2026-09-26T04:00:00Z' });
           // Two days ago, gone.

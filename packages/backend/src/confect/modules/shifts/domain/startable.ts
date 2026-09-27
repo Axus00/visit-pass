@@ -1,3 +1,5 @@
+import * as Predicate from 'effect/Predicate';
+
 import type { Shift } from './models';
 
 const MILLIS_PER_HOUR = 60 * 60 * 1000;
@@ -13,7 +15,38 @@ export const OVERDUE_START_HOURS = 12;
 
 type ScheduledShift = Pick<Shift, 'status' | 'plannedStart' | 'plannedEnd'>;
 
-/** Planned Turnos the Portero can still start at `now`, soonest first. */
+/**
+ * A planned Turno ending at or before this instant is past its overdue grace
+ * at `now`; scans for startable Turnos read planned ends after it.
+ */
+export function earliestStartablePlannedEnd(now: number): number {
+  return now - OVERDUE_START_HOURS * MILLIS_PER_HOUR;
+}
+
+/**
+ * Whether the Portero can start the planned Turno at `now`: from
+ * `EARLY_START_HOURS` before its planned start until `OVERDUE_START_HOURS`
+ * after its planned end.
+ */
+export function isStartableAt(shift: ScheduledShift, now: number): boolean {
+  const { plannedStart, plannedEnd } = shift;
+  const isPlanned =
+    shift.status === 'scheduled' &&
+    Predicate.isNotUndefined(plannedStart) &&
+    Predicate.isNotUndefined(plannedEnd);
+  if (!isPlanned) return false;
+
+  const hasWindowOpened =
+    plannedStart - EARLY_START_HOURS * MILLIS_PER_HOUR <= now;
+  const hasWindowClosed = plannedEnd <= earliestStartablePlannedEnd(now);
+
+  return hasWindowOpened && !hasWindowClosed;
+}
+
+/**
+ * Planned Turnos the Portero can start now or later (their window has not
+ * closed), soonest first. For display: a future one is not startable yet.
+ */
 export function listStartableShifts<S extends ScheduledShift>(
   shifts: ReadonlyArray<S>,
   now: number
@@ -22,15 +55,14 @@ export function listStartableShifts<S extends ScheduledShift>(
     .filter(
       (shift) =>
         shift.status === 'scheduled' &&
-        (shift.plannedEnd ?? 0) + OVERDUE_START_HOURS * MILLIS_PER_HOUR > now
+        (shift.plannedEnd ?? 0) > earliestStartablePlannedEnd(now)
     )
     .toSorted((a, b) => (a.plannedStart ?? 0) - (b.plannedStart ?? 0));
 }
 
 /**
  * The planned Turno that "Iniciar turno" starts instead of opening an
- * unplanned one: among those already startable (from an hour before their
- * start to the overdue grace after their end), the latest planned start, so
+ * unplanned one: among those startable at `now`, the latest planned start, so
  * the current Turno wins over an overdue one.
  */
 export function findPlannedShiftToStart<S extends ScheduledShift>(
@@ -38,9 +70,6 @@ export function findPlannedShiftToStart<S extends ScheduledShift>(
   now: number
 ): S | undefined {
   return listStartableShifts(shifts, now)
-    .filter(
-      (shift) =>
-        (shift.plannedStart ?? 0) - EARLY_START_HOURS * MILLIS_PER_HOUR <= now
-    )
+    .filter((shift) => isStartableAt(shift, now))
     .at(-1);
 }

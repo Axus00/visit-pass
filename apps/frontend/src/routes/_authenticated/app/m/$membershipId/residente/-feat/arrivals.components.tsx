@@ -27,17 +27,19 @@ import {
 } from './visits.utils';
 
 /**
- * Puts the arrivals bell in the top bar while the Residente panel is mounted.
- * Renders nothing itself.
+ * Puts the arrivals bell in the top bar while the Residente panel is mounted,
+ * one per Membresía. Renders nothing itself.
  */
 export function ArrivalsNotifier() {
+  const { membershipId } = MembershipRouteFeat.useCurrentMembership();
   const { setTopBarActions } = MembershipRouteFeat.useTopBarActionsSlot();
 
+  // Keyed by Membresía so switching Apartamentos starts a fresh baseline.
   useEffect(() => {
-    setTopBarActions(<ArrivalsBell />);
+    setTopBarActions(<ArrivalsBell key={membershipId} />);
 
     return () => setTopBarActions(null);
-  }, [setTopBarActions]);
+  }, [membershipId, setTopBarActions]);
 
   return null;
 }

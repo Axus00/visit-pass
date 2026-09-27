@@ -8,6 +8,7 @@ import refs from '@repo/backend/refs';
 import { toast } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import {
@@ -29,10 +30,12 @@ export function useCreateAuthorization() {
   return async (
     payload: CreateAuthorizationPayload
   ): Promise<SharedAuthorization | null> => {
-    const result = await create({
-      membershipId: membership.membershipId,
-      ...payload,
-    });
+    const result = await AppRouteFeat.settleMutation(
+      create({
+        membershipId: membership.membershipId,
+        ...payload,
+      })
+    );
 
     if (Result.isFailure(result)) {
       toast.error(VisitPass.describeBackendError(result.failure));
@@ -89,10 +92,12 @@ export function useCreateFavorite() {
   const createFavorite = useMutation(refs.public.authorizations.createFavorite);
 
   return async (favorite: CreateFavoritePayload) => {
-    const result = await createFavorite({
-      membershipId: membership.membershipId,
-      ...favorite,
-    });
+    const result = await AppRouteFeat.settleMutation(
+      createFavorite({
+        membershipId: membership.membershipId,
+        ...favorite,
+      })
+    );
 
     if (Result.isFailure(result)) {
       toast.error(VisitPass.describeBackendError(result.failure));

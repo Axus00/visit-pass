@@ -7,6 +7,7 @@ import { Button, toast } from '@repo/ui';
 import * as CommonUI from '#modules/common-ui';
 import * as Forms from '#modules/forms';
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import { CreateApartmentsFormStandardSchema } from './admin.models';
@@ -44,11 +45,13 @@ export function CreateApartmentsDialog({
       }
 
       const tower = value.tower.trim();
-      const result = await createApartments({
-        membershipId: membership.membershipId,
-        tower,
-        numbers: parsed.success,
-      });
+      const result = await AppRouteFeat.settleMutation(
+        createApartments({
+          membershipId: membership.membershipId,
+          tower,
+          numbers: parsed.success,
+        })
+      );
 
       if (Result.isFailure(result)) {
         toast.error(VisitPass.describeBackendError(result.failure));

@@ -14,7 +14,10 @@ import * as Calendar from './modules/calendar';
 import * as ResidentialUnits from './modules/residentialUnits';
 import * as Shifts from './modules/shifts';
 
-const LIST_FOR_APARTMENT_LIMIT = 50;
+/** The latest Autorizaciones listed whatever their state. */
+const LIST_FOR_APARTMENT_LATEST_LIMIT = 50;
+/** Active Autorizaciones still valid today or later, however old. */
+const LIST_FOR_APARTMENT_CURRENT_LIMIT = 200;
 const FAVORITES_LIMIT = 200;
 
 // -*******************************************************************************-
@@ -130,6 +133,11 @@ const createImpl = FunctionImpl.make(
     })
 );
 
+/**
+ * Every active Autorización valid on or after the unit's day of `now`, so a
+ * long Servicio never drops out behind newer ones, plus the latest ones in any
+ * state; latest created first.
+ */
 const listForApartmentImpl = FunctionImpl.make(
   databaseSchema,
   authorizationsSpec,
@@ -138,19 +146,46 @@ const listForApartmentImpl = FunctionImpl.make(
     Effect.gen(function* () {
       const reader = yield* DatabaseReader;
 
-      const { apartmentId } = yield* Authorizations.requireResidentApartment(
-        args.membershipId
-      );
+      const { membership, apartmentId } =
+        yield* Authorizations.requireResidentApartment(args.membershipId);
 
-      const authorizations = yield* reader
-        .table('authorizations')
-        .index(
-          'by_apartmentId',
-          (q) => q.eq('apartmentId', apartmentId),
-          'desc'
-        )
-        .take(LIST_FOR_APARTMENT_LIMIT)
+      const unit = yield* reader
+        .table('residentialUnits')
+        .get(membership.residentialUnitId)
         .pipe(Effect.orDie);
+      const today = Calendar.toLocalDate(args.now, unit.timeZone);
+
+      const [current, latest] = yield* Effect.all(
+        [
+          reader
+            .table('authorizations')
+            .index('by_apartmentId_and_status_and_endDate', (q) =>
+              q
+                .eq('apartmentId', apartmentId)
+                .eq('status', 'active')
+                .gte('endDate', today)
+            )
+            .take(LIST_FOR_APARTMENT_CURRENT_LIMIT),
+          reader
+            .table('authorizations')
+            .index(
+              'by_apartmentId',
+              (q) => q.eq('apartmentId', apartmentId),
+              'desc'
+            )
+            .take(LIST_FOR_APARTMENT_LATEST_LIMIT),
+        ],
+        { concurrency: 'unbounded' }
+      ).pipe(Effect.orDie);
+
+      const authorizations = [
+        ...new Map(
+          [...current, ...latest].map((authorization) => [
+            authorization._id,
+            authorization,
+          ])
+        ).values(),
+      ].toSorted((a, b) => b._creationTime - a._creationTime);
 
       const [passesByAuthorization, creatorNames] = yield* Effect.all(
         [

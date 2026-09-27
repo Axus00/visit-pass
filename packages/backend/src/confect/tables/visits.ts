@@ -7,6 +7,11 @@ export default Table.make(() => VisitsDomain.VisitsTableSchema)
     'residentialUnitId',
     'enteredAt',
   ])
+  .index('by_residentialUnitId_and_anonymizedAt_and_enteredAt', [
+    'residentialUnitId',
+    'anonymizedAt',
+    'enteredAt',
+  ])
   .index('by_residentialUnitId_and_exitedAt', ['residentialUnitId', 'exitedAt'])
   .index('by_apartmentId_and_enteredAt', ['apartmentId', 'enteredAt'])
   .index('by_shiftId', ['shiftId'])

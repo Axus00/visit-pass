@@ -43,6 +43,7 @@ function MembershipLayout() {
     <MembershipRouteFeat.MembershipProvider
       membership={membership}
       memberships={access.memberships}
+      isSuperadmin={access.isSuperadmin}
     >
       <MembershipRouteFeat.AppShell>
         <Outlet />

@@ -19,7 +19,8 @@ export default GroupSpec.make()
   .addFunction(
     /**
      * Portero (own Turnos) or Administrador: generates the XLSX Reporte de
-     * turno and, with `sendEmail`, emails it to the unit's Administradores.
+     * turno of a started Turno and, with `sendEmail`, emails it to the unit's
+     * Administradores.
      */
     FunctionSpec.publicMutation({
       name: 'request',

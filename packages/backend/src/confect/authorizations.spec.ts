@@ -28,10 +28,13 @@ export default GroupSpec.make()
     }).middleware(RequireUserIdentity)
   )
   .addFunction(
-    /** Residente: the Apartamento's latest Autorizaciones with their Pases. */
+    /**
+     * Residente: every Autorización still valid on or after the day of `now`
+     * (however old), plus the latest ones, with their Pases.
+     */
     FunctionSpec.publicQuery({
       name: 'listForApartment',
-      args: () => ({ membershipId: Id('memberships') }),
+      args: () => ({ membershipId: Id('memberships'), now: Schema.Finite }),
       returns: () => Schema.Array(AuthorizationsDomain.AuthorizationSummary),
       error: () => MembershipsDomain.AccessDeniedError,
     }).middleware(RequireUserIdentity)

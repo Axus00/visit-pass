@@ -7,6 +7,7 @@ import * as Layer from 'effect/Layer';
 import refs from './_generated/refs';
 import databaseSchema from './_generated/schema';
 import { DatabaseReader, Scheduler } from './_generated/services';
+import * as Calendar from './modules/calendar';
 import * as Retention from './modules/retention';
 import retentionSpec from './retention.spec';
 
@@ -20,7 +21,8 @@ const UNITS_PER_BATCH = 50;
 /**
  * Every sweep is a batched internal mutation that reschedules itself while
  * work remains. Continuations carry the first run's cutoff, so a paginated
- * cursor always resumes the same index range.
+ * cursor always resumes the same index range; the Visita sweep needs none,
+ * since anonymizing a Visita moves it out of the range it reads.
  */
 const runImpl = FunctionImpl.make(databaseSchema, retentionSpec, 'run', () =>
   Effect.gen(function* () {
@@ -64,19 +66,21 @@ const sweepUnitsImpl = FunctionImpl.make(
 
       yield* Effect.forEach(
         page.page,
-        (unit) =>
-          Effect.all(
+        (unit) => {
+          const visitCutoff = Retention.toVisitRetentionCutoff({
+            now: args.now,
+            visitRetentionMonths: unit.visitRetentionMonths,
+          });
+
+          return Effect.all(
             [
               scheduler.runAfter(
                 Duration.zero,
                 refs.internal.retention.anonymizeVisits,
                 {
                   residentialUnitId: unit._id,
-                  cutoff: Retention.toVisitRetentionCutoff({
-                    now: args.now,
-                    visitRetentionMonths: unit.visitRetentionMonths,
-                  }),
-                  cursor: null,
+                  cutoff: visitCutoff,
+                  today: Calendar.toLocalDate(args.now, unit.timeZone),
                 }
               ),
               scheduler.runAfter(
@@ -88,12 +92,14 @@ const sweepUnitsImpl = FunctionImpl.make(
                     now: args.now,
                     timeZone: unit.timeZone,
                   }),
+                  visitCutoff,
                   cursor: null,
                 }
               ),
             ],
             { concurrency: 'unbounded', discard: true }
-          ),
+          );
+        },
         { concurrency: 'unbounded', discard: true }
       );
 
@@ -116,13 +122,13 @@ const anonymizeVisitsImpl = FunctionImpl.make(
     Effect.gen(function* () {
       const scheduler = yield* Scheduler;
 
-      const progress = yield* Retention.anonymizeVisitsPage(args);
+      const mayHaveMore = yield* Retention.anonymizeVisitsBatch(args);
 
-      if (!progress.isDone)
+      if (mayHaveMore)
         yield* scheduler.runAfter(
           Duration.zero,
           refs.internal.retention.anonymizeVisits,
-          { ...args, cursor: progress.continueCursor }
+          args
         );
 
       return null;

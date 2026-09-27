@@ -22,6 +22,7 @@ import {
 
 import * as Forms from '#modules/forms';
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import * as PorteriaRouteFeat from '../-feat';
@@ -142,7 +143,7 @@ function PorteriaManualEntryPage() {
       }
 
       const plate = value.plate.trim().toUpperCase();
-      const result = await PorteriaRouteFeat.settleMutation(
+      const result = await AppRouteFeat.settleMutation(
         registerManualEntry({
           membershipId,
           visitorName: value.visitorName.trim(),

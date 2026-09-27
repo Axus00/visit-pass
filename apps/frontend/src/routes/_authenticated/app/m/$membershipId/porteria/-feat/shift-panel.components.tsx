@@ -11,6 +11,7 @@ import {
   Users,
 } from 'lucide-react';
 
+import * as ShiftsShared from '@repo/backend/shared/shifts';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +37,8 @@ import type { PorterShiftState, ShiftStats } from './porteria.models';
 import { describeShiftWindow, shiftElapsedMillis } from './shift-format.utils';
 
 const LARGE_BUTTON = tw`h-12 px-5 text-base`;
+
+const MILLIS_PER_HOUR = 60 * 60 * 1000;
 
 /**
  * The Portero's Turno: how to start one (unplanned or planned) or, while open,
@@ -96,29 +99,53 @@ function NoOpenShiftCard({
             Turnos planeados
           </p>
           <ul className="flex flex-col gap-2">
-            {upcoming.map((shift) => (
-              <li
-                key={shift._id}
-                className="flex flex-col gap-2 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-medium">
-                    {describeShiftWindow(shift, residentialUnitTimeZone)}
-                  </p>
-                  {(shift.plannedEnd ?? now) < now ? (
-                    <Badge variant="warning">Atrasado</Badge>
-                  ) : null}
-                </div>
-                <Button
-                  variant="outline"
-                  className="h-11"
-                  disabled={isPending}
-                  onClick={() => void startShift(shift._id)}
+            {upcoming.map((shift) => {
+              const availableFrom =
+                (shift.plannedStart ?? now) -
+                ShiftsShared.EARLY_START_HOURS * MILLIS_PER_HOUR;
+              const isOverdue = (shift.plannedEnd ?? now) < now;
+              const isStartable = availableFrom <= now;
+              const isAvailableToday =
+                VisitPass.todayIn(residentialUnitTimeZone, availableFrom) ===
+                VisitPass.todayIn(residentialUnitTimeZone, now);
+              const availableFromLabel = isAvailableToday
+                ? `las ${VisitPass.formatTime(availableFrom, residentialUnitTimeZone)}`
+                : VisitPass.formatDateTime(
+                    availableFrom,
+                    residentialUnitTimeZone
+                  );
+
+              return (
+                <li
+                  key={shift._id}
+                  className="flex flex-col gap-2 rounded-xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  Iniciar este turno
-                </Button>
-              </li>
-            ))}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium">
+                        {describeShiftWindow(shift, residentialUnitTimeZone)}
+                      </p>
+                      {isOverdue ? (
+                        <Badge variant="warning">Atrasado</Badge>
+                      ) : null}
+                    </div>
+                    {isStartable ? null : (
+                      <p className="text-xs text-muted-foreground">
+                        Disponible desde {availableFromLabel}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="h-11"
+                    disabled={isPending || !isStartable}
+                    onClick={() => void startShift(shift._id)}
+                  >
+                    Iniciar este turno
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       ) : null}

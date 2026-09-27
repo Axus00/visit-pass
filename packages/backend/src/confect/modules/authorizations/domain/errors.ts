@@ -7,6 +7,8 @@ export const InvalidAuthorizationReason = Schema.Literals([
   'rangeTooLong',
   'missingEndDate',
   'missingWeekdays',
+  /** No day between the start and end dates falls on an allowed weekday. */
+  'noAllowedDayInRange',
   /** Temporal and Servicio take exactly one Visitante. */
   'singleVisitorRequired',
 ]);

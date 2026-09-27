@@ -27,6 +27,7 @@ import {
 } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 import * as AdminRouteFeat from '#routes/_authenticated/app/m/$membershipId/admin/-feat';
 
@@ -283,10 +284,12 @@ function RevokeMembershipDialog({
     if (Predicate.isNull(member)) return;
 
     setIsRevoking(true);
-    const result = await revoke({
-      membershipId: membership.membershipId,
-      targetMembershipId: member._id,
-    });
+    const result = await AppRouteFeat.settleMutation(
+      revoke({
+        membershipId: membership.membershipId,
+        targetMembershipId: member._id,
+      })
+    );
     setIsRevoking(false);
 
     if (Result.isFailure(result)) {

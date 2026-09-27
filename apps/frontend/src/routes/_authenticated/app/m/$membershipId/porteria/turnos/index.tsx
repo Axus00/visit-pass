@@ -28,6 +28,9 @@ function PorteriaShiftsPage() {
   const [selectedShift, setSelectedShift] =
     useState<VisitPass.ShiftSummary | null>(null);
   const openShift = shiftState?.openShift ?? null;
+  const closedShifts = QueryResult.isSuccess(history)
+    ? history.value.filter((shift) => shift.status === 'closed')
+    : [];
 
   return (
     <>
@@ -64,7 +67,7 @@ function PorteriaShiftsPage() {
             Turnos anteriores
           </h2>
           {QueryResult.isSuccess(history) ? (
-            history.value.length === 0 ? (
+            closedShifts.length === 0 ? (
               <VisitPass.EmptyState
                 icon={CalendarClock}
                 title="Aún no tienes Turnos cerrados"
@@ -72,7 +75,7 @@ function PorteriaShiftsPage() {
               />
             ) : (
               <ul className="flex flex-col gap-2">
-                {history.value.map((shift) => (
+                {closedShifts.map((shift) => (
                   <li key={shift._id}>
                     <button
                       type="button"

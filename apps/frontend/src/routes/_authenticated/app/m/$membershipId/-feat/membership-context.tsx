@@ -5,6 +5,7 @@ import type * as VisitPass from '#modules/visit-pass';
 type MembershipContextValue = {
   membership: VisitPass.MembershipSummary;
   memberships: ReadonlyArray<VisitPass.MembershipSummary>;
+  isSuperadmin: boolean;
   topBarActions: ReactNode;
   setTopBarActions: (actions: ReactNode) => void;
 };
@@ -14,17 +15,25 @@ const MembershipContext = createContext<MembershipContextValue | null>(null);
 export function MembershipProvider({
   membership,
   memberships,
+  isSuperadmin,
   children,
 }: {
   membership: VisitPass.MembershipSummary;
   memberships: ReadonlyArray<VisitPass.MembershipSummary>;
+  isSuperadmin: boolean;
   children: ReactNode;
 }) {
   const [topBarActions, setTopBarActions] = useState<ReactNode>(null);
 
   return (
     <MembershipContext.Provider
-      value={{ membership, memberships, topBarActions, setTopBarActions }}
+      value={{
+        membership,
+        memberships,
+        isSuperadmin,
+        topBarActions,
+        setTopBarActions,
+      }}
     >
       {children}
     </MembershipContext.Provider>
@@ -51,6 +60,11 @@ export function useCurrentMembership() {
 /** All of the caller's Membresías, for switching between them. */
 export function useAllMemberships() {
   return useMembershipContext().memberships;
+}
+
+/** Whether the caller is also a Superadmin, who always has the `/app` hub. */
+export function useIsSuperadmin() {
+  return useMembershipContext().isSuperadmin;
 }
 
 /** Top bar actions (such as the Residente's arrivals bell) set by a role layout. */

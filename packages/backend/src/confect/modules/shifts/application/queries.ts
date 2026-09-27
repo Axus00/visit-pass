@@ -17,7 +17,7 @@ export const findOpenShift = Effect.fn('Shifts.findOpenShift')(function* (
 
   return yield* reader
     .table('shifts')
-    .index('by_porterMembershipId_and_status', (q) =>
+    .index('by_porterMembershipId_and_status_and_plannedEnd', (q) =>
       q.eq('porterMembershipId', porterMembershipId).eq('status', 'open')
     )
     .first()

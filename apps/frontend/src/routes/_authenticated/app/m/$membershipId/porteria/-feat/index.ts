@@ -15,7 +15,6 @@ export type {
   ShiftStats,
 } from './porteria.models';
 export { PrivacyNotice } from './privacy-notice.components';
-export { settleMutation } from './settle-mutation.utils';
 export { ShiftDetailSheet } from './shift-detail-sheet.components';
 export {
   describeReportEmailStatus,

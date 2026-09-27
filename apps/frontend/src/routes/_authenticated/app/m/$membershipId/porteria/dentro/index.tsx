@@ -10,6 +10,7 @@ import refs from '@repo/backend/refs';
 import { Button, Skeleton, toast } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import * as PorteriaRouteFeat from '../-feat';
@@ -146,7 +147,7 @@ function RegisterExitButton({ visit }: { visit: VisitPass.VisitSummary }) {
       disabled={isPending}
       onClick={async () => {
         setIsPending(true);
-        const result = await PorteriaRouteFeat.settleMutation(
+        const result = await AppRouteFeat.settleMutation(
           registerExit({ membershipId, visitId: visit._id })
         );
 

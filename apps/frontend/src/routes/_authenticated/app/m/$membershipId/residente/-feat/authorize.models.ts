@@ -52,6 +52,17 @@ export type AuthorizeFormValues = {
   guests: Array<GuestRow>;
   saveAsFavorite: boolean;
   favoriteRelationship: VisitPass.Relationship;
+  /**
+   * The Favorito this form already created, so retrying after the Autorización
+   * failed links it instead of saving a duplicate.
+   */
+  savedFavorite: SavedFavorite | null;
+};
+
+export type SavedFavorite = {
+  id: FavoriteId;
+  visitorName: string;
+  visitorDocument: string;
 };
 
 export function defaultAuthorizeFormValues(
@@ -69,6 +80,7 @@ export function defaultAuthorizeFormValues(
     guests: [{ name: '', document: '' }],
     saveAsFavorite: false,
     favoriteRelationship: 'family',
+    savedFavorite: null,
   };
 }
 
@@ -145,6 +157,7 @@ const REASON_FIELD = {
   rangeTooLong: 'endDate',
   missingEndDate: 'endDate',
   missingWeekdays: 'weekdays',
+  noAllowedDayInRange: 'weekdays',
   singleVisitorRequired: 'visitorName',
 } as const satisfies Record<
   AuthorizationsShared.InvalidAuthorizationReason,

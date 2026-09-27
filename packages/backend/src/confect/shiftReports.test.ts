@@ -25,6 +25,7 @@ const identityOf = (key: string) => ({
 const World = Schema.Struct({
   unitA: Id('residentialUnits'),
   shiftA: Id('shifts'),
+  scheduledShiftA: Id('shifts'),
   porterA: Id('memberships'),
   porterA2: Id('memberships'),
   adminA: Id('memberships'),
@@ -32,8 +33,9 @@ const World = Schema.Struct({
 });
 
 /**
- * Unit A with Porteros `porterA` (owner of `shiftA`, which has one Visita) and
- * `porterA2`, the Administrador `adminA`, and unit B with its own `adminB`.
+ * Unit A with Porteros `porterA` (owner of `shiftA`, which has one Visita, and
+ * of the not yet started `scheduledShiftA`) and `porterA2`, the Administrador
+ * `adminA`, and unit B with its own `adminB`.
  */
 const seedWorld = Effect.gen(function* () {
   const confect = yield* TestConfect.TestConfect;
@@ -117,6 +119,14 @@ const seedWorld = Effect.gen(function* () {
         startedAt,
       });
 
+      const scheduledShiftA = yield* writer.table('shifts').insert({
+        residentialUnitId: unitA,
+        porterMembershipId: porterA,
+        status: 'scheduled',
+        plannedStart: startedAt + 86_400_000,
+        plannedEnd: startedAt + 86_400_000 + 8 * 3_600_000,
+      });
+
       yield* writer.table('visits').insert({
         residentialUnitId: unitA,
         apartmentId,
@@ -130,7 +140,15 @@ const seedWorld = Effect.gen(function* () {
         privacyNoticeVersion: 'test',
       });
 
-      return { unitA, shiftA, porterA, porterA2, adminA, adminB };
+      return {
+        unitA,
+        shiftA,
+        scheduledShiftA,
+        porterA,
+        porterA2,
+        adminA,
+        adminB,
+      };
     }).pipe(Effect.orDie),
     World
   );
@@ -147,7 +165,8 @@ const RequestedReport = Schema.Struct({
 /** Inserts the row `request` would, without starting the workflow component. */
 const seedGeneratingReport = (
   world: typeof World.Type,
-  emailStatus: 'pending' | 'notRequested'
+  emailStatus: 'pending' | 'notRequested',
+  shiftId: GenericId<'shifts'> = world.shiftA
 ) =>
   Effect.gen(function* () {
     const confect = yield* TestConfect.TestConfect;
@@ -158,7 +177,7 @@ const seedGeneratingReport = (
 
         return yield* writer.table('shiftReports').insert({
           residentialUnitId: world.unitA,
-          shiftId: world.shiftA,
+          shiftId,
           requestedByMembershipId: world.porterA,
           fileName: 'reporte.xlsx',
           status: 'generating',
@@ -199,7 +218,7 @@ describe('shiftReports', () => {
       );
       EffectVitestUtils.assertFailure(
         request,
-        new ShiftReports.ShiftReportNotAllowedError()
+        new ShiftReports.ShiftReportNotAllowedError({ reason: 'notOwnShift' })
       );
 
       const list = yield* Effect.result(
@@ -212,7 +231,64 @@ describe('shiftReports', () => {
       );
       EffectVitestUtils.assertFailure(
         list,
-        new ShiftReports.ShiftReportNotAllowedError()
+        new ShiftReports.ShiftReportNotAllowedError({ reason: 'notOwnShift' })
+      );
+    }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect('refuses to report a Turno that has not started', () =>
+    Effect.gen(function* () {
+      const confect = yield* TestConfect.TestConfect;
+      const world = yield* seedWorld;
+
+      const request = yield* Effect.result(
+        confect
+          .withIdentity(identityOf('adminA'))
+          .mutation(refs.public.shiftReports.request, {
+            membershipId: world.adminA,
+            shiftId: world.scheduledShiftA,
+            sendEmail: false,
+          })
+      );
+      EffectVitestUtils.assertFailure(
+        request,
+        new ShiftReports.ShiftReportNotAllowedError({
+          reason: 'shiftNotStarted',
+        })
+      );
+    }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect('still lists the unit’s reports when a Turno was deleted', () =>
+    Effect.gen(function* () {
+      const confect = yield* TestConfect.TestConfect;
+      const world = yield* seedWorld;
+      const orphanedId = yield* seedGeneratingReport(
+        world,
+        'notRequested',
+        world.scheduledShiftA
+      );
+      const keptId = yield* seedGeneratingReport(world, 'notRequested');
+
+      yield* confect.run(
+        Effect.gen(function* () {
+          const writer = yield* DatabaseWriter;
+          yield* writer.table('shifts').delete(world.scheduledShiftA);
+        })
+      );
+
+      const reports = yield* confect
+        .withIdentity(identityOf('adminA'))
+        .query(refs.public.shiftReports.listForUnit, {
+          membershipId: world.adminA,
+        });
+
+      EffectVitestUtils.deepStrictEqual(
+        new Map(reports.map((report) => [report._id, report.porterName])),
+        new Map([
+          [keptId, 'porterA Test'],
+          [orphanedId, ShiftReports.DELETED_SHIFT_PORTER_NAME],
+        ])
       );
     }).pipe(Effect.provide(TestConfect.layer))
   );

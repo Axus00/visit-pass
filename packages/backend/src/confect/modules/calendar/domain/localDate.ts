@@ -1,8 +1,20 @@
+import * as DateTime from 'effect/DateTime';
+import * as Option from 'effect/Option';
 import * as Schema from 'effect/Schema';
 
-/** A calendar day in a Unidad residencial's own time zone, as `YYYY-MM-DD`. */
+/**
+ * A calendar day in a Unidad residencial's own time zone, as `YYYY-MM-DD`.
+ * Days a month does not have, such as `2026-02-31`, are rejected.
+ */
 export const LocalDate = Schema.String.check(
-  Schema.isPattern(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/)
+  Schema.isPattern(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/),
+  Schema.makeFilter(
+    (value: string) =>
+      Option.exists(
+        DateTime.make(`${value}T00:00:00Z`),
+        (dateTime) => DateTime.formatIsoDateUtc(dateTime) === value
+      ) || 'Not an existing calendar day'
+  )
 );
 
 export type LocalDate = typeof LocalDate.Type;

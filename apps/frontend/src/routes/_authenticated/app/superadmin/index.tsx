@@ -253,13 +253,15 @@ function CreateUnitCard() {
       const administratorEmail = value.administratorEmail.trim();
       const name = value.name.trim();
 
-      const result = await create({
-        name,
-        city: value.city.trim(),
-        administratorEmail,
-        administratorName:
-          administratorName.length > 0 ? administratorName : undefined,
-      });
+      const result = await AppRouteFeat.settleMutation(
+        create({
+          name,
+          city: value.city.trim(),
+          administratorEmail,
+          administratorName:
+            administratorName.length > 0 ? administratorName : undefined,
+        })
+      );
 
       if (Result.isFailure(result)) {
         toast.error(VisitPass.describeBackendError(result.failure));

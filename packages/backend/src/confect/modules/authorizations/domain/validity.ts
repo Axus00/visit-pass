@@ -49,6 +49,14 @@ export function resolveAuthorizationValidity(
   const weekdays = [...new Set(dto.weekdays ?? [])].sort((a, b) => a - b);
   if (weekdays.length === 0) return Result.fail('missingWeekdays');
 
+  // Any seven consecutive days cover every weekday.
+  const hasAllowedDay = Array.from(
+    { length: Math.min(spannedDays, 7) },
+    (_, offset) =>
+      CalendarDomain.weekdayOf(CalendarDomain.addDays(dto.startDate, offset))
+  ).some((weekday) => weekdays.includes(weekday));
+  if (!hasAllowedDay) return Result.fail('noAllowedDayInRange');
+
   return Result.succeed({
     startDate: dto.startDate,
     endDate: dto.endDate,

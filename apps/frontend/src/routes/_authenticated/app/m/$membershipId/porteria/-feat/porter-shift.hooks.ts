@@ -7,10 +7,10 @@ import refs from '@repo/backend/refs';
 import { toast } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import type { PorterShiftState } from './porteria.models';
-import { settleMutation } from './settle-mutation.utils';
 
 /**
  * The Portero's open Turno, its counters and upcoming planned Turnos; `null`
@@ -33,7 +33,9 @@ export function useShiftActions() {
 
   const startShift = async (shiftId?: VisitPass.ShiftSummary['_id']) => {
     setIsPending(true);
-    const result = await settleMutation(start({ membershipId, shiftId }));
+    const result = await AppRouteFeat.settleMutation(
+      start({ membershipId, shiftId })
+    );
     setIsPending(false);
 
     if (Result.isFailure(result)) {
@@ -46,7 +48,9 @@ export function useShiftActions() {
 
   const endShift = async (shiftId: VisitPass.ShiftSummary['_id']) => {
     setIsPending(true);
-    const result = await settleMutation(end({ membershipId, shiftId }));
+    const result = await AppRouteFeat.settleMutation(
+      end({ membershipId, shiftId })
+    );
     setIsPending(false);
 
     if (Result.isFailure(result)) {

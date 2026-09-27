@@ -34,6 +34,7 @@ const VISITS_TODAY_WINDOW_MILLIS = 36 * 60 * 60 * 1000;
 // Public
 // -*******************************************************************************-
 
+/** Voided Visitas count neither as today's Visitas nor as Visitantes inside. */
 const getOverviewImpl = FunctionImpl.make(
   databaseSchema,
   residentialUnitsSpec,
@@ -91,12 +92,16 @@ const getOverviewImpl = FunctionImpl.make(
                 .gte('enteredAt', args.now - VISITS_TODAY_WINDOW_MILLIS)
             )
             .take(VISITS_COUNT_LIMIT),
+          // Newest first, so Visitas left open long ago fall off the limit.
           reader
             .table('visits')
-            .index('by_residentialUnitId_and_exitedAt', (q) =>
-              q
-                .eq('residentialUnitId', residentialUnitId)
-                .eq('exitedAt', undefined)
+            .index(
+              'by_residentialUnitId_and_exitedAt',
+              (q) =>
+                q
+                  .eq('residentialUnitId', residentialUnitId)
+                  .eq('exitedAt', undefined),
+              'desc'
             )
             .take(VISITS_COUNT_LIMIT),
         ],
@@ -128,9 +133,12 @@ const getOverviewImpl = FunctionImpl.make(
         openShiftCount: openShifts.length,
         visitsToday: recentVisits.filter(
           (visit) =>
+            Predicate.isUndefined(visit.voidedAt) &&
             Calendar.toLocalDate(visit.enteredAt, unit.timeZone) === today
         ).length,
-        visitorsInside: visitsInside.length,
+        visitorsInside: visitsInside.filter((visit) =>
+          Predicate.isUndefined(visit.voidedAt)
+        ).length,
       };
     })
 );

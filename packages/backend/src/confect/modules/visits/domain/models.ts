@@ -6,6 +6,9 @@ import * as AuthorizationsDomain from '../../authorizations/domain';
 
 export const PLATE_MAX_LENGTH = 12;
 
+/** How many of an Apartamento's latest Visitas the Residente's history lists. */
+export const APARTMENT_HISTORY_LIMIT = 50;
+
 /** Temporal, Evento or Servicio; inherited from the Autorización on a Pase. */
 export const VisitType = AuthorizationsDomain.AuthorizationType;
 

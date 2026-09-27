@@ -10,11 +10,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
+  toast,
 } from '@repo/ui';
+
+import * as VisitPass from '#modules/visit-pass';
 
 /**
  * Asks before an irreversible action. `onConfirm` resolves `true` to close the
- * dialog; the confirm button stays disabled while it runs.
+ * dialog; the confirm button stays disabled while it runs, and a rejection is
+ * toasted and keeps the dialog open.
  */
 export function ConfirmActionDialog({
   trigger,
@@ -39,7 +43,10 @@ export function ConfirmActionDialog({
 
   const handleConfirm = async () => {
     setIsPending(true);
-    const shouldClose = await onConfirm();
+    const shouldClose = await onConfirm().catch((error: unknown) => {
+      toast.error(VisitPass.describeBackendError(error));
+      return false;
+    });
     setIsPending(false);
 
     if (shouldClose) setOpen(false);

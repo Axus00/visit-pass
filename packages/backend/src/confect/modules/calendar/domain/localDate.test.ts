@@ -1,7 +1,9 @@
+import * as Schema from 'effect/Schema';
 import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_TIME_ZONE,
+  LocalDate,
   addDays,
   daysBetween,
   toLocalDate,
@@ -57,5 +59,27 @@ describe('daysBetween', () => {
     expect(daysBetween('2026-09-26', '2026-10-06')).toBe(10);
     expect(daysBetween('2026-10-06', '2026-09-26')).toBe(-10);
     expect(daysBetween('2026-01-01', '2027-01-01')).toBe(365);
+  });
+});
+
+describe('LocalDate', () => {
+  const isLocalDate = Schema.is(LocalDate);
+
+  it('accepts existing calendar days, leap days included', () => {
+    expect(isLocalDate('2026-09-26')).toBe(true);
+    expect(isLocalDate('2026-12-31')).toBe(true);
+    expect(isLocalDate('2028-02-29')).toBe(true);
+  });
+
+  it('rejects days the month does not have', () => {
+    expect(isLocalDate('2026-02-31')).toBe(false);
+    expect(isLocalDate('2026-02-29')).toBe(false);
+    expect(isLocalDate('2026-04-31')).toBe(false);
+  });
+
+  it('rejects other shapes', () => {
+    expect(isLocalDate('2026-9-26')).toBe(false);
+    expect(isLocalDate('2026-13-01')).toBe(false);
+    expect(isLocalDate('not a date')).toBe(false);
   });
 });

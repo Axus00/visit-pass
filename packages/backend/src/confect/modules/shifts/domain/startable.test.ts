@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { findPlannedShiftToStart, listStartableShifts } from './startable';
+import {
+  findPlannedShiftToStart,
+  isStartableAt,
+  listStartableShifts,
+} from './startable';
 
 const HOUR = 60 * 60 * 1000;
 const now = Date.UTC(2026, 8, 26, 23, 10);
@@ -50,5 +54,24 @@ describe('findPlannedShiftToStart', () => {
 
     expect(findPlannedShiftToStart([inHalfAnHour], now)).toBe(inHalfAnHour);
     expect(findPlannedShiftToStart([inThreeHours], now)).toBeUndefined();
+  });
+});
+
+describe('isStartableAt', () => {
+  it('opens an hour before the planned start', () => {
+    expect(isStartableAt(planned(1, 8), now)).toBe(true);
+    expect(isStartableAt(planned(1.1, 8), now)).toBe(false);
+  });
+
+  it('closes twelve hours after the planned end', () => {
+    expect(isStartableAt(planned(-19.9, 8), now)).toBe(true);
+    expect(isStartableAt(planned(-20, 8), now)).toBe(false);
+  });
+
+  it('never applies to a Turno that is not scheduled', () => {
+    expect(isStartableAt({ ...planned(-1, 8), status: 'open' }, now)).toBe(
+      false
+    );
+    expect(isStartableAt({ status: 'scheduled' }, now)).toBe(false);
   });
 });

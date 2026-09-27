@@ -1,5 +1,8 @@
 import { formatFileTimestamp } from './localDateTime';
 
+/** Stands in for the Portero of a report whose Turno no longer exists. */
+export const DELETED_SHIFT_PORTER_NAME = 'Turno eliminado';
+
 /**
  * Names a Membresía the way reports show it: the signed-in Usuario's full
  * name, else the name the Administrador typed, else the email.

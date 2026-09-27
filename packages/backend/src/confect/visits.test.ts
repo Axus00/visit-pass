@@ -147,7 +147,10 @@ describe('visits', () => {
         const residentA = yield* PorteriaFixtures.as('residentA');
         const [listed] = yield* residentA.query(
           authorizations.listForApartment,
-          { membershipId: world.residentA }
+          {
+            membershipId: world.residentA,
+            now: PorteriaFixtures.wallClockMillis(),
+          }
         );
         EffectVitestUtils.strictEqual(listed?.passes[0]?.entryCount, 2);
         EffectVitestUtils.strictEqual(listed?.passes[0]?.status, 'active');
@@ -554,6 +557,91 @@ describe('visits', () => {
     }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect('keeps a Visitante inside across a regenerated Servicio Pase', () =>
+    Effect.gen(function* () {
+      const world = yield* PorteriaFixtures.seedPorteria;
+      const porterA = yield* PorteriaFixtures.as('porterA');
+      const residentA = yield* PorteriaFixtures.as('residentA');
+      yield* openShiftForPorterA(world);
+
+      const created = yield* authorizeInA(world, {
+        type: 'service',
+        endDate: PorteriaFixtures.localDateFromToday(30),
+        weekdays: Authorizations.ALL_WEEKDAYS,
+        visitors: [{ name: 'Jardinero', document: '98765432' }],
+      });
+      const visitId = yield* porterA.mutation(visits.registerPassEntry, {
+        membershipId: world.porterA,
+        token: tokenOf(created),
+      });
+
+      const first = yield* residentA.mutation(authorizations.regeneratePass, {
+        membershipId: world.residentA,
+        passId: created.passes[0]!._id,
+      });
+      const second = yield* residentA.mutation(authorizations.regeneratePass, {
+        membershipId: world.residentA,
+        passId: first._id,
+      });
+
+      const whileInside = yield* Effect.result(
+        porterA.mutation(visits.registerPassEntry, {
+          membershipId: world.porterA,
+          token: second.token,
+        })
+      );
+      EffectVitestUtils.assertFailure(
+        whileInside,
+        new Visits.PassRejectedError({ reason: 'alreadyInside' })
+      );
+
+      yield* porterA.mutation(visits.registerExit, {
+        membershipId: world.porterA,
+        visitId,
+      });
+      yield* porterA.mutation(visits.registerPassEntry, {
+        membershipId: world.porterA,
+        token: second.token,
+      });
+    }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'lists Visitantes inside latest Ingreso first, not voided ones',
+    () =>
+      Effect.gen(function* () {
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const porterA = yield* PorteriaFixtures.as('porterA');
+        yield* openShiftForPorterA(world);
+
+        const enter = (visitorName: string) =>
+          porterA.mutation(visits.registerManualEntry, {
+            membershipId: world.porterA,
+            visitorName,
+            visitorDocument: '11112222',
+            apartmentId: world.apartmentA101,
+            visitType: 'temporary',
+          });
+
+        yield* enter('Luis');
+        const mistaken = yield* enter('Marta');
+        yield* enter('Ana');
+        yield* porterA.mutation(visits.voidVisit, {
+          membershipId: world.porterA,
+          visitId: mistaken,
+          reason: 'Registro duplicado',
+        });
+
+        const inside = yield* porterA.query(visits.listInside, {
+          membershipId: world.porterA,
+        });
+        EffectVitestUtils.deepStrictEqual(
+          inside.map((visit) => visit.visitorName),
+          ['Ana', 'Luis']
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('lets the Portero complete a document the Pase lacks', () =>
     Effect.gen(function* () {
       const world = yield* PorteriaFixtures.seedPorteria;
@@ -589,6 +677,7 @@ describe('visits', () => {
       const residentA = yield* PorteriaFixtures.as('residentA');
       const [listed] = yield* residentA.query(authorizations.listForApartment, {
         membershipId: world.residentA,
+        now: PorteriaFixtures.wallClockMillis(),
       });
       EffectVitestUtils.strictEqual(
         listed?.passes.find((pass) => pass.visitorName === 'Ana')

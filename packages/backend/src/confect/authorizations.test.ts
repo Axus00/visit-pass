@@ -2,8 +2,11 @@ import { describe, it } from '@effect/vitest';
 import * as EffectVitestUtils from '@effect/vitest/utils';
 import * as Effect from 'effect/Effect';
 import * as Predicate from 'effect/Predicate';
+import * as Schema from 'effect/Schema';
 
+import { Id } from './_generated/id';
 import refs from './_generated/refs';
+import { DatabaseWriter } from './_generated/services';
 import * as Authorizations from './modules/authorizations';
 import * as Memberships from './modules/memberships';
 import * as PorteriaFixtures from './porteria.fixtures';
@@ -37,7 +40,10 @@ describe('authorizations', () => {
 
         const listed = yield* coResidentA.query(
           authorizations.listForApartment,
-          { membershipId: world.coResidentA }
+          {
+            membershipId: world.coResidentA,
+            now: PorteriaFixtures.wallClockMillis(),
+          }
         );
         EffectVitestUtils.strictEqual(listed.length, 1);
         EffectVitestUtils.strictEqual(
@@ -48,7 +54,10 @@ describe('authorizations', () => {
 
         const otherApartment = yield* residentA102.query(
           authorizations.listForApartment,
-          { membershipId: world.residentA102 }
+          {
+            membershipId: world.residentA102,
+            now: PorteriaFixtures.wallClockMillis(),
+          }
         );
         EffectVitestUtils.strictEqual(otherApartment.length, 0);
 
@@ -104,10 +113,89 @@ describe('authorizations', () => {
 
       const [listed] = yield* residentA.query(authorizations.listForApartment, {
         membershipId: world.residentA,
+        now: PorteriaFixtures.wallClockMillis(),
       });
       EffectVitestUtils.strictEqual(listed?.eventName, 'Cumpleaños');
       EffectVitestUtils.strictEqual(listed?.passes.length, 3);
     }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'lists every current Autorización however old, plus the latest ones',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const residentA = yield* PorteriaFixtures.as('residentA');
+        const yesterday = PorteriaFixtures.localDateFromToday(-1);
+
+        const seeded = yield* confect.run(
+          Effect.gen(function* () {
+            const writer = yield* DatabaseWriter;
+
+            const insert = (args: {
+              type: 'temporary' | 'service';
+              endDate: string;
+              status: 'active' | 'cancelled';
+            }) =>
+              writer.table('authorizations').insert({
+                residentialUnitId: world.unitA,
+                apartmentId: world.apartmentA101,
+                createdByMembershipId: world.residentA,
+                type: args.type,
+                startDate:
+                  args.type === 'service'
+                    ? PorteriaFixtures.localDateFromToday(0)
+                    : args.endDate,
+                endDate: args.endDate,
+                weekdays: Authorizations.ALL_WEEKDAYS,
+                status: args.status,
+              });
+
+            const expired = yield* insert({
+              type: 'temporary',
+              endDate: yesterday,
+              status: 'active',
+            });
+            const cancelledService = yield* insert({
+              type: 'service',
+              endDate: PorteriaFixtures.localDateFromToday(30),
+              status: 'cancelled',
+            });
+            const currentService = yield* insert({
+              type: 'service',
+              endDate: PorteriaFixtures.localDateFromToday(30),
+              status: 'active',
+            });
+            const latest = yield* Effect.forEach(
+              Array.from({ length: 50 }),
+              () =>
+                insert({
+                  type: 'temporary',
+                  endDate: yesterday,
+                  status: 'active',
+                })
+            );
+
+            return { expired, cancelledService, currentService, latest };
+          }).pipe(Effect.orDie),
+          Schema.Struct({
+            expired: Id('authorizations'),
+            cancelledService: Id('authorizations'),
+            currentService: Id('authorizations'),
+            latest: Schema.mutable(Schema.Array(Id('authorizations'))),
+          })
+        );
+
+        const listed = yield* residentA.query(authorizations.listForApartment, {
+          membershipId: world.residentA,
+          now: PorteriaFixtures.wallClockMillis(),
+        });
+        EffectVitestUtils.deepStrictEqual(
+          listed.map((authorization) => authorization._id),
+          [...seeded.latest.toReversed(), seeded.currentService]
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
   );
 
   it.effect('rejects invalid Autorizaciones with their reason', () =>
@@ -188,7 +276,10 @@ describe('authorizations', () => {
 
         const [listed] = yield* residentA.query(
           authorizations.listForApartment,
-          { membershipId: world.residentA }
+          {
+            membershipId: world.residentA,
+            now: PorteriaFixtures.wallClockMillis(),
+          }
         );
         EffectVitestUtils.strictEqual(listed?.status, 'cancelled');
         EffectVitestUtils.deepStrictEqual(
@@ -251,6 +342,7 @@ describe('authorizations', () => {
 
       const [listed] = yield* residentA.query(authorizations.listForApartment, {
         membershipId: world.residentA,
+        now: PorteriaFixtures.wallClockMillis(),
       });
       EffectVitestUtils.deepStrictEqual(
         listed?.passes.map((listedPass) => listedPass.status).toSorted(),
@@ -382,6 +474,7 @@ describe('authorizations', () => {
         const othersMembership = yield* Effect.result(
           residentA102.query(authorizations.listForApartment, {
             membershipId: world.residentA,
+            now: PorteriaFixtures.wallClockMillis(),
           })
         );
         EffectVitestUtils.assertFailure(

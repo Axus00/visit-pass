@@ -8,7 +8,7 @@ import * as Domain from '../domain';
 import { listAdministratorEmails, requireReportableShift } from './queries';
 
 /**
- * Inserts a `generating` report for a Turno the caller may report on. The
+ * Inserts a `generating` report for a started Turno the caller may report on. The
  * caller starts its workflow; the email is only `pending` when the unit has an
  * active Administrador to receive it.
  */
@@ -30,6 +30,11 @@ export const requestShiftReport = Effect.fn('ShiftReports.requestShiftReport')(
       membership,
       shiftId: args.shiftId,
     });
+
+    if (shift.status === 'scheduled')
+      return yield* new Domain.ShiftReportNotAllowedError({
+        reason: 'shiftNotStarted',
+      });
 
     const [unit, recipients] = yield* Effect.all(
       [

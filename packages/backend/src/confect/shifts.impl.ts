@@ -42,10 +42,11 @@ const getMyStateImpl = FunctionImpl.make(
           Shifts.findOpenShift(membership._id),
           reader
             .table('shifts')
-            .index('by_porterMembershipId_and_status', (q) =>
+            .index('by_porterMembershipId_and_status_and_plannedEnd', (q) =>
               q
                 .eq('porterMembershipId', membership._id)
                 .eq('status', 'scheduled')
+                .gt('plannedEnd', Shifts.earliestStartablePlannedEnd(args.now))
             )
             .take(SCHEDULED_SCAN_LIMIT)
             .pipe(Effect.orDie),
@@ -88,7 +89,8 @@ const getMyStateImpl = FunctionImpl.make(
 
 /**
  * A Portero may hold open Turnos in several units, one per Membresía; the
- * check is per Membresía.
+ * check is per Membresía. A chosen planned Turno starts only inside its
+ * startable window (`Shifts.isStartableAt`).
  */
 const startImpl = FunctionImpl.make(
   databaseSchema,
@@ -111,10 +113,15 @@ const startImpl = FunctionImpl.make(
       const now = yield* Clock.currentTimeMillis;
 
       if (Predicate.isUndefined(args.shiftId)) {
+        // Soonest planned end first, so Turnos never started long ago are out
+        // of range instead of crowding out the current plan.
         const scheduledShifts = yield* reader
           .table('shifts')
-          .index('by_porterMembershipId_and_status', (q) =>
-            q.eq('porterMembershipId', membership._id).eq('status', 'scheduled')
+          .index('by_porterMembershipId_and_status_and_plannedEnd', (q) =>
+            q
+              .eq('porterMembershipId', membership._id)
+              .eq('status', 'scheduled')
+              .gt('plannedEnd', Shifts.earliestStartablePlannedEnd(now))
           )
           .take(SCHEDULED_SCAN_LIMIT)
           .pipe(Effect.orDie);
@@ -161,7 +168,8 @@ const startImpl = FunctionImpl.make(
         shift.porterMembershipId === membership._id;
       if (!isOwnShift) return yield* new Shifts.ShiftNotFoundError();
 
-      if (shift.status !== 'scheduled')
+      // Not scheduled, or outside the window around its plan.
+      if (!Shifts.isStartableAt(shift, now))
         return yield* new Shifts.InvalidShiftTransitionError();
 
       yield* writer

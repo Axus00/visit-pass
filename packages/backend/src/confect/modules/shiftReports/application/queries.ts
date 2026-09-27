@@ -88,7 +88,9 @@ export const requireReportableShift = Effect.fn(
     shift.porterMembershipId !== args.membership._id;
 
   if (isOtherPortersShift)
-    return yield* new Domain.ShiftReportNotAllowedError();
+    return yield* new Domain.ShiftReportNotAllowedError({
+      reason: 'notOwnShift',
+    });
 
   return shift;
 });
@@ -258,7 +260,10 @@ export const loadShiftReportEmail = Effect.fn(
   return email;
 });
 
-/** Projects reports for the client, resolving porter names and download URLs. */
+/**
+ * Projects reports for the client, resolving porter names and download URLs.
+ * A report whose Turno was deleted still lists, under a placeholder name.
+ */
 export const toShiftReportSummaries = Effect.fn(
   'ShiftReports.toShiftReportSummaries'
 )(function* (reports: ReadonlyArray<ShiftReportsDoc>) {
@@ -270,16 +275,23 @@ export const toShiftReportSummaries = Effect.fn(
   const porterNames = yield* Effect.forEach(
     shiftIds,
     (shiftId) =>
-      reader
-        .table('shifts')
-        .get(shiftId)
-        .pipe(
-          Effect.orDie,
-          Effect.flatMap((shift) =>
-            getMemberDisplayName(shift.porterMembershipId)
-          ),
-          Effect.map((name) => [shiftId, name] as const)
-        ),
+      Effect.gen(function* () {
+        const shift = yield* reader
+          .table('shifts')
+          .get(shiftId)
+          .pipe(
+            Effect.catchTags({
+              GetByIdFailure: () => Effect.succeed(null),
+              DocumentDecodeError: Effect.die,
+            })
+          );
+
+        const name = Predicate.isNull(shift)
+          ? Domain.DELETED_SHIFT_PORTER_NAME
+          : yield* getMemberDisplayName(shift.porterMembershipId);
+
+        return [shiftId, name] as const;
+      }),
     { concurrency: 'unbounded' }
   ).pipe(Effect.map((entries) => new Map(entries)));
 

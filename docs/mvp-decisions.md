@@ -48,3 +48,11 @@ Implementado según `CONTEXT.md`: Temporal (un Ingreso), Evento (un Pase por inv
 - Portero (móvil primero): tarjeta de Turno con contadores, escáner de Pases con cámara (`barcode-detector`) y entrada manual del código, Registro manual sin foto con Aviso de privacidad, lista de Visitantes dentro para registrar Salidas, Turnos y Reportes.
 - Residente: formulario por tipo, Favoritos con autorización de un toque, Autorizaciones con compartir/regenerar/cancelar, historial y aviso en tiempo real cuando llega su Visitante.
 - Pase: enlace público `/p/<token>` con QR, estado, instrucciones y Aviso de privacidad; compartir por WhatsApp (`navigator.share` o `wa.me`) y guardar imagen.
+
+## Límites conocidos del MVP
+
+Aceptados a propósito; cada uno tiene un camino claro cuando haga falta.
+
+- **Lista del Superadmin**: `residentialUnits.listAll` cuenta los Apartamentos leyéndolos por unidad. Alcanza para decenas de unidades; con más, se guarda un contador por unidad o se usa `@convex-dev/aggregate`.
+- **Correo verificado**: la activación de Membresías y el rol de Superadmin confían en el correo que WorkOS sincroniza. AuthKit exige verificar el correo antes de iniciar sesión; si se habilita un proveedor que no lo garantice, se guarda `emailVerified` en `users` y se exige en esos tres puntos.
+- **Historiales largos**: el historial del Residente y los listados del Portero y del Administrador muestran las Visitas más recientes (50–100) y lo indican; la paginación completa queda para después.

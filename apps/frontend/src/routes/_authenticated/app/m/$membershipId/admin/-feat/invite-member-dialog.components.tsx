@@ -7,6 +7,7 @@ import { Button, toast } from '@repo/ui';
 import * as CommonUI from '#modules/common-ui';
 import * as Forms from '#modules/forms';
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import { InviteMemberFormStandardSchema } from './admin.models';
@@ -74,14 +75,16 @@ export function InviteMemberDialog({
       const displayName = value.displayName.trim();
       const email = value.email.trim();
 
-      const result = await invite({
-        membershipId: membership.membershipId,
-        email,
-        displayName: displayName.length > 0 ? displayName : undefined,
-        role: value.role,
-        apartmentId: isResident ? apartment?._id : undefined,
-        occupancyType: isResident ? value.occupancyType : undefined,
-      });
+      const result = await AppRouteFeat.settleMutation(
+        invite({
+          membershipId: membership.membershipId,
+          email,
+          displayName: displayName.length > 0 ? displayName : undefined,
+          role: value.role,
+          apartmentId: isResident ? apartment?._id : undefined,
+          occupancyType: isResident ? value.occupancyType : undefined,
+        })
+      );
 
       if (Result.isFailure(result)) {
         toast.error(VisitPass.describeBackendError(result.failure));

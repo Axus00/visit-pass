@@ -27,6 +27,7 @@ import {
 import * as CommonUI from '#modules/common-ui';
 import * as Forms from '#modules/forms';
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import {
@@ -238,10 +239,12 @@ export function FavoriteCard({
   const now = VisitPass.useNow();
 
   const handleRemove = async () => {
-    const result = await removeFavorite({
-      membershipId: membership.membershipId,
-      favoriteId: favorite._id,
-    });
+    const result = await AppRouteFeat.settleMutation(
+      removeFavorite({
+        membershipId: membership.membershipId,
+        favoriteId: favorite._id,
+      })
+    );
 
     if (Result.isFailure(result)) {
       toast.error(VisitPass.describeBackendError(result.failure));

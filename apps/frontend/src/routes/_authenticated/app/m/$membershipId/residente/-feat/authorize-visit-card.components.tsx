@@ -78,14 +78,33 @@ export function AuthorizeVisitCard({
         validateAuthorizeForm(value, VisitPass.todayIn(timeZone)),
     },
     onSubmit: async ({ value, formApi }) => {
+      const visitorName = value.visitorName.trim();
+      const visitorDocument = value.visitorDocument.trim();
       const shouldSaveFavorite = value.saveAsFavorite && value.type !== 'event';
-      const favoriteId = shouldSaveFavorite
-        ? await createFavorite({
-            visitorName: value.visitorName.trim(),
-            visitorDocument: value.visitorDocument.trim() || undefined,
-            relationship: value.favoriteRelationship,
-          })
-        : undefined;
+      const savedFavorite = value.savedFavorite;
+      const canReuseSavedFavorite =
+        Predicate.isNotNull(savedFavorite) &&
+        savedFavorite.visitorName === visitorName &&
+        savedFavorite.visitorDocument === visitorDocument;
+
+      const favoriteId = await (async () => {
+        if (!shouldSaveFavorite) return undefined;
+        if (canReuseSavedFavorite) return savedFavorite.id;
+
+        const createdId = await createFavorite({
+          visitorName,
+          visitorDocument: visitorDocument || undefined,
+          relationship: value.favoriteRelationship,
+        });
+        if (Predicate.isNull(createdId)) return null;
+
+        formApi.setFieldValue(
+          'savedFavorite',
+          { id: createdId, visitorName, visitorDocument },
+          { dontUpdateMeta: true, dontValidate: true }
+        );
+        return createdId;
+      })();
 
       if (Predicate.isNull(favoriteId)) return;
 

@@ -9,6 +9,7 @@ import { Button, toast } from '@repo/ui';
 import * as CommonUI from '#modules/common-ui';
 import * as Forms from '#modules/forms';
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import { VoidVisitFormStandardSchema } from './admin.models';
@@ -33,11 +34,13 @@ export function VoidVisitDialog({
     onSubmit: async ({ value, formApi }) => {
       if (Predicate.isNull(visit)) return;
 
-      const result = await voidVisit({
-        membershipId: membership.membershipId,
-        visitId: visit._id,
-        reason: value.reason.trim(),
-      });
+      const result = await AppRouteFeat.settleMutation(
+        voidVisit({
+          membershipId: membership.membershipId,
+          visitId: visit._id,
+          reason: value.reason.trim(),
+        })
+      );
 
       if (Result.isFailure(result)) {
         toast.error(VisitPass.describeBackendError(result.failure));

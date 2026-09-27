@@ -29,6 +29,7 @@ import {
 } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 import * as AdminRouteFeat from '#routes/_authenticated/app/m/$membershipId/admin/-feat';
 
@@ -340,10 +341,9 @@ function ShiftActionDialog({
     };
 
     setIsRunning(true);
-    const result =
-      action.kind === 'forceClose'
-        ? await forceClose(args)
-        : await cancelScheduled(args);
+    const result = await AppRouteFeat.settleMutation(
+      action.kind === 'forceClose' ? forceClose(args) : cancelScheduled(args)
+    );
     setIsRunning(false);
 
     if (Result.isFailure(result)) {

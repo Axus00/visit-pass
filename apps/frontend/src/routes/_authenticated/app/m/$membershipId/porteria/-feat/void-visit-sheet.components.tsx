@@ -20,9 +20,8 @@ import {
 
 import * as Forms from '#modules/forms';
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
-
-import { settleMutation } from './settle-mutation.utils';
 
 const VoidVisitFormStandardSchema = Forms.toSpanishStandardSchema(
   Schema.Struct({ reason: VisitsShared.VoidVisitDto.fields.reason })
@@ -74,7 +73,7 @@ function VoidVisitForm({
     defaultValues: { reason: '' },
     validators: { onSubmit: VoidVisitFormStandardSchema },
     onSubmit: async ({ value }) => {
-      const result = await settleMutation(
+      const result = await AppRouteFeat.settleMutation(
         voidVisit({
           membershipId,
           visitId: visit._id,

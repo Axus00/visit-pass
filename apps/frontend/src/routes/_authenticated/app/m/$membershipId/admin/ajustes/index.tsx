@@ -20,6 +20,7 @@ import {
 
 import * as Forms from '#modules/forms';
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 import * as AdminRouteFeat from '#routes/_authenticated/app/m/$membershipId/admin/-feat';
 
@@ -79,12 +80,14 @@ function UnitSettingsForm({
     },
     validators: { onSubmit: AdminRouteFeat.UpdateUnitFormStandardSchema },
     onSubmit: async ({ value }) => {
-      const result = await update({
-        membershipId: membership.membershipId,
-        name: value.name.trim(),
-        city: value.city.trim(),
-        visitRetentionMonths: value.visitRetentionMonths,
-      });
+      const result = await AppRouteFeat.settleMutation(
+        update({
+          membershipId: membership.membershipId,
+          name: value.name.trim(),
+          city: value.city.trim(),
+          visitRetentionMonths: value.visitRetentionMonths,
+        })
+      );
 
       if (Result.isFailure(result)) {
         toast.error(VisitPass.describeBackendError(result.failure));

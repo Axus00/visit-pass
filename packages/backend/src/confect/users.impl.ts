@@ -9,6 +9,7 @@ import databaseSchema from './_generated/schema';
 import { DatabaseWriter, Scheduler } from './_generated/services';
 import RequireUserIdentity from './middleware/RequireUserIdentity.impl';
 import * as Authentication from './modules/authentication';
+import * as Memberships from './modules/memberships';
 import * as Users from './modules/users';
 import * as WorkOS from './modules/workos';
 import usersSpec from './users.spec';
@@ -46,6 +47,10 @@ const getOneByExternalIdImpl = FunctionImpl.make(
   (args) => Users.getOneByExternalId(args.externalId)
 );
 
+/**
+ * Also activates the synced email's Membresías pendientes, so an invitation
+ * works even when the person signed in before this webhook arrived.
+ */
 const upsertFromWorkOSImpl = FunctionImpl.make(
   databaseSchema,
   usersSpec,
@@ -106,6 +111,8 @@ const upsertFromWorkOSImpl = FunctionImpl.make(
           Effect.catchTag('NoSuchElementError', Effect.die)
         );
 
+        yield* Memberships.activatePendingForUser(createdUser);
+
         return createdUser;
       }
 
@@ -123,6 +130,8 @@ const upsertFromWorkOSImpl = FunctionImpl.make(
         Effect.andThen((user) => Effect.fromNullishOr(user)),
         Effect.catchTag('NoSuchElementError', Effect.die)
       );
+
+      yield* Memberships.activatePendingForUser(reactivatedUser);
 
       return reactivatedUser;
     })

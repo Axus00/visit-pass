@@ -33,6 +33,7 @@ import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import {
   useAllMemberships,
   useCurrentMembership,
+  useIsSuperadmin,
   useTopBarActionsSlot,
 } from './membership-context';
 import { NAVIGATION, type NavItem } from './navigation.constant';
@@ -253,6 +254,7 @@ function UserMenu() {
   const { user } = useAuth();
   const membership = useCurrentMembership();
   const memberships = useAllMemberships();
+  const isSuperadmin = useIsSuperadmin();
   const navigate = useNavigate();
 
   if (!user) return null;
@@ -262,6 +264,8 @@ function UserMenu() {
     user.lastName
   );
   const hasSeveralMemberships = memberships.length > 1;
+  // With one Membresía and no Superadmin panel, `/app` redirects right back.
+  const hasMembershipHub = hasSeveralMemberships || isSuperadmin;
 
   return (
     <DropdownMenu>
@@ -315,14 +319,16 @@ function UserMenu() {
               </Link>
             }
           />
-          <DropdownMenuItem
-            render={
-              <Link to="/app">
-                {hasSeveralMemberships ? <ArrowLeftRight /> : <LayoutGrid />}
-                Todas mis Membresías
-              </Link>
-            }
-          />
+          {hasMembershipHub ? (
+            <DropdownMenuItem
+              render={
+                <Link to="/app">
+                  {hasSeveralMemberships ? <ArrowLeftRight /> : <LayoutGrid />}
+                  Todas mis Membresías
+                </Link>
+              }
+            />
+          ) : null}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <Theme.ThemeMenuItems />

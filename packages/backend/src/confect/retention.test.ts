@@ -37,12 +37,16 @@ const World = Schema.Struct({
   unusedPassOfExpiredAuthorization: Id('passes'),
   recentAuthorization: Id('authorizations'),
   unusedPassOfRecentAuthorization: Id('passes'),
+  runningServicePass: Id('passes'),
+  endedServicePass: Id('passes'),
 });
 
 /**
  * Unit A keeps Visitas 3 months, unit B 12. Both get a Visita from 100 days
- * ago; unit A also gets a recent one, a voided old one, and Autorizaciones
- * that ended 40 and 5 days ago.
+ * ago; unit A also gets a recent one, a voided old one, Autorizaciones that
+ * ended 40 and 5 days ago, a Servicio still running whose Pase's only Ingreso
+ * was 100 days ago, and a Servicio that ended 40 days ago whose Pase's only
+ * Visita was anonymized while it ran.
  */
 const seedWorld = Effect.gen(function* () {
   const confect = yield* TestConfect.TestConfect;
@@ -86,7 +90,11 @@ const seedWorld = Effect.gen(function* () {
       const insertVisit = (
         unit: typeof unitA,
         daysAgo: number,
-        extra: { passId?: GenericId<'passes'>; voidedAt?: number } = {}
+        extra: {
+          passId?: GenericId<'passes'>;
+          voidedAt?: number;
+          anonymizedAt?: number;
+        } = {}
       ) =>
         writer.table('visits').insert({
           residentialUnitId: unit.unitId,
@@ -98,6 +106,7 @@ const seedWorld = Effect.gen(function* () {
           origin: Predicate.isUndefined(extra.passId) ? 'manual' : 'pass',
           passId: extra.passId,
           voidedAt: extra.voidedAt,
+          anonymizedAt: extra.anonymizedAt,
           voidReason: Predicate.isUndefined(extra.voidedAt)
             ? undefined
             : 'Duplicado',
@@ -107,13 +116,16 @@ const seedWorld = Effect.gen(function* () {
           privacyNoticeVersion: 'test',
         });
 
-      const insertAuthorization = (endDate: string) =>
+      const insertAuthorization = (
+        endDate: string,
+        service: { startDate: string } | null = null
+      ) =>
         writer.table('authorizations').insert({
           residentialUnitId: unitA.unitId,
           apartmentId: unitA.apartmentId,
           createdByMembershipId: unitA.porterId,
-          type: 'temporary',
-          startDate: endDate,
+          type: Predicate.isNull(service) ? 'temporary' : 'service',
+          startDate: service?.startDate ?? endDate,
           endDate,
           weekdays: [0, 1, 2, 3, 4, 5, 6],
           status: 'active',
@@ -133,7 +145,43 @@ const seedWorld = Effect.gen(function* () {
           token,
           status: entryCount > 0 ? 'used' : 'active',
           entryCount,
+          lastEntryAt: entryCount > 0 ? now - 100 * MILLIS_PER_DAY : undefined,
         });
+
+      /** Servicio Pases stay `active` across Ingresos. */
+      const insertServicePass = (
+        authorizationId: GenericId<'authorizations'>,
+        token: string
+      ) =>
+        writer.table('passes').insert({
+          authorizationId,
+          residentialUnitId: unitA.unitId,
+          apartmentId: unitA.apartmentId,
+          visitorName: 'Marta',
+          visitorDocument: '33334444',
+          token,
+          status: 'active',
+          entryCount: 1,
+          lastEntryAt: now - 100 * MILLIS_PER_DAY,
+        });
+
+      const runningServicePass = yield* insertServicePass(
+        yield* insertAuthorization(localDateFromToday(30), {
+          startDate: localDateFromToday(-120),
+        }),
+        'running-service'
+      );
+      const endedServicePass = yield* insertServicePass(
+        yield* insertAuthorization(localDateFromToday(-40), {
+          startDate: localDateFromToday(-120),
+        }),
+        'ended-service'
+      );
+      yield* insertVisit(unitA, 100, { passId: runningServicePass });
+      yield* insertVisit(unitA, 100, {
+        passId: endedServicePass,
+        anonymizedAt: now - 10 * MILLIS_PER_DAY,
+      });
 
       const usedAuthorization = yield* insertAuthorization(
         localDateFromToday(-40)
@@ -181,6 +229,8 @@ const seedWorld = Effect.gen(function* () {
         unusedPassOfExpiredAuthorization,
         recentAuthorization,
         unusedPassOfRecentAuthorization,
+        runningServicePass,
+        endedServicePass,
       };
     }).pipe(Effect.orDie),
     World
@@ -199,7 +249,15 @@ const Snapshot = Schema.Struct({
       })
     )
   ),
-  passIds: Schema.mutable(Schema.Array(Id('passes'))),
+  passes: Schema.mutable(
+    Schema.Array(
+      Schema.Struct({
+        _id: Id('passes'),
+        visitorName: Schema.String,
+        visitorDocument: Schema.optional(Schema.String),
+      })
+    )
+  ),
   authorizationIds: Schema.mutable(Schema.Array(Id('authorizations'))),
 });
 
@@ -224,7 +282,11 @@ const readSnapshot = Effect.gen(function* () {
           plate: visit.plate,
           isAnonymized: visit.anonymizedAt !== undefined,
         })),
-        passIds: passes.map((pass) => pass._id),
+        passes: passes.map((pass) => ({
+          _id: pass._id,
+          visitorName: pass.visitorName,
+          visitorDocument: pass.visitorDocument,
+        })),
         authorizationIds: authorizations.map(
           (authorization) => authorization._id
         ),
@@ -300,11 +362,13 @@ describe('retention', () => {
         const snapshot = yield* readSnapshot;
 
         EffectVitestUtils.deepStrictEqual(
-          [...snapshot.passIds].sort(),
+          snapshot.passes.map((pass) => pass._id).sort(),
           [
             world.usedPass,
             world.forcedEntryPass,
             world.unusedPassOfRecentAuthorization,
+            world.runningServicePass,
+            world.endedServicePass,
           ].sort()
         );
         EffectVitestUtils.assertFalse(
@@ -313,7 +377,46 @@ describe('retention', () => {
         EffectVitestUtils.assertTrue(
           snapshot.authorizationIds.includes(world.recentAuthorization)
         );
-        EffectVitestUtils.strictEqual(snapshot.authorizationIds.length, 2);
+        EffectVitestUtils.strictEqual(snapshot.authorizationIds.length, 4);
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'anonymizes a Pase once its Visitas aged out and it admits no one',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* seedWorld;
+
+        yield* confect.mutation(refs.internal.retention.run, {});
+        yield* confect.finishAllScheduledFunctions(() => {});
+
+        const snapshot = yield* readSnapshot;
+        const passes = new Map(
+          snapshot.passes.map(({ _id, ...pass }) => [_id, pass])
+        );
+        const anonymized = { visitorName: Retention.ANONYMIZED_VISITOR_NAME };
+
+        // Its Visita aged out and the Temporal is used.
+        EffectVitestUtils.deepStrictEqual(
+          passes.get(world.usedPass),
+          anonymized
+        );
+        // Its Servicio ended after its only Visita was anonymized.
+        EffectVitestUtils.deepStrictEqual(
+          passes.get(world.endedServicePass),
+          anonymized
+        );
+        // Its Visita is recent.
+        EffectVitestUtils.deepStrictEqual(passes.get(world.forcedEntryPass), {
+          visitorName: 'Luis',
+          visitorDocument: '11112222',
+        });
+        // Its Servicio still admits the Visitante.
+        EffectVitestUtils.deepStrictEqual(
+          passes.get(world.runningServicePass),
+          { visitorName: 'Marta', visitorDocument: '33334444' }
+        );
       }).pipe(Effect.provide(TestConfect.layer))
   );
 

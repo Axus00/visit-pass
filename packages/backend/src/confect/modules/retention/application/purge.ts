@@ -31,57 +31,126 @@ export interface SweepProgress {
 }
 
 /**
- * Anonymizes one page of the unit's Visitas that entered before `cutoff`.
- * Anonymized Visitas stay in the index range, so the sweep pages with a cursor
- * instead of re-reading the first batch.
+ * Anonymizes one batch of the unit's not yet anonymized Visitas that entered
+ * before `cutoff`, and the Pases they came through once those can no longer
+ * admit anyone (a running Servicio keeps its Pase until `purgeUnusedPassesPage`
+ * sees it ended). Anonymized Visitas leave the index range, so each batch
+ * reads only pending work. Answers whether a full batch was processed, meaning
+ * more may remain.
  */
-export const anonymizeVisitsPage = Effect.fn('Retention.anonymizeVisitsPage')(
+export const anonymizeVisitsBatch = Effect.fn('Retention.anonymizeVisitsBatch')(
   function* (args: {
     readonly residentialUnitId: Id<'residentialUnits'>;
     readonly cutoff: number;
-    readonly cursor: string | null;
+    readonly today: CalendarDomain.LocalDate;
   }) {
     const reader = yield* DatabaseReader;
     const writer = yield* DatabaseWriter;
 
-    const page = yield* reader
+    const visits = yield* reader
       .table('visits')
-      .index('by_residentialUnitId_and_enteredAt', (q) =>
+      .index('by_residentialUnitId_and_anonymizedAt_and_enteredAt', (q) =>
         q
           .eq('residentialUnitId', args.residentialUnitId)
+          .eq('anonymizedAt', undefined)
           .lt('enteredAt', args.cutoff)
       )
-      .paginate({ numItems: VISITS_PER_BATCH, cursor: args.cursor })
+      .take(VISITS_PER_BATCH)
       .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
 
     const now = yield* Clock.currentTimeMillis;
 
-    yield* Effect.forEach(
-      page.page.filter((visit) => Predicate.isUndefined(visit.anonymizedAt)),
-      (visit) =>
-        writer
-          .table('visits')
-          .patch(visit._id, {
-            visitorName: Domain.ANONYMIZED_VISITOR_NAME,
-            visitorDocument: undefined,
-            plate: undefined,
-            anonymizedAt: now,
-          })
-          .pipe(
-            Effect.catchTag(
-              ['GetByIdFailure', 'DocumentDecodeError', 'DocumentEncodeError'],
-              Effect.die
-            )
-          ),
+    const passIds = [
+      ...new Set(
+        visits.map((visit) => visit.passId).filter(Predicate.isNotUndefined)
+      ),
+    ];
+
+    yield* Effect.all(
+      [
+        Effect.forEach(
+          visits,
+          (visit) =>
+            writer
+              .table('visits')
+              .patch(visit._id, {
+                visitorName: Domain.ANONYMIZED_VISITOR_NAME,
+                visitorDocument: undefined,
+                plate: undefined,
+                anonymizedAt: now,
+              })
+              .pipe(
+                Effect.catchTag(
+                  [
+                    'GetByIdFailure',
+                    'DocumentDecodeError',
+                    'DocumentEncodeError',
+                  ],
+                  Effect.die
+                )
+              ),
+          { concurrency: 'unbounded', discard: true }
+        ),
+        Effect.forEach(
+          passIds,
+          (passId) =>
+            Effect.gen(function* () {
+              const pass = yield* reader
+                .table('passes')
+                .get(passId)
+                .pipe(
+                  Effect.catchTags({
+                    GetByIdFailure: () => Effect.succeed(null),
+                    DocumentDecodeError: Effect.die,
+                  })
+                );
+
+              const isPassGoneOrAnonymized =
+                Predicate.isNull(pass) ||
+                pass.visitorName === Domain.ANONYMIZED_VISITOR_NAME;
+              if (isPassGoneOrAnonymized) return;
+
+              const authorization = yield* reader
+                .table('authorizations')
+                .get(pass.authorizationId)
+                .pipe(
+                  Effect.catchTags({
+                    GetByIdFailure: () => Effect.succeed(null),
+                    DocumentDecodeError: Effect.die,
+                  })
+                );
+
+              const canStillAdmit =
+                pass.status === 'active' &&
+                Predicate.isNotNull(authorization) &&
+                authorization.status === 'active' &&
+                authorization.endDate >= args.today;
+              if (canStillAdmit) return;
+
+              yield* writer
+                .table('passes')
+                .patch(pass._id, {
+                  visitorName: Domain.ANONYMIZED_VISITOR_NAME,
+                  visitorDocument: undefined,
+                })
+                .pipe(
+                  Effect.catchTag(
+                    [
+                      'GetByIdFailure',
+                      'DocumentDecodeError',
+                      'DocumentEncodeError',
+                    ],
+                    Effect.die
+                  )
+                );
+            }),
+          { concurrency: 'unbounded', discard: true }
+        ),
+      ],
       { concurrency: 'unbounded', discard: true }
     );
 
-    const progress: SweepProgress = {
-      isDone: page.isDone,
-      continueCursor: page.continueCursor,
-    };
-
-    return progress;
+    return visits.length === VISITS_PER_BATCH;
   }
 );
 
@@ -90,13 +159,15 @@ export const anonymizeVisitsPage = Effect.fn('Retention.anonymizeVisitsPage')(
  * `cutoffDate`, every Pase never used and never referenced by a Visita (a
  * forced Registro manual keeps the rejected Pase's id). An Autorización left
  * without Pases is deleted too: every Visita that names an Autorización also
- * names one of its Pases, so none can still reference it.
+ * names one of its Pases, so none can still reference it. A kept Pase whose
+ * last Ingreso entered before `visitCutoff` is anonymized like its Visitas.
  */
 export const purgeUnusedPassesPage = Effect.fn(
   'Retention.purgeUnusedPassesPage'
 )(function* (args: {
   readonly residentialUnitId: Id<'residentialUnits'>;
   readonly cutoffDate: CalendarDomain.LocalDate;
+  readonly visitCutoff: number;
   readonly cursor: string | null;
 }) {
   const reader = yield* DatabaseReader;
@@ -138,9 +209,46 @@ export const purgeUnusedPassesPage = Effect.fn(
           { concurrency: 'unbounded' }
         );
 
-        yield* Effect.forEach(
-          deletablePasses,
-          (pass) => writer.table('passes').delete(pass._id),
+        const deletablePassIds = new Set(
+          deletablePasses.map((pass) => pass._id)
+        );
+        const agedOutPasses = passes.filter(
+          (pass) =>
+            !deletablePassIds.has(pass._id) &&
+            pass.visitorName !== Domain.ANONYMIZED_VISITOR_NAME &&
+            Predicate.isNotUndefined(pass.lastEntryAt) &&
+            pass.lastEntryAt < args.visitCutoff
+        );
+
+        yield* Effect.all(
+          [
+            Effect.forEach(
+              deletablePasses,
+              (pass) => writer.table('passes').delete(pass._id),
+              { concurrency: 'unbounded', discard: true }
+            ),
+            Effect.forEach(
+              agedOutPasses,
+              (pass) =>
+                writer
+                  .table('passes')
+                  .patch(pass._id, {
+                    visitorName: Domain.ANONYMIZED_VISITOR_NAME,
+                    visitorDocument: undefined,
+                  })
+                  .pipe(
+                    Effect.catchTag(
+                      [
+                        'GetByIdFailure',
+                        'DocumentDecodeError',
+                        'DocumentEncodeError',
+                      ],
+                      Effect.die
+                    )
+                  ),
+              { concurrency: 'unbounded', discard: true }
+            ),
+          ],
           { concurrency: 'unbounded', discard: true }
         );
 

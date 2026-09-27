@@ -8,6 +8,7 @@ import refs from '@repo/backend/refs';
 import { Badge, Button, Card, toast } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import {
@@ -64,10 +65,12 @@ export function AuthorizationCard({
     });
 
   const handleCancel = async () => {
-    const result = await cancel({
-      membershipId: membership.membershipId,
-      authorizationId: authorization._id,
-    });
+    const result = await AppRouteFeat.settleMutation(
+      cancel({
+        membershipId: membership.membershipId,
+        authorizationId: authorization._id,
+      })
+    );
 
     if (Result.isFailure(result)) {
       toast.error(VisitPass.describeBackendError(result.failure));
@@ -79,10 +82,12 @@ export function AuthorizationCard({
   };
 
   const handleRegenerate = async (pass: PassSummary) => {
-    const result = await regeneratePass({
-      membershipId: membership.membershipId,
-      passId: pass._id,
-    });
+    const result = await AppRouteFeat.settleMutation(
+      regeneratePass({
+        membershipId: membership.membershipId,
+        passId: pass._id,
+      })
+    );
 
     if (Result.isFailure(result)) {
       toast.error(VisitPass.describeBackendError(result.failure));

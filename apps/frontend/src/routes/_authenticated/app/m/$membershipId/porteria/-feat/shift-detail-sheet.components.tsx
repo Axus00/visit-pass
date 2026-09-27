@@ -29,9 +29,9 @@ import {
 } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
-import { settleMutation } from './settle-mutation.utils';
 import {
   describeReportEmailStatus,
   describeShiftWindow,
@@ -166,7 +166,7 @@ function ShiftReportsSection({ shift }: { shift: VisitPass.ShiftSummary }) {
 
   const request = async (sendEmail: boolean) => {
     setPendingRequest(sendEmail ? 'email' : 'download');
-    const result = await settleMutation(
+    const result = await AppRouteFeat.settleMutation(
       requestReport({ membershipId, shiftId: shift._id, sendEmail })
     );
     setPendingRequest(null);

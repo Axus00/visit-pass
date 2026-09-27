@@ -16,7 +16,6 @@ import visitsSpec from './visits.spec';
 
 const LIST_INSIDE_LIMIT = 200;
 const LIST_RECENT_FOR_UNIT_LIMIT = 100;
-const LIST_FOR_APARTMENT_LIMIT = 50;
 const LIST_FOR_SHIFT_LIMIT = 1000;
 
 // -*******************************************************************************-
@@ -332,7 +331,10 @@ const voidVisitImpl = FunctionImpl.make(
     })
 );
 
-/** Voided Visitas are left out: nobody is inside because of them. */
+/**
+ * Latest Ingreso first. Voided Visitas are left out: nobody is inside because
+ * of them.
+ */
 const listInsideImpl = FunctionImpl.make(
   databaseSchema,
   visitsSpec,
@@ -346,20 +348,23 @@ const listInsideImpl = FunctionImpl.make(
         ['porter', 'administrator']
       );
 
+      // Newest first, so Visitas left open or voided long ago cannot push
+      // today's Ingresos past the limit.
       const visits = yield* reader
         .table('visits')
-        .index('by_residentialUnitId_and_exitedAt', (q) =>
-          q
-            .eq('residentialUnitId', membership.residentialUnitId)
-            .eq('exitedAt', undefined)
+        .index(
+          'by_residentialUnitId_and_exitedAt',
+          (q) =>
+            q
+              .eq('residentialUnitId', membership.residentialUnitId)
+              .eq('exitedAt', undefined),
+          'desc'
         )
         .take(LIST_INSIDE_LIMIT)
         .pipe(Effect.orDie);
 
       return yield* Visits.toVisitSummaries(
-        visits
-          .filter((visit) => Predicate.isUndefined(visit.voidedAt))
-          .toSorted((a, b) => b.enteredAt - a.enteredAt),
+        visits.filter((visit) => Predicate.isUndefined(visit.voidedAt)),
         { maskDocuments: false }
       );
     })
@@ -411,7 +416,7 @@ const listForApartmentImpl = FunctionImpl.make(
           (q) => q.eq('apartmentId', apartmentId),
           'desc'
         )
-        .take(LIST_FOR_APARTMENT_LIMIT)
+        .take(Visits.APARTMENT_HISTORY_LIMIT)
         .pipe(Effect.orDie);
 
       return yield* Visits.toVisitSummaries(visits, { maskDocuments: true });

@@ -1,13 +1,18 @@
 import { describe, it } from '@effect/vitest';
 import * as EffectVitestUtils from '@effect/vitest/utils';
 import type { User } from '@workos-inc/node';
+import type { GenericId } from 'convex/values';
 import * as Effect from 'effect/Effect';
 import * as Predicate from 'effect/Predicate';
+import * as Schema from 'effect/Schema';
 
+import { Id } from './_generated/id';
 import refs from './_generated/refs';
-import { DatabaseWriter } from './_generated/services';
+import { DatabaseReader, DatabaseWriter } from './_generated/services';
 import * as Authentication from './modules/authentication';
+import * as Memberships from './modules/memberships';
 import * as Users from './modules/users';
+import * as TestFixtures from './test.fixtures';
 import * as TestConfect from './test.setup';
 
 const workOSClientId = 'client_test';
@@ -30,6 +35,11 @@ const makeWorkOSUser = (overrides: Partial<User> = {}): User => ({
   externalId: null,
   metadata: {},
   ...overrides,
+});
+
+const Invitation = Schema.Struct({
+  status: Memberships.MembershipStatus,
+  userId: Schema.optional(Id('users')),
 });
 
 const seedUser = Effect.fn('seedUser')(function* (args: {
@@ -231,6 +241,68 @@ describe('users', () => {
         Date.parse('2026-07-03T12:00:00.000Z')
       );
     }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'activates the synced email’s pending invitations, even after sign-in',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* TestFixtures.seedTwoUnits;
+
+        const invite = (email: string) =>
+          confect
+            .withIdentity(TestFixtures.identityOf('adminA'))
+            .mutation(refs.public.memberships.invite, {
+              membershipId: world.adminA,
+              email,
+              role: 'porter',
+            });
+
+        const readInvitation = (membershipId: GenericId<'memberships'>) =>
+          confect.run(
+            Effect.gen(function* () {
+              const reader = yield* DatabaseReader;
+              const membership = yield* reader
+                .table('memberships')
+                .get(membershipId);
+
+              return { status: membership.status, userId: membership.userId };
+            }).pipe(Effect.orDie),
+            Invitation
+          );
+
+        const newUserInvitationId = yield* invite(userEmail);
+        const renamedUserInvitationId = yield* invite('renamed@example.test');
+
+        const created = yield* confect.mutation(
+          refs.internal.users.upsertFromWorkOS,
+          { workosUser: makeWorkOSUser() }
+        );
+
+        EffectVitestUtils.deepStrictEqual(
+          yield* readInvitation(newUserInvitationId),
+          { status: 'active', userId: created._id }
+        );
+
+        // The client already signed in, so its own activation finds nothing.
+        const lateActivation = yield* confect
+          .withIdentity({
+            subject: externalUserId,
+            tokenIdentifier: created.identityTokenIdentifier,
+          })
+          .mutation(refs.public.memberships.activatePending, {});
+        EffectVitestUtils.strictEqual(lateActivation, 0);
+
+        yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+          workosUser: makeWorkOSUser({ email: 'renamed@example.test' }),
+        });
+
+        EffectVitestUtils.deepStrictEqual(
+          yield* readInvitation(renamedUserInvitationId),
+          { status: 'active', userId: created._id }
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
   );
 
   it.effect('answers the signed-in User through `me`', () =>

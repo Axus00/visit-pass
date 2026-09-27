@@ -39,10 +39,14 @@ const MESSAGES_BY_REASON: Record<string, string> = {
   rangeTooLong: 'El rango de fechas es demasiado largo.',
   missingEndDate: 'Indica la fecha final.',
   missingWeekdays: 'Elige al menos un día de la semana.',
+  noAllowedDayInRange:
+    'Ningún día entre las fechas elegidas cae en los días de la semana permitidos.',
   singleVisitorRequired: 'Este tipo de Autorización admite un solo Visitante.',
   tooLong: 'Un Turno no puede durar más de 24 horas.',
   endsInThePast: 'El Turno ya habría terminado. Elige un horario futuro.',
   notAPorter: 'La Membresía elegida no es de un Portero activo.',
+  shiftNotStarted:
+    'El Turno aún no ha comenzado; genera el Reporte cuando esté en curso o cerrado.',
   ...PASS_REJECTION_LABELS,
 };
 

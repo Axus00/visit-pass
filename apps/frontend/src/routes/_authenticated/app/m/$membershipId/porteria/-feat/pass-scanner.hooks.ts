@@ -120,6 +120,7 @@ export function usePassScanner(onCode: (rawValue: string) => boolean) {
         .then(Result.succeed, (error: unknown) => Result.fail(error));
       if (isStopped) return;
       if (Result.isFailure(playResult)) {
+        stop();
         setStatus('failed');
         return;
       }
@@ -136,6 +137,7 @@ export function usePassScanner(onCode: (rawValue: string) => boolean) {
       );
       if (isStopped) return;
       if (Result.isFailure(detectorResult)) {
+        stop();
         setStatus('failed');
         return;
       }

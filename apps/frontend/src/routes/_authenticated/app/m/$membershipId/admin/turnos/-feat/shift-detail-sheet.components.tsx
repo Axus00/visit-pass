@@ -20,6 +20,7 @@ import {
 } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 import * as AdminRouteFeat from '#routes/_authenticated/app/m/$membershipId/admin/-feat';
 
@@ -117,11 +118,13 @@ function ShiftReportsSection({ shift }: { shift: VisitPass.ShiftSummary }) {
 
   const handleRequest = async (sendEmail: boolean) => {
     setIsRequesting(true);
-    const result = await requestReport({
-      membershipId: membership.membershipId,
-      shiftId: shift._id,
-      sendEmail,
-    });
+    const result = await AppRouteFeat.settleMutation(
+      requestReport({
+        membershipId: membership.membershipId,
+        shiftId: shift._id,
+        sendEmail,
+      })
+    );
     setIsRequesting(false);
 
     if (Result.isFailure(result)) {

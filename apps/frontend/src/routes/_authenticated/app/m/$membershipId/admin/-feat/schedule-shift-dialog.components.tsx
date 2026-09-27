@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { QueryResult, useMutation, useQuery } from '@confect/react';
 import * as Result from 'effect/Result';
 import { MoonStar } from 'lucide-react';
@@ -8,6 +10,7 @@ import { Button, toast } from '@repo/ui';
 import * as CommonUI from '#modules/common-ui';
 import * as Forms from '#modules/forms';
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import { ScheduleShiftFormStandardSchema } from './admin.models';
@@ -58,12 +61,14 @@ export function ScheduleShiftDialog({
       }
 
       const shiftWindow = toShiftWindow({ ...value, timeZone });
-      const result = await schedule({
-        membershipId: membership.membershipId,
-        porterMembershipId: porter._id,
-        plannedStart: shiftWindow.plannedStart,
-        plannedEnd: shiftWindow.plannedEnd,
-      });
+      const result = await AppRouteFeat.settleMutation(
+        schedule({
+          membershipId: membership.membershipId,
+          porterMembershipId: porter._id,
+          plannedStart: shiftWindow.plannedStart,
+          plannedEnd: shiftWindow.plannedEnd,
+        })
+      );
 
       if (Result.isFailure(result)) {
         toast.error(VisitPass.describeBackendError(result.failure));
@@ -77,6 +82,16 @@ export function ScheduleShiftDialog({
       onOpenChange(false);
     },
   });
+
+  // Each opening starts from today, even if the page stayed open past midnight.
+  useEffect(() => {
+    if (!open) return;
+
+    form.setFieldValue('date', VisitPass.todayIn(timeZone), {
+      dontUpdateMeta: true,
+      dontValidate: true,
+    });
+  }, [form, open, timeZone]);
 
   const close = () => {
     form.reset();

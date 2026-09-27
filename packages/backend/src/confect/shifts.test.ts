@@ -5,6 +5,7 @@ import * as Predicate from 'effect/Predicate';
 import * as Result from 'effect/Result';
 
 import refs from './_generated/refs';
+import { DatabaseWriter } from './_generated/services';
 import * as Memberships from './modules/memberships';
 import * as Shifts from './modules/shifts';
 import * as PorteriaFixtures from './porteria.fixtures';
@@ -262,6 +263,100 @@ describe('shifts', () => {
           state.openShift?.plannedStart,
           now - 2 * MILLIS_PER_HOUR
         );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect('starts a chosen planned Turno only inside its window', () =>
+    Effect.gen(function* () {
+      const world = yield* PorteriaFixtures.seedPorteria;
+      const adminA = yield* PorteriaFixtures.as('adminA');
+      const porterA = yield* PorteriaFixtures.as('porterA');
+      const now = PorteriaFixtures.wallClockMillis();
+
+      const tomorrow = yield* adminA.mutation(shifts.schedule, {
+        membershipId: world.adminA,
+        porterMembershipId: world.porterA,
+        plannedStart: now + 20 * MILLIS_PER_HOUR,
+        plannedEnd: now + 28 * MILLIS_PER_HOUR,
+      });
+      const inHalfAnHour = yield* adminA.mutation(shifts.schedule, {
+        membershipId: world.adminA,
+        porterMembershipId: world.porterA,
+        plannedStart: now + MILLIS_PER_HOUR / 2,
+        plannedEnd: now + 8 * MILLIS_PER_HOUR,
+      });
+
+      const tooEarly = yield* Effect.result(
+        porterA.mutation(shifts.start, {
+          membershipId: world.porterA,
+          shiftId: tomorrow,
+        })
+      );
+      EffectVitestUtils.assertFailure(
+        tooEarly,
+        new Shifts.InvalidShiftTransitionError()
+      );
+
+      const started = yield* porterA.mutation(shifts.start, {
+        membershipId: world.porterA,
+        shiftId: inHalfAnHour,
+      });
+      EffectVitestUtils.strictEqual(started, inHalfAnHour);
+    }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'finds the planned Turno under way behind many never started ones',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const adminA = yield* PorteriaFixtures.as('adminA');
+        const porterA = yield* PorteriaFixtures.as('porterA');
+        const now = PorteriaFixtures.wallClockMillis();
+
+        yield* confect.run(
+          Effect.gen(function* () {
+            const writer = yield* DatabaseWriter;
+
+            yield* Effect.forEach(
+              Array.from({ length: 150 }, (_, index) => index),
+              (daysAgo) =>
+                writer.table('shifts').insert({
+                  residentialUnitId: world.unitA,
+                  porterMembershipId: world.porterA,
+                  plannedStart: now - (daysAgo + 2) * 24 * MILLIS_PER_HOUR,
+                  plannedEnd:
+                    now -
+                    (daysAgo + 2) * 24 * MILLIS_PER_HOUR +
+                    MILLIS_PER_HOUR,
+                  status: 'scheduled',
+                }),
+              { discard: true }
+            );
+          }).pipe(Effect.orDie)
+        );
+
+        const underWay = yield* adminA.mutation(shifts.schedule, {
+          membershipId: world.adminA,
+          porterMembershipId: world.porterA,
+          plannedStart: now - MILLIS_PER_HOUR,
+          plannedEnd: now + 7 * MILLIS_PER_HOUR,
+        });
+
+        const state = yield* porterA.query(shifts.getMyState, {
+          membershipId: world.porterA,
+          now,
+        });
+        EffectVitestUtils.deepStrictEqual(
+          state.upcoming.map((shift) => shift._id),
+          [underWay]
+        );
+
+        const started = yield* porterA.mutation(shifts.start, {
+          membershipId: world.porterA,
+        });
+        EffectVitestUtils.strictEqual(started, underWay);
       }).pipe(Effect.provide(TestConfect.layer))
   );
 

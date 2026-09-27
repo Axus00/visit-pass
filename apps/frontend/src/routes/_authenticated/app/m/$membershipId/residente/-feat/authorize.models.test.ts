@@ -128,6 +128,19 @@ describe('validateAuthorizeForm', () => {
     ).toHaveProperty('weekdays');
   });
 
+  it('flags a Servicio whose range holds none of its weekdays on the weekday field', () => {
+    // Saturday 26 to Sunday 27, allowed only Lunes a viernes.
+    expect(
+      validateAuthorizeForm(
+        temporary({ type: 'service', endDate: '2026-09-27' }),
+        today
+      )?.fields
+    ).toEqual({
+      weekdays:
+        'Ningún día entre las fechas elegidas cae en los días de la semana permitidos.',
+    });
+  });
+
   it('flags each unnamed guest row of an Evento', () => {
     expect(
       validateAuthorizeForm(

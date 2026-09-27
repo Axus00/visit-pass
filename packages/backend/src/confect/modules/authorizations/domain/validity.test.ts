@@ -127,6 +127,48 @@ describe('resolveAuthorizationValidity', () => {
     ).toEqual(Result.fail('missingWeekdays'));
   });
 
+  it('rejects a Servicio range without any allowed weekday', () => {
+    // 2026-09-28 is a Monday.
+    const mondayToWednesday = {
+      type: 'service',
+      startDate: '2026-09-28',
+      endDate: '2026-09-30',
+      visitors: oneVisitor,
+    } as const;
+
+    expect(
+      resolveAuthorizationValidity(
+        { ...mondayToWednesday, weekdays: [0, 6] },
+        today
+      )
+    ).toEqual(Result.fail('noAllowedDayInRange'));
+    expect(
+      Result.isSuccess(
+        resolveAuthorizationValidity(
+          { ...mondayToWednesday, weekdays: [0, 3] },
+          today
+        )
+      )
+    ).toBe(true);
+  });
+
+  it('finds an allowed weekday anywhere in a long Servicio range', () => {
+    expect(
+      Result.isSuccess(
+        resolveAuthorizationValidity(
+          {
+            type: 'service',
+            startDate: '2026-09-28',
+            endDate: '2026-12-31',
+            weekdays: [0],
+            visitors: oneVisitor,
+          },
+          today
+        )
+      )
+    ).toBe(true);
+  });
+
   it(`caps a Servicio at ${MAX_SERVICE_DAYS} days`, () => {
     const service = {
       type: 'service',

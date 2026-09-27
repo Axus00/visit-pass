@@ -19,12 +19,12 @@ import { Button, cn, toast } from '@repo/ui';
 
 import * as Forms from '#modules/forms';
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import { PassDetails } from './pass-details.components';
 import type { ResolvedPass } from './porteria.models';
 import { PrivacyNotice } from './privacy-notice.components';
-import { settleMutation } from './settle-mutation.utils';
 
 const Plate = Schema.Trim.check(
   Schema.isMaxLength(VisitsShared.PLATE_MAX_LENGTH)
@@ -133,7 +133,7 @@ export function AdmissiblePassCard({
       const visitorDocument = value.visitorDocument.trim();
 
       onSubmittingChange(true);
-      const result = await settleMutation(
+      const result = await AppRouteFeat.settleMutation(
         registerPassEntry({
           membershipId,
           token,

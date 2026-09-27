@@ -28,12 +28,13 @@ export default GroupSpec.make()
     })
   )
   .addFunction(
+    /** `today` is unit-local, so a running Servicio keeps its Pase. */
     FunctionSpec.internalMutation({
       name: 'anonymizeVisits',
       args: () => ({
         residentialUnitId: Id('residentialUnits'),
         cutoff: Schema.Finite,
-        cursor: Cursor,
+        today: CalendarDomain.LocalDate,
       }),
       returns: () => Schema.Null,
       error: () => Schema.Never,
@@ -45,6 +46,7 @@ export default GroupSpec.make()
       args: () => ({
         residentialUnitId: Id('residentialUnits'),
         cutoffDate: CalendarDomain.LocalDate,
+        visitCutoff: Schema.Finite,
         cursor: Cursor,
       }),
       returns: () => Schema.Null,

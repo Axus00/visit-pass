@@ -16,9 +16,6 @@ import * as Users from './modules/users';
 /** A Usuario belongs to a handful of units; this bounds a runaway account. */
 const MEMBERSHIPS_PER_USER_LIMIT = 100;
 
-/** Enough for the pending invitations one email can accumulate. */
-const PENDING_PER_EMAIL_LIMIT = 100;
-
 /** Staff plus Residentes of a large copropiedad fit in one page. */
 const MEMBERSHIPS_PER_UNIT_LIMIT = 1000;
 
@@ -107,6 +104,10 @@ const listMineImpl = FunctionImpl.make(
     })
 );
 
+/**
+ * Answers 0 until the WorkOS webhook has synced the caller; that sync
+ * activates the Membresías pendientes itself.
+ */
 const activatePendingImpl = FunctionImpl.make(
   databaseSchema,
   membershipsSpec,
@@ -114,8 +115,6 @@ const activatePendingImpl = FunctionImpl.make(
   () =>
     Effect.gen(function* () {
       const identity = yield* Authentication.CurrentUserIdentity;
-      const reader = yield* DatabaseReader;
-      const writer = yield* DatabaseWriter;
 
       const user = yield* Users.getOneByIdentityTokenIdentifier(
         identity.tokenIdentifier
@@ -123,40 +122,7 @@ const activatePendingImpl = FunctionImpl.make(
 
       if (Predicate.isNull(user)) return 0;
 
-      const pendingMemberships = yield* reader
-        .table('memberships')
-        .index('by_email_and_status', (q) =>
-          q.eq('email', user.email).eq('status', 'pending')
-        )
-        .take(PENDING_PER_EMAIL_LIMIT)
-        .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
-
-      const now = yield* Clock.currentTimeMillis;
-
-      yield* Effect.forEach(
-        pendingMemberships,
-        (membership) =>
-          writer
-            .table('memberships')
-            .patch(membership._id, {
-              status: 'active',
-              userId: user._id,
-              activatedAt: now,
-            })
-            .pipe(
-              Effect.catchTag(
-                [
-                  'GetByIdFailure',
-                  'DocumentDecodeError',
-                  'DocumentEncodeError',
-                ],
-                Effect.die
-              )
-            ),
-        { concurrency: 'unbounded', discard: true }
-      );
-
-      return pendingMemberships.length;
+      return yield* Memberships.activatePendingForUser(user);
     })
 );
 

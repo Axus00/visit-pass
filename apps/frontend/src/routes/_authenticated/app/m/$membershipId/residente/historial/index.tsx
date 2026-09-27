@@ -6,6 +6,7 @@ import * as Predicate from 'effect/Predicate';
 import { History, SearchX } from 'lucide-react';
 
 import refs from '@repo/backend/refs';
+import * as VisitsShared from '@repo/backend/shared/visits';
 import { Card, Skeleton } from '@repo/ui';
 
 import * as CommonUI from '#modules/common-ui';
@@ -40,6 +41,9 @@ function ResidenteHistorialPage() {
   );
   const hasNoVisits =
     Predicate.isNotNull(loadedVisits) && loadedVisits.length === 0;
+  const isListTruncated =
+    Predicate.isNotNull(loadedVisits) &&
+    loadedVisits.length >= VisitsShared.APARTMENT_HISTORY_LIMIT;
   const hasNoMatches =
     Predicate.isNotNull(loadedVisits) &&
     !hasNoVisits &&
@@ -111,6 +115,13 @@ function ResidenteHistorialPage() {
           </Card>
         </section>
       ))}
+
+      {isListTruncated ? (
+        <p className="text-center text-sm text-muted-foreground">
+          Mostrando las {VisitsShared.APARTMENT_HISTORY_LIMIT} Visitas más
+          recientes.
+        </p>
+      ) : null}
     </>
   );
 }

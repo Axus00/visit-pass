@@ -8,8 +8,14 @@ import { DatabaseReader } from '../../../_generated/services';
 import * as AuthorizationsDomain from '../../authorizations/domain';
 import * as CalendarDomain from '../../calendar/domain';
 
-/** Voided Visitas may stay open; a live one sits among the first few. */
+/** Voided Visitas may stay open; a live one is the newest, read first. */
 const OPEN_VISITS_PER_PASS_LIMIT = 10;
+/**
+ * An Evento's guest list plus regenerated Pases; read newest first, so the
+ * scanned Pase's own replacement chain is the part that is kept.
+ */
+const PASSES_PER_AUTHORIZATION_LIMIT =
+  2 * AuthorizationsDomain.MAX_EVENT_VISITORS;
 
 /**
  * Finds the Pase behind a scanned token and decides whether its Visitante may
@@ -39,36 +45,74 @@ export const evaluatePassByToken = Effect.fn('Visits.evaluatePassByToken')(
       pass.residentialUnitId === args.residentialUnitId;
     if (!isPassOfUnit) return null;
 
-    const [authorization, unit, apartment, activeResident, openVisits] =
-      yield* Effect.all(
-        [
-          reader.table('authorizations').get(pass.authorizationId),
-          reader.table('residentialUnits').get(pass.residentialUnitId),
-          reader.table('apartments').get(pass.apartmentId),
-          reader
-            .table('memberships')
-            .index('by_apartmentId_and_status', (q) =>
-              q.eq('apartmentId', pass.apartmentId).eq('status', 'active')
-            )
-            .first(),
-          reader
-            .table('visits')
-            .index('by_passId_and_exitedAt', (q) =>
-              q.eq('passId', pass._id).eq('exitedAt', undefined)
-            )
-            .take(OPEN_VISITS_PER_PASS_LIMIT),
-        ],
-        { concurrency: 'unbounded' }
-      ).pipe(Effect.orDie);
+    const [
+      authorization,
+      unit,
+      apartment,
+      activeResident,
+      passesOfAuthorization,
+    ] = yield* Effect.all(
+      [
+        reader.table('authorizations').get(pass.authorizationId),
+        reader.table('residentialUnits').get(pass.residentialUnitId),
+        reader.table('apartments').get(pass.apartmentId),
+        reader
+          .table('memberships')
+          .index('by_apartmentId_and_status', (q) =>
+            q.eq('apartmentId', pass.apartmentId).eq('status', 'active')
+          )
+          .first(),
+        reader
+          .table('passes')
+          .index(
+            'by_authorizationId',
+            (q) => q.eq('authorizationId', pass.authorizationId),
+            'desc'
+          )
+          .take(PASSES_PER_AUTHORIZATION_LIMIT),
+      ],
+      { concurrency: 'unbounded' }
+    ).pipe(Effect.orDie);
+
+    // A Visitante who entered with a Pase since regenerated is still inside
+    // as far as its replacement is concerned.
+    const replacedPassIdOf = new Map(
+      passesOfAuthorization.flatMap((candidate) =>
+        Predicate.isUndefined(candidate.replacedByPassId)
+          ? []
+          : [[candidate.replacedByPassId, candidate._id] as const]
+      )
+    );
+    const chainEndingAt = (passId: Id<'passes'>): Array<Id<'passes'>> => {
+      const replacedPassId = replacedPassIdOf.get(passId);
+
+      return Predicate.isUndefined(replacedPassId)
+        ? [passId]
+        : [passId, ...chainEndingAt(replacedPassId)];
+    };
+
+    const openVisits = yield* Effect.forEach(
+      chainEndingAt(pass._id),
+      (passId) =>
+        reader
+          .table('visits')
+          .index(
+            'by_passId_and_exitedAt',
+            (q) => q.eq('passId', passId).eq('exitedAt', undefined),
+            'desc'
+          )
+          .take(OPEN_VISITS_PER_PASS_LIMIT),
+      { concurrency: 'unbounded' }
+    ).pipe(Effect.orDie);
 
     const admission = AuthorizationsDomain.evaluatePassAdmission({
       pass,
       authorization,
       today: CalendarDomain.toLocalDate(args.now, unit.timeZone),
       apartmentHasActiveResident: Option.isSome(activeResident),
-      visitorIsInside: openVisits.some((visit) =>
-        Predicate.isUndefined(visit.voidedAt)
-      ),
+      visitorIsInside: openVisits
+        .flat()
+        .some((visit) => Predicate.isUndefined(visit.voidedAt)),
     });
 
     return { pass, authorization, apartment, admission };
