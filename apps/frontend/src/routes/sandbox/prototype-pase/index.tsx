@@ -1,5 +1,5 @@
 // PROTOTYPE (#15) — throwaway. "El Pase que recibe el Visitante": three
-// variants of the public Pase page (`?variant=A|B|C`) plus the saved PNG and
+// variants of the public Pase page (`?variant=A|B|C`, round 2: C1|C2|C3) plus the saved PNG and
 // the Residente's WhatsApp share (`?vista=`), across every `?estado=` and
 // `?tipo=`. Lives under /sandbox so production redirects it away.
 import { useMemo } from 'react';
@@ -13,6 +13,9 @@ const VARIANTS = [
   { key: 'A', name: 'Tarjeta del mockup' },
   { key: 'B', name: 'Estado primero' },
   { key: 'C', name: 'Modo portería' },
+  { key: 'C1', name: 'Portería + tarjetas claras' },
+  { key: 'C2', name: 'Portería oscura continua' },
+  { key: 'C3', name: 'Portería con pestañas' },
 ] as const;
 
 type Search = {
@@ -67,6 +70,15 @@ function PrototypePasePage() {
       )}
       {search.vista === 'pagina' && search.variant === 'C' && (
         <PrototypePaseRouteFeat.VariantGate {...props} />
+      )}
+      {search.vista === 'pagina' && search.variant === 'C1' && (
+        <PrototypePaseRouteFeat.VariantGateLightCards {...props} />
+      )}
+      {search.vista === 'pagina' && search.variant === 'C2' && (
+        <PrototypePaseRouteFeat.VariantGateDark {...props} />
+      )}
+      {search.vista === 'pagina' && search.variant === 'C3' && (
+        <PrototypePaseRouteFeat.VariantGateTabs {...props} />
       )}
       {search.vista === 'imagen' && (
         <PrototypePaseRouteFeat.ImageView

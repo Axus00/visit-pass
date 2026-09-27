@@ -3,6 +3,11 @@ export {
   VariantGate,
   VariantStatusFirst,
 } from './pase-page-variants.components';
+export {
+  VariantGateDark,
+  VariantGateLightCards,
+  VariantGateTabs,
+} from './pase-gate-variants.components';
 export { ImageView, ShareView } from './pase-share.components';
 export { usePaseImage } from './pase-prototype-shell.components';
 export {
