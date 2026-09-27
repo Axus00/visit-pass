@@ -379,6 +379,66 @@ describe('authorizations', () => {
   );
 
   it.effect(
+    'lists and cancels a full Evento’s regenerated Pase with the rest',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const residentA = yield* PorteriaFixtures.as('residentA');
+
+        const created = yield* residentA.mutation(authorizations.create, {
+          membershipId: world.residentA,
+          type: 'event',
+          startDate: PorteriaFixtures.localDateFromToday(1),
+          eventName: 'Matrimonio',
+          visitors: Array.from(
+            { length: Authorizations.MAX_EVENT_VISITORS },
+            (_, index) => ({ name: `Invitado ${index + 1}` })
+          ),
+        });
+        const [firstGuest] = created.passes;
+        EffectVitestUtils.assertTrue(Predicate.isNotUndefined(firstGuest));
+
+        const regenerated = yield* residentA.mutation(
+          authorizations.regeneratePass,
+          { membershipId: world.residentA, passId: firstGuest._id }
+        );
+
+        const [listed] = yield* residentA.query(
+          authorizations.listForApartment,
+          {
+            membershipId: world.residentA,
+            now: PorteriaFixtures.wallClockMillis(),
+          }
+        );
+        EffectVitestUtils.strictEqual(
+          listed?.passes.length,
+          Authorizations.MAX_EVENT_VISITORS + 1
+        );
+        EffectVitestUtils.strictEqual(
+          listed?.passes.find((pass) => pass._id === regenerated._id)?.status,
+          'active'
+        );
+
+        yield* residentA.mutation(authorizations.cancel, {
+          membershipId: world.residentA,
+          authorizationId: created.authorizationId,
+        });
+
+        const [newLink, lastGuestLink] = yield* Effect.all([
+          confect.query(authorizations.getPublicPass, {
+            token: regenerated.token,
+          }),
+          confect.query(authorizations.getPublicPass, {
+            token: created.passes.at(-1)?.token ?? '',
+          }),
+        ]);
+        EffectVitestUtils.strictEqual(newLink?.status, 'cancelled');
+        EffectVitestUtils.strictEqual(lastGuestLink?.status, 'cancelled');
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
     'keeps Favoritos per Membresía and stamps them when authorized',
     () =>
       Effect.gen(function* () {

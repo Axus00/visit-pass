@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { QueryResult, useQuery } from '@confect/react';
+import { QueryResult } from '@confect/react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import * as Match from 'effect/Match';
 import * as Predicate from 'effect/Predicate';
@@ -28,14 +28,21 @@ function PorteriaScanPage() {
   const navigate = useNavigate();
   const shiftState = PorteriaRouteFeat.usePorterShiftState();
   const now = VisitPass.useNow();
-  const [token, setToken] = useState<string | null>(null);
+  /**
+   * The Pase being checked and when it was read. `now` stays fixed per scan so
+   * the resolution does not re-subscribe (and remount the card) every minute.
+   */
+  const [scan, setScan] = useState<{ token: string; now: number } | null>(null);
+  const token = scan?.token ?? null;
   /** Holds the admitted Pase while its Ingreso saves and the Pase turns used. */
   const [heldResolution, setHeldResolution] =
     useState<PorteriaRouteFeat.PassResolution | null>(null);
 
-  const liveResolution = useQuery(
+  const liveResolution = VisitPass.useStableQuery(
     refs.public.visits.resolvePass,
-    Predicate.isNull(token) ? 'skip' : { membershipId, token, now }
+    Predicate.isNull(scan)
+      ? 'skip'
+      : { membershipId, token: scan.token, now: scan.now }
   );
   const resolution =
     heldResolution ??
@@ -45,7 +52,7 @@ function PorteriaScanPage() {
 
   const scanAnother = () => {
     setHeldResolution(null);
-    setToken(null);
+    setScan(null);
   };
 
   const acceptCode = (rawValue: string) => {
@@ -57,7 +64,7 @@ function PorteriaScanPage() {
     }
 
     navigator.vibrate?.(80);
-    setToken(parsedToken);
+    setScan({ token: parsedToken, now });
     return true;
   };
 
@@ -137,7 +144,7 @@ function PorteriaScanPage() {
         <ManualCodeCard
           onToken={(nextToken) => {
             setHeldResolution(null);
-            setToken(nextToken);
+            setScan({ token: nextToken, now });
           }}
         />
       </div>

@@ -9,6 +9,7 @@ import { Id } from './_generated/id';
 import refs from './_generated/refs';
 import { DatabaseReader, DatabaseWriter } from './_generated/services';
 import * as Calendar from './modules/calendar';
+import * as ResidentialUnits from './modules/residentialUnits';
 import * as Retention from './modules/retention';
 import * as TestConfect from './test.setup';
 
@@ -33,6 +34,7 @@ const World = Schema.Struct({
   usedPass: Id('passes'),
   unusedPassOfUsedAuthorization: Id('passes'),
   forcedEntryPass: Id('passes'),
+  oldForcedEntryPass: Id('passes'),
   expiredAuthorization: Id('authorizations'),
   unusedPassOfExpiredAuthorization: Id('passes'),
   recentAuthorization: Id('authorizations'),
@@ -195,6 +197,18 @@ const seedWorld = Effect.gen(function* () {
       // A forced Registro manual names the rejected Pase without using it.
       const forcedEntryPass = yield* insertPass(usedAuthorization, 0, 'forced');
 
+      // Rejected long ago, then named by a forced Registro manual whose
+      // Visita has already been anonymized.
+      const oldForcedEntryPass = yield* insertPass(
+        yield* insertAuthorization(localDateFromToday(-120)),
+        0,
+        'old-forced'
+      );
+      yield* insertVisit(unitA, 119, {
+        passId: oldForcedEntryPass,
+        anonymizedAt: now - 20 * MILLIS_PER_DAY,
+      });
+
       const expiredAuthorization = yield* insertAuthorization(
         localDateFromToday(-40)
       );
@@ -225,6 +239,7 @@ const seedWorld = Effect.gen(function* () {
         usedPass,
         unusedPassOfUsedAuthorization,
         forcedEntryPass,
+        oldForcedEntryPass,
         expiredAuthorization,
         unusedPassOfExpiredAuthorization,
         recentAuthorization,
@@ -366,6 +381,7 @@ describe('retention', () => {
           [
             world.usedPass,
             world.forcedEntryPass,
+            world.oldForcedEntryPass,
             world.unusedPassOfRecentAuthorization,
             world.runningServicePass,
             world.endedServicePass,
@@ -377,7 +393,7 @@ describe('retention', () => {
         EffectVitestUtils.assertTrue(
           snapshot.authorizationIds.includes(world.recentAuthorization)
         );
-        EffectVitestUtils.strictEqual(snapshot.authorizationIds.length, 4);
+        EffectVitestUtils.strictEqual(snapshot.authorizationIds.length, 5);
       }).pipe(Effect.provide(TestConfect.layer))
   );
 
@@ -407,6 +423,11 @@ describe('retention', () => {
           passes.get(world.endedServicePass),
           anonymized
         );
+        // Never used, its Autorización ended before the Visita retention.
+        EffectVitestUtils.deepStrictEqual(
+          passes.get(world.oldForcedEntryPass),
+          anonymized
+        );
         // Its Visita is recent.
         EffectVitestUtils.deepStrictEqual(passes.get(world.forcedEntryPass), {
           visitorName: 'Luis',
@@ -417,6 +438,111 @@ describe('retention', () => {
           passes.get(world.runningServicePass),
           { visitorName: 'Marta', visitorDocument: '33334444' }
         );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'sweeps Pases through the longest retention, never older Autorizaciones',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const now = wallClockMillis();
+        const longestRetentionDays =
+          ResidentialUnits.MAX_VISIT_RETENTION_MONTHS *
+          Retention.DAYS_PER_RETENTION_MONTH;
+        const sweepFloorDaysAgo =
+          Retention.UNUSED_PASS_RETENTION_DAYS +
+          Retention.PASS_SWEEP_WINDOW_DAYS;
+
+        const seeded = yield* confect.run(
+          Effect.gen(function* () {
+            const writer = yield* DatabaseWriter;
+
+            const unitId = yield* writer.table('residentialUnits').insert({
+              name: 'Unidad retención máxima',
+              city: 'Bogotá',
+              timeZone: TIME_ZONE,
+              visitRetentionMonths: ResidentialUnits.MAX_VISIT_RETENTION_MONTHS,
+            });
+            const apartmentId = yield* writer.table('apartments').insert({
+              residentialUnitId: unitId,
+              tower: '1',
+              number: '101',
+            });
+            const porterId = yield* writer.table('memberships').insert({
+              residentialUnitId: unitId,
+              email: 'porter-max@example.test',
+              role: 'porter',
+              status: 'active',
+            });
+
+            const insertAuthorizationWithPass = Effect.fn(function* (
+              endedDaysAgo: number,
+              lastEntryAt: number | undefined
+            ) {
+              const authorizationId = yield* writer
+                .table('authorizations')
+                .insert({
+                  residentialUnitId: unitId,
+                  apartmentId,
+                  createdByMembershipId: porterId,
+                  type: 'temporary',
+                  startDate: localDateFromToday(-endedDaysAgo),
+                  endDate: localDateFromToday(-endedDaysAgo),
+                  weekdays: [0, 1, 2, 3, 4, 5, 6],
+                  status: 'active',
+                });
+
+              return yield* writer.table('passes').insert({
+                authorizationId,
+                residentialUnitId: unitId,
+                apartmentId,
+                visitorName: 'Luis',
+                visitorDocument: '11112222',
+                token: `ended-${endedDaysAgo}`,
+                status: Predicate.isUndefined(lastEntryAt) ? 'active' : 'used',
+                entryCount: Predicate.isUndefined(lastEntryAt) ? 0 : 1,
+                lastEntryAt,
+              });
+            });
+
+            const lastEntryAt =
+              now - (longestRetentionDays + 2) * MILLIS_PER_DAY;
+
+            return {
+              // Used on its last day, it only now ages out of the longest retention.
+              agedOutPass: yield* insertAuthorizationWithPass(
+                longestRetentionDays + 2,
+                lastEntryAt
+              ),
+              // Past the sweep window, earlier runs already settled it.
+              settledPass: yield* insertAuthorizationWithPass(
+                sweepFloorDaysAgo + 1,
+                undefined
+              ),
+            };
+          }).pipe(Effect.orDie),
+          Schema.Struct({
+            agedOutPass: Id('passes'),
+            settledPass: Id('passes'),
+          })
+        );
+
+        yield* confect.mutation(refs.internal.retention.run, {});
+        yield* confect.finishAllScheduledFunctions(() => {});
+
+        const snapshot = yield* readSnapshot;
+        const passes = new Map(
+          snapshot.passes.map(({ _id, ...pass }) => [_id, pass])
+        );
+
+        EffectVitestUtils.deepStrictEqual(passes.get(seeded.agedOutPass), {
+          visitorName: Retention.ANONYMIZED_VISITOR_NAME,
+        });
+        EffectVitestUtils.deepStrictEqual(passes.get(seeded.settledPass), {
+          visitorName: 'Luis',
+          visitorDocument: '11112222',
+        });
       }).pipe(Effect.provide(TestConfect.layer))
   );
 

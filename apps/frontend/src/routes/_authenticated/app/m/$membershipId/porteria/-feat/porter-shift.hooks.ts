@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { QueryResult, useMutation, useQuery } from '@confect/react';
+import { QueryResult, useMutation } from '@confect/react';
 import * as Result from 'effect/Result';
 
 import refs from '@repo/backend/refs';
@@ -19,7 +19,10 @@ import type { PorterShiftState } from './porteria.models';
 export function usePorterShiftState(): PorterShiftState | null {
   const { membershipId } = MembershipRouteFeat.useCurrentMembership();
   const now = VisitPass.useNow();
-  const state = useQuery(refs.public.shifts.getMyState, { membershipId, now });
+  const state = VisitPass.useStableQuery(refs.public.shifts.getMyState, {
+    membershipId,
+    now,
+  });
 
   return QueryResult.isSuccess(state) ? state.value : null;
 }

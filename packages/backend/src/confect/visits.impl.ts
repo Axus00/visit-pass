@@ -254,8 +254,9 @@ const registerExitImpl = FunctionImpl.make(
 );
 
 /**
- * Voiding keeps the Visita with its reason. When it consumed a Temporal or
- * Evento Pase of a still active Autorización, the Pase is usable again.
+ * Voiding keeps the Visita with its reason and takes its Ingreso off the
+ * Pase's count. When it consumed a Temporal or Evento Pase of a still active
+ * Autorización, the Pase is usable again.
  */
 const voidVisitImpl = FunctionImpl.make(
   databaseSchema,
@@ -317,12 +318,11 @@ const voidVisitImpl = FunctionImpl.make(
         pass.status === 'used' &&
         Predicate.isNotNull(authorization) &&
         authorization.status === 'active';
-      if (!isPassToRestore) return null;
 
       yield* writer
         .table('passes')
         .patch(pass._id, {
-          status: 'active',
+          status: isPassToRestore ? 'active' : pass.status,
           entryCount: Math.max(pass.entryCount - 1, 0),
         })
         .pipe(Effect.orDie);

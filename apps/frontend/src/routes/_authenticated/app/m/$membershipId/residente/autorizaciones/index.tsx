@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { QueryResult, useQuery } from '@confect/react';
+import { QueryResult } from '@confect/react';
 import { createFileRoute } from '@tanstack/react-router';
 import * as Predicate from 'effect/Predicate';
 import { Plus, Ticket } from 'lucide-react';
@@ -40,10 +40,13 @@ const EMPTY_TAB_COPY = {
 function ResidenteAutorizacionesPage() {
   const membership = MembershipRouteFeat.useCurrentMembership();
   const now = VisitPass.useNow();
-  const authorizations = useQuery(refs.public.authorizations.listForApartment, {
-    membershipId: membership.membershipId,
-    now,
-  });
+  const authorizations = VisitPass.useStableQuery(
+    refs.public.authorizations.listForApartment,
+    {
+      membershipId: membership.membershipId,
+      now,
+    }
+  );
   const today = VisitPass.todayIn(membership.residentialUnitTimeZone, now);
   const [tab, setTab] =
     useState<ResidenteRouteFeat.AuthorizationTab>('current');

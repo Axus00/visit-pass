@@ -381,6 +381,76 @@ describe('shiftReports', () => {
   );
 
   it.effect(
+    'emails no Administrador whose Usuario was deleted, and invited ones by their invited email',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* seedWorld;
+
+        const recipients = yield* confect.run(
+          Effect.gen(function* () {
+            const reader = yield* DatabaseReader;
+            const writer = yield* DatabaseWriter;
+
+            const deletedUserId = yield* writer.table('users').insert({
+              externalId: 'deletedAdmin',
+              identityTokenIdentifier:
+                identityOf('deletedAdmin').tokenIdentifier,
+              email: 'deleted.user@example.test',
+              firstName: 'Deleted',
+              lastName: 'Admin',
+              profilePictureUrl: null,
+              lastSignInAt: null,
+              locale: null,
+              externalCreatedAt: 0,
+              externalUpdatedAt: 0,
+              deletedAt: 0,
+            });
+
+            yield* writer.table('memberships').insert({
+              residentialUnitId: world.unitA,
+              email: 'deleted.membership@example.test',
+              userId: deletedUserId,
+              role: 'administrator',
+              status: 'active',
+              activatedAt: 0,
+            });
+            yield* writer.table('memberships').insert({
+              residentialUnitId: world.unitA,
+              email: 'unlinked@example.test',
+              role: 'administrator',
+              status: 'active',
+              activatedAt: 0,
+            });
+
+            const shiftReportId = yield* ShiftReports.requestShiftReport({
+              membershipId: world.porterA,
+              shiftId: world.shiftA,
+              sendEmail: true,
+            }).pipe(
+              Effect.provideService(
+                Authentication.CurrentUserIdentity,
+                identityOf('porterA')
+              )
+            );
+
+            const inserted = yield* reader
+              .table('shiftReports')
+              .get(shiftReportId);
+
+            return [...inserted.recipients];
+          }).pipe(Effect.orDie),
+          Schema.mutable(Schema.Array(Schema.String))
+        );
+
+        EffectVitestUtils.deepStrictEqual(recipients, [
+          'adminA@example.test',
+          'unlinked@example.test',
+        ]);
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
     'stores the file, skips an unconfigured email and completes once',
     () =>
       Effect.gen(function* () {

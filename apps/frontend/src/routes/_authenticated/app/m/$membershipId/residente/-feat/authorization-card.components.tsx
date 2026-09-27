@@ -13,7 +13,7 @@ import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId
 
 import {
   type AuthorizationTab,
-  PASS_STATUS_BADGE_VARIANT,
+  describePassBadge,
   formatEntryCount,
   partitionReplacedPasses,
 } from './authorizations.utils';
@@ -43,6 +43,10 @@ export function AuthorizationCard({
   const now = VisitPass.useNow();
 
   const isCurrent = tab === 'current';
+  const isAuthorizationPast =
+    tab === 'past' ||
+    authorization.endDate <
+      VisitPass.todayIn(membership.residentialUnitTimeZone, now);
   const { live, replaced } = partitionReplacedPasses(authorization.passes);
   const activePasses = live.filter((pass) => pass.status === 'active');
   const visiblePasses = showAllPasses ? live : live.slice(0, COLLAPSED_PASSES);
@@ -143,6 +147,7 @@ export function AuthorizationCard({
       <ul className="flex flex-col divide-y rounded-xl border">
         {visiblePasses.map((pass) => {
           const canManagePass = isCurrent && pass.status === 'active';
+          const badge = describePassBadge(pass.status, isAuthorizationPast);
 
           return (
             <li key={pass._id} className="flex items-center gap-3 px-3 py-2.5">
@@ -155,9 +160,7 @@ export function AuthorizationCard({
                   {pass.visitorName}
                 </p>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <Badge variant={PASS_STATUS_BADGE_VARIANT[pass.status]}>
-                    {VisitPass.PASS_STATUS_LABELS[pass.status]}
-                  </Badge>
+                  <Badge variant={badge.variant}>{badge.label}</Badge>
                   <span className="text-xs text-muted-foreground">
                     {formatEntryCount(pass.entryCount)}
                   </span>

@@ -764,6 +764,47 @@ describe('visits', () => {
     }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect('takes a voided Ingreso off a Servicio Pase’s count', () =>
+    Effect.gen(function* () {
+      const world = yield* PorteriaFixtures.seedPorteria;
+      const porterA = yield* PorteriaFixtures.as('porterA');
+      const residentA = yield* PorteriaFixtures.as('residentA');
+      yield* openShiftForPorterA(world);
+
+      const created = yield* authorizeInA(world, {
+        type: 'service',
+        endDate: PorteriaFixtures.localDateFromToday(30),
+        weekdays: Authorizations.ALL_WEEKDAYS,
+        visitors: [{ name: 'Jardinero', document: '98765432' }],
+      });
+      const firstVisit = yield* porterA.mutation(visits.registerPassEntry, {
+        membershipId: world.porterA,
+        token: tokenOf(created),
+      });
+      yield* porterA.mutation(visits.registerExit, {
+        membershipId: world.porterA,
+        visitId: firstVisit,
+      });
+      const mistaken = yield* porterA.mutation(visits.registerPassEntry, {
+        membershipId: world.porterA,
+        token: tokenOf(created),
+      });
+
+      yield* porterA.mutation(visits.voidVisit, {
+        membershipId: world.porterA,
+        visitId: mistaken,
+        reason: 'Escaneado dos veces',
+      });
+
+      const [listed] = yield* residentA.query(authorizations.listForApartment, {
+        membershipId: world.residentA,
+        now: PorteriaFixtures.wallClockMillis(),
+      });
+      EffectVitestUtils.strictEqual(listed?.passes[0]?.entryCount, 1);
+      EffectVitestUtils.strictEqual(listed?.passes[0]?.status, 'active');
+    }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('never resolves or admits another unit’s Pase', () =>
     Effect.gen(function* () {
       const world = yield* PorteriaFixtures.seedPorteria;

@@ -1,4 +1,4 @@
-import type * as VisitPass from '#modules/visit-pass';
+import * as VisitPass from '#modules/visit-pass';
 
 export type AuthorizationTab = 'current' | 'past' | 'cancelled';
 
@@ -36,12 +36,30 @@ export function formatEntryCount(entryCount: number) {
   return `${entryCount} ingresos`;
 }
 
-export const PASS_STATUS_BADGE_VARIANT = {
+const PASS_STATUS_BADGE_VARIANT = {
   active: 'success',
   used: 'secondary',
   cancelled: 'destructive',
   replaced: 'outline',
 } as const satisfies Record<VisitPass.PassStatus, string>;
+
+/**
+ * The label and badge variant of a Pase inside its Autorización card. An
+ * unused Pase whose Autorización already ended reads as Vencido, as on the
+ * Pase page, instead of the stored `active` status.
+ */
+export function describePassBadge(
+  status: VisitPass.PassStatus,
+  isAuthorizationPast: boolean
+) {
+  const isExpired = isAuthorizationPast && status === 'active';
+  if (isExpired) return { label: 'Vencido', variant: 'destructive' } as const;
+
+  return {
+    label: VisitPass.PASS_STATUS_LABELS[status],
+    variant: PASS_STATUS_BADGE_VARIANT[status],
+  };
+}
 
 export const AUTHORIZATION_TABS: ReadonlyArray<AuthorizationTab> = [
   'current',

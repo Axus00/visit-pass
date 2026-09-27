@@ -72,10 +72,10 @@ function AdminHomePage() {
   const now = VisitPass.useNow();
   const [openDialog, setOpenDialog] = useState<OpenDialog>(null);
 
-  const overview = useQuery(refs.public.residentialUnits.getOverview, {
-    membershipId: membership.membershipId,
-    now,
-  });
+  const overview = VisitPass.useStableQuery(
+    refs.public.residentialUnits.getOverview,
+    { membershipId: membership.membershipId, now }
+  );
 
   const dialogProps = (dialog: Exclude<OpenDialog, null>) => ({
     open: openDialog === dialog,

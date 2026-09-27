@@ -95,7 +95,11 @@ export const requireReportableShift = Effect.fn(
   return shift;
 });
 
-/** Emails of the unit's active Administradores, preferring the signed-in Usuario's. */
+/**
+ * Emails of the unit's active Administradores: the linked Usuario's current
+ * email, or the invited email while none is linked. An Administrador whose
+ * Usuario was deleted receives nothing.
+ */
 export const listAdministratorEmails = Effect.fn(
   'ShiftReports.listAdministratorEmails'
 )(function* (residentialUnitId: Id<'residentialUnits'>) {
@@ -113,18 +117,18 @@ export const listAdministratorEmails = Effect.fn(
     administrators.filter((membership) => membership.status === 'active'),
     (membership) =>
       Effect.gen(function* () {
-        const user = Predicate.isUndefined(membership.userId)
-          ? null
-          : yield* UsersApplication.getOneById(membership.userId).pipe(
-              UsersDomain.isActiveOrNull
-            );
+        if (Predicate.isUndefined(membership.userId)) return membership.email;
 
-        return user?.email ?? membership.email;
+        const user = yield* UsersApplication.getOneById(membership.userId).pipe(
+          UsersDomain.isActiveOrNull
+        );
+
+        return user?.email ?? null;
       }),
     { concurrency: 'unbounded' }
   );
 
-  return [...new Set(emails)];
+  return [...new Set(emails.filter(Predicate.isNotNull))];
 });
 
 /** Loads the Turno, its Visitas and every name the workbook prints. */

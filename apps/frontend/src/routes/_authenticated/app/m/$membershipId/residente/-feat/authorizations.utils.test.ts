@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   classifyAuthorization,
+  describePassBadge,
   formatEntryCount,
   groupAuthorizationsByTab,
   partitionReplacedPasses,
@@ -111,5 +112,28 @@ describe('formatEntryCount', () => {
     expect(formatEntryCount(0)).toBe('Sin ingresos');
     expect(formatEntryCount(1)).toBe('1 ingreso');
     expect(formatEntryCount(3)).toBe('3 ingresos');
+  });
+});
+
+describe('describePassBadge', () => {
+  it('shows an unused Pase of a current Autorización as Vigente', () => {
+    expect(describePassBadge('active', false)).toEqual({
+      label: 'Vigente',
+      variant: 'success',
+    });
+  });
+
+  it('shows an unused Pase of an ended Autorización as Vencido', () => {
+    expect(describePassBadge('active', true)).toEqual({
+      label: 'Vencido',
+      variant: 'destructive',
+    });
+  });
+
+  it('keeps the stored status of a used Pase once the Autorización ended', () => {
+    expect(describePassBadge('used', true)).toEqual({
+      label: 'Usado',
+      variant: 'secondary',
+    });
   });
 });

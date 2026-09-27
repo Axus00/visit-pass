@@ -62,14 +62,27 @@ export function listStartableShifts<S extends ScheduledShift>(
 
 /**
  * The planned Turno that "Iniciar turno" starts instead of opening an
- * unplanned one: among those startable at `now`, the latest planned start, so
- * the current Turno wins over an overdue one.
+ * unplanned one, among those startable at `now`: the one running now (its
+ * planned start is past and its planned end is not), else the soonest upcoming
+ * one inside its early window, else the most recently ended overdue one.
  */
 export function findPlannedShiftToStart<S extends ScheduledShift>(
   shifts: ReadonlyArray<S>,
   now: number
 ): S | undefined {
-  return listStartableShifts(shifts, now)
-    .filter((shift) => isStartableAt(shift, now))
+  const startable = listStartableShifts(shifts, now).filter((shift) =>
+    isStartableAt(shift, now)
+  );
+
+  const running = startable.findLast(
+    (shift) => (shift.plannedStart ?? 0) <= now && now < (shift.plannedEnd ?? 0)
+  );
+  if (Predicate.isNotUndefined(running)) return running;
+
+  const upcoming = startable.find((shift) => (shift.plannedStart ?? 0) > now);
+  if (Predicate.isNotUndefined(upcoming)) return upcoming;
+
+  return startable
+    .toSorted((a, b) => (a.plannedEnd ?? 0) - (b.plannedEnd ?? 0))
     .at(-1);
 }

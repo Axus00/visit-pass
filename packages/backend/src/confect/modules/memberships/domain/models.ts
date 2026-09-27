@@ -1,5 +1,6 @@
 import * as SystemFields from '@confect/core/SystemFields';
 import * as Schema from 'effect/Schema';
+import * as Struct from 'effect/Struct';
 
 import { Id } from '../../../_generated/id';
 
@@ -54,13 +55,15 @@ export const MembershipsDocSchema = SystemFields.extendWithSystemFields(
 /** One entry of the caller's Membresías, enough to route to its panel. */
 export const MembershipSummary = Schema.Struct({
   membershipId: Id('memberships'),
-  role: Role,
-  residentialUnitId: Id('residentialUnits'),
+  ...Struct.pick(MembershipsTableSchema.fields, [
+    'role',
+    'residentialUnitId',
+    'apartmentId',
+    'occupancyType',
+  ]),
   residentialUnitName: Schema.String,
   residentialUnitTimeZone: Schema.String,
-  apartmentId: Schema.optional(Id('apartments')),
   apartmentLabel: Schema.optional(Schema.String),
-  occupancyType: Schema.optional(OccupancyType),
 });
 
 export type MembershipSummary = typeof MembershipSummary.Type;
@@ -74,17 +77,19 @@ export type MyAccess = typeof MyAccess.Type;
 
 /** A Membresía as the Administrador manages it. */
 export const MembershipDetail = Schema.Struct({
-  _id: Id('memberships'),
-  _creationTime: Schema.Finite,
-  email: Schema.String,
+  ...Struct.pick(MembershipsDocSchema.fields, [
+    '_id',
+    '_creationTime',
+    'email',
+    'role',
+    'status',
+    'apartmentId',
+    'occupancyType',
+    'activatedAt',
+  ]),
   /** The signed-in Usuario's name, else the name the Administrador typed. */
   name: Schema.optional(Schema.String),
-  role: Role,
-  status: MembershipStatus,
-  apartmentId: Schema.optional(Id('apartments')),
   apartmentLabel: Schema.optional(Schema.String),
-  occupancyType: Schema.optional(OccupancyType),
-  activatedAt: Schema.optional(Schema.Finite),
 });
 
 export type MembershipDetail = typeof MembershipDetail.Type;

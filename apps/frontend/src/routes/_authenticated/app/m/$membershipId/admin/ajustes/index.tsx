@@ -1,4 +1,6 @@
-import { useMutation, useQuery } from '@confect/react';
+import { useState } from 'react';
+
+import { useMutation } from '@confect/react';
 import { createFileRoute } from '@tanstack/react-router';
 import * as Result from 'effect/Result';
 import { FileLock2, Scale } from 'lucide-react';
@@ -36,11 +38,14 @@ const UNUSED_PASS_PURGE_DAYS = 30;
 /** The unit's name, city and Visita retention, plus its Habeas Data notice. */
 function AdminSettingsPage() {
   const membership = MembershipRouteFeat.useCurrentMembership();
-  const now = VisitPass.useNow();
-  const overview = useQuery(refs.public.residentialUnits.getOverview, {
-    membershipId: membership.membershipId,
-    now,
-  });
+  // Only the unit is read here, which does not depend on the day, so a `now`
+  // fixed at mount keeps the subscription from re-opening every minute.
+  const tickingNow = VisitPass.useNow();
+  const [now] = useState(tickingNow);
+  const overview = VisitPass.useStableQuery(
+    refs.public.residentialUnits.getOverview,
+    { membershipId: membership.membershipId, now }
+  );
 
   return (
     <>
@@ -55,7 +60,7 @@ function AdminSettingsPage() {
       >
         {(value) => (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <UnitSettingsForm unit={value.unit} />
+            <UnitSettingsForm key={value.unit._id} unit={value.unit} />
             <PrivacyCard unitName={value.unit.name} />
           </div>
         )}
@@ -71,13 +76,17 @@ function UnitSettingsForm({
 }) {
   const membership = MembershipRouteFeat.useCurrentMembership();
   const update = useMutation(refs.public.residentialUnits.update);
+  // Read from the server once per unit (the form is keyed by its id), so a
+  // refreshed overview never overwrites what the Administrador is typing.
+  // Saving moves the defaults to the saved values.
+  const [defaultValues, setDefaultValues] = useState(() => ({
+    name: unit.name,
+    city: unit.city,
+    visitRetentionMonths: unit.visitRetentionMonths,
+  }));
 
   const form = Forms.useAppForm({
-    defaultValues: {
-      name: unit.name,
-      city: unit.city,
-      visitRetentionMonths: unit.visitRetentionMonths,
-    },
+    defaultValues,
     validators: { onSubmit: AdminRouteFeat.UpdateUnitFormStandardSchema },
     onSubmit: async ({ value }) => {
       const result = await AppRouteFeat.settleMutation(
@@ -94,6 +103,8 @@ function UnitSettingsForm({
         return;
       }
 
+      setDefaultValues(value);
+      form.reset(value);
       toast.success('Ajustes guardados.');
     },
   });

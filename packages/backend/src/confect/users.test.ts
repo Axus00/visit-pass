@@ -250,13 +250,13 @@ describe('users', () => {
         const confect = yield* TestConfect.TestConfect;
         const world = yield* TestFixtures.seedTwoUnits;
 
-        const invite = (email: string) =>
+        const invite = (email: string, role: 'porter' | 'administrator') =>
           confect
             .withIdentity(TestFixtures.identityOf('adminA'))
             .mutation(refs.public.memberships.invite, {
               membershipId: world.adminA,
               email,
-              role: 'porter',
+              role,
             });
 
         const readInvitation = (membershipId: GenericId<'memberships'>) =>
@@ -272,8 +272,11 @@ describe('users', () => {
             Invitation
           );
 
-        const newUserInvitationId = yield* invite(userEmail);
-        const renamedUserInvitationId = yield* invite('renamed@example.test');
+        const newUserInvitationId = yield* invite(userEmail, 'porter');
+        const renamedUserInvitationId = yield* invite(
+          'renamed@example.test',
+          'administrator'
+        );
 
         const created = yield* confect.mutation(
           refs.internal.users.upsertFromWorkOS,

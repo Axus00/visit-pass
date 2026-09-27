@@ -3,6 +3,7 @@ import * as EffectVitestUtils from '@effect/vitest/utils';
 import * as Effect from 'effect/Effect';
 
 import refs from './_generated/refs';
+import { DatabaseReader, DatabaseWriter } from './_generated/services';
 import * as Memberships from './modules/memberships';
 import * as ResidentialUnits from './modules/residentialUnits';
 import * as TestFixtures from './test.fixtures';
@@ -252,6 +253,99 @@ describe('memberships', () => {
         })
       );
     }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'never gives a Usuario who changed email a second Membresía in the same seat',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* TestFixtures.seedTwoUnits;
+        const admin = confect.withIdentity(TestFixtures.identityOf('adminA'));
+        const porter = confect.withIdentity(TestFixtures.identityOf('porterA'));
+
+        // Invited while no Usuario holds the new email, so it waits pending.
+        const pendingId = yield* admin.mutation(
+          refs.public.memberships.invite,
+          {
+            membershipId: world.adminA,
+            email: 'porter.new@example.test',
+            role: 'porter',
+          }
+        );
+
+        yield* confect.run(
+          Effect.gen(function* () {
+            const reader = yield* DatabaseReader;
+            const writer = yield* DatabaseWriter;
+            const porterUser = yield* reader
+              .table('users')
+              .get(
+                'by_identityTokenIdentifier',
+                TestFixtures.identityOf('porterA').tokenIdentifier
+              );
+
+            yield* writer.table('users').patch(porterUser._id, {
+              email: 'porter.new@example.test',
+            });
+          }).pipe(Effect.orDie)
+        );
+
+        const activated = yield* porter.mutation(
+          refs.public.memberships.activatePending,
+          {}
+        );
+        EffectVitestUtils.strictEqual(activated, 0);
+
+        const [access, unitMembers] = yield* Effect.all([
+          porter.query(refs.public.memberships.listMine, {}),
+          admin.query(refs.public.memberships.listForUnit, {
+            membershipId: world.adminA,
+          }),
+        ]);
+
+        EffectVitestUtils.deepStrictEqual(
+          access.memberships.map(({ membershipId }) => membershipId),
+          [world.porterA]
+        );
+        EffectVitestUtils.strictEqual(
+          unitMembers.find(({ _id }) => _id === pendingId)?.status,
+          'revoked'
+        );
+
+        const [samePorterSeat, residentSeat] = yield* Effect.all([
+          Effect.result(
+            admin.mutation(refs.public.memberships.invite, {
+              membershipId: world.adminA,
+              email: 'Porter.New@Example.test',
+              role: 'porter',
+            })
+          ),
+          admin.mutation(refs.public.memberships.invite, {
+            membershipId: world.adminA,
+            email: 'porter.new@example.test',
+            role: 'resident',
+            apartmentId: world.apartmentA102,
+            occupancyType: 'tenant',
+          }),
+        ]);
+
+        EffectVitestUtils.assertFailure(
+          samePorterSeat,
+          new Memberships.MembershipAlreadyExistsError({
+            email: 'porter.new@example.test',
+          })
+        );
+
+        const accessAfterInvite = yield* porter.query(
+          refs.public.memberships.listMine,
+          {}
+        );
+        EffectVitestUtils.deepStrictEqual(
+          accessAfterInvite.memberships.map(({ membershipId }) => membershipId),
+          [world.porterA, residentSeat]
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
   );
 
   it.effect('keeps every unit’s Membresías to its own Administradores', () =>

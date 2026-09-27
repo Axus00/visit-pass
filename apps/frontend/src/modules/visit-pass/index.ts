@@ -41,3 +41,4 @@ export {
   StatCard,
 } from './page.components';
 export { useNow } from './use-now.hooks';
+export { useStableQuery } from './use-stable-query.hooks';

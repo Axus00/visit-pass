@@ -136,7 +136,8 @@ const createImpl = FunctionImpl.make(
 /**
  * Every active Autorización valid on or after the unit's day of `now`, so a
  * long Servicio never drops out behind newer ones, plus the latest ones in any
- * state; latest created first.
+ * state; latest created first. Each carries its newest Pases in creation
+ * order, so regenerated replacements are never the ones left out.
  */
 const listForApartmentImpl = FunctionImpl.make(
   databaseSchema,
@@ -194,11 +195,16 @@ const listForApartmentImpl = FunctionImpl.make(
             (authorization) =>
               reader
                 .table('passes')
-                .index('by_authorizationId', (q) =>
-                  q.eq('authorizationId', authorization._id)
+                .index(
+                  'by_authorizationId',
+                  (q) => q.eq('authorizationId', authorization._id),
+                  'desc'
                 )
-                .take(Authorizations.MAX_EVENT_VISITORS)
-                .pipe(Effect.orDie),
+                .take(Authorizations.PASSES_PER_AUTHORIZATION_LIMIT)
+                .pipe(
+                  Effect.map((passes) => passes.toReversed()),
+                  Effect.orDie
+                ),
             { concurrency: 'unbounded' }
           ),
           Shifts.loadMemberNames(
@@ -271,16 +277,17 @@ const cancelImpl = FunctionImpl.make(
         })
         .pipe(Effect.orDie);
 
-      const passes = yield* reader
+      // At most one active Pase per Visitante: regenerating replaces the old.
+      const activePasses = yield* reader
         .table('passes')
-        .index('by_authorizationId', (q) =>
-          q.eq('authorizationId', authorization._id)
+        .index('by_authorizationId_and_status', (q) =>
+          q.eq('authorizationId', authorization._id).eq('status', 'active')
         )
-        .take(Authorizations.MAX_EVENT_VISITORS)
+        .take(Authorizations.PASSES_PER_AUTHORIZATION_LIMIT)
         .pipe(Effect.orDie);
 
       yield* Effect.forEach(
-        passes.filter((pass) => pass.status === 'active'),
+        activePasses,
         (pass) =>
           writer
             .table('passes')

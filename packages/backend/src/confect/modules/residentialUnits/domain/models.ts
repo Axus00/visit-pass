@@ -1,5 +1,6 @@
 import * as SystemFields from '@confect/core/SystemFields';
 import * as Schema from 'effect/Schema';
+import * as Struct from 'effect/Struct';
 
 import { Id } from '../../../_generated/id';
 
@@ -58,20 +59,14 @@ export const SuperadminsTableSchema = Schema.Struct({
 // Payloads and projections
 // -*******************************************************************************-
 
-export const ResidentialUnitSummary = Schema.Struct({
-  _id: Id('residentialUnits'),
-  name: Schema.String,
-  city: Schema.String,
-  timeZone: Schema.String,
-  visitRetentionMonths: Schema.Finite,
-});
+export const ResidentialUnitSummary = Schema.Struct(
+  Struct.omit(ResidentialUnitsDocSchema.fields, ['_creationTime'])
+);
 
 export type ResidentialUnitSummary = typeof ResidentialUnitSummary.Type;
 
 export const ApartmentSummary = Schema.Struct({
-  _id: Id('apartments'),
-  tower: Schema.String,
-  number: Schema.String,
+  ...Struct.pick(ApartmentsDocSchema.fields, ['_id', 'tower', 'number']),
   /** Display name such as `Torre 2 · 402`. */
   label: Schema.String,
   activeResidentCount: Schema.Finite,

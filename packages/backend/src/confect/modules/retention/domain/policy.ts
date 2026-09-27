@@ -1,4 +1,5 @@
 import * as CalendarDomain from '../../calendar/domain';
+import * as ResidentialUnitsDomain from '../../residentialUnits/domain';
 
 const MILLIS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -7,6 +8,16 @@ export const DAYS_PER_RETENTION_MONTH = 30;
 
 /** A never-used Pase outlives its Autorización's last day by this much. */
 export const UNUSED_PASS_RETENTION_DAYS = 30;
+
+/**
+ * Days before `toUnusedPassCutoffDate` an ended Autorización still needs the
+ * Pase sweep. Its Pases admit no one after its `endDate`, so a kept Pase's
+ * last Ingreso ages out within the longest Visita retention; older
+ * Autorizaciones hold nothing left to delete or anonymize.
+ */
+export const PASS_SWEEP_WINDOW_DAYS =
+  ResidentialUnitsDomain.MAX_VISIT_RETENTION_MONTHS * DAYS_PER_RETENTION_MONTH +
+  UNUSED_PASS_RETENTION_DAYS;
 
 /** Reportes de turno and their files are kept this long after being requested. */
 export const SHIFT_REPORT_RETENTION_DAYS = 30;

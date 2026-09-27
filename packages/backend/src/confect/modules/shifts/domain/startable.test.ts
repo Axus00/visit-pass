@@ -48,6 +48,29 @@ describe('findPlannedShiftToStart', () => {
     expect(findPlannedShiftToStart([overdue, current], now)).toBe(current);
   });
 
+  it('prefers the running planned Turno over the next one opening early', () => {
+    const at1330 = Date.UTC(2026, 8, 26, 13, 30);
+    const morning = {
+      status: 'scheduled' as const,
+      plannedStart: Date.UTC(2026, 8, 26, 6),
+      plannedEnd: Date.UTC(2026, 8, 26, 14),
+    };
+    const afternoon = {
+      status: 'scheduled' as const,
+      plannedStart: Date.UTC(2026, 8, 26, 14),
+      plannedEnd: Date.UTC(2026, 8, 26, 22),
+    };
+
+    expect(findPlannedShiftToStart([morning, afternoon], at1330)).toBe(morning);
+  });
+
+  it('prefers an upcoming planned Turno over an overdue one', () => {
+    const overdue = planned(-9, 8);
+    const upcoming = planned(0.5, 8);
+
+    expect(findPlannedShiftToStart([overdue, upcoming], now)).toBe(upcoming);
+  });
+
   it('starts a planned Turno up to an hour early, not earlier', () => {
     const inHalfAnHour = planned(0.5, 8);
     const inThreeHours = planned(3, 8);

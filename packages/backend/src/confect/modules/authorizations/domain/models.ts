@@ -8,6 +8,11 @@ export const VISITOR_NAME_MAX_LENGTH = 120;
 export const VISITOR_DOCUMENT_MAX_LENGTH = 30;
 export const EVENT_NAME_MAX_LENGTH = 80;
 export const MAX_EVENT_VISITORS = 100;
+/**
+ * Bound for reading one Autorización's Pases newest first: an Evento's guest
+ * list plus room for regenerated ones, so the live Pases are the part kept.
+ */
+export const PASSES_PER_AUTHORIZATION_LIMIT = 2 * MAX_EVENT_VISITORS;
 /** A Servicio spans at most this many days. */
 export const MAX_SERVICE_DAYS = 366;
 

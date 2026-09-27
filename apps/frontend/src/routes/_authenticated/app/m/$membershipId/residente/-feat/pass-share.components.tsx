@@ -116,11 +116,22 @@ function PassShareBody({ shared }: { shared: SharedAuthorization }) {
     if (outcome === 'downloaded') toast.success('Imagen del Pase descargada');
   };
 
-  const handleCopyLink = () =>
-    navigator.clipboard.writeText(url).then(
-      () => toast.success('Enlace del Pase copiado'),
-      () => toast.error('No se pudo copiar el enlace.')
-    );
+  // `navigator.clipboard` is undefined outside secure contexts (a plain-http
+  // LAN address), and `writeText` can throw synchronously as well as reject.
+  const handleCopyLink = () => {
+    const clipboard = navigator.clipboard as Clipboard | undefined;
+    if (Predicate.isUndefined(clipboard)) {
+      toast.error('No se pudo copiar el enlace.');
+      return;
+    }
+
+    void Promise.resolve()
+      .then(() => clipboard.writeText(url))
+      .then(
+        () => toast.success('Enlace del Pase copiado'),
+        () => toast.error('No se pudo copiar el enlace.')
+      );
+  };
 
   return (
     <>
@@ -195,7 +206,7 @@ function PassShareBody({ shared }: { shared: SharedAuthorization }) {
             <ImageDown data-icon="inline-start" />
             Guardar imagen
           </Button>
-          <Button variant="outline" onClick={() => void handleCopyLink()}>
+          <Button variant="outline" onClick={handleCopyLink}>
             <Copy data-icon="inline-start" />
             Copiar enlace
           </Button>

@@ -11,12 +11,14 @@ import * as UsersApplication from '../../users/application';
 import * as UsersDomain from '../../users/domain';
 import * as Domain from '../domain';
 
-/** One email holds few Membresías, so a small scan finds every duplicate. */
+/** One email or Usuario holds few Membresías, so a small scan finds every duplicate. */
 const DUPLICATE_SCAN_LIMIT = 200;
 
 /**
  * Creates a Membresía in `residentialUnitId`. It starts `active` when a
  * Usuario already signed in with that email, else `pending` until they do.
+ * Fails with `MembershipAlreadyExistsError` when the email, or its Usuario
+ * under any earlier email, already holds the same unit, Rol and Apartamento.
  * Callers must have authorized the caller for the unit first.
  */
 export const inviteMember = Effect.fn('Memberships.inviteMember')(function* (
@@ -88,7 +90,24 @@ export const inviteMember = Effect.fn('Memberships.inviteMember')(function* (
     { concurrency: 'unbounded' }
   ).pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
 
-  const isDuplicate = [...pendingMemberships, ...activeMemberships].some(
+  // A Usuario who changed email keeps Membresías stored under the old one.
+  const userMemberships = Predicate.isNull(user)
+    ? []
+    : yield* reader
+        .table('memberships')
+        .index('by_userId', (q) => q.eq('userId', user._id))
+        .take(DUPLICATE_SCAN_LIMIT)
+        .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
+
+  const activeUserMemberships = userMemberships.filter(
+    (membership) => membership.status === 'active'
+  );
+
+  const isDuplicate = [
+    ...pendingMemberships,
+    ...activeMemberships,
+    ...activeUserMemberships,
+  ].some(
     (membership) =>
       membership.residentialUnitId === residentialUnitId &&
       membership.role === invitation.role &&

@@ -10,12 +10,6 @@ import * as CalendarDomain from '../../calendar/domain';
 
 /** Voided Visitas may stay open; a live one is the newest, read first. */
 const OPEN_VISITS_PER_PASS_LIMIT = 10;
-/**
- * An Evento's guest list plus regenerated Pases; read newest first, so the
- * scanned Pase's own replacement chain is the part that is kept.
- */
-const PASSES_PER_AUTHORIZATION_LIMIT =
-  2 * AuthorizationsDomain.MAX_EVENT_VISITORS;
 
 /**
  * Finds the Pase behind a scanned token and decides whether its Visitante may
@@ -69,7 +63,7 @@ export const evaluatePassByToken = Effect.fn('Visits.evaluatePassByToken')(
             (q) => q.eq('authorizationId', pass.authorizationId),
             'desc'
           )
-          .take(PASSES_PER_AUTHORIZATION_LIMIT),
+          .take(AuthorizationsDomain.PASSES_PER_AUTHORIZATION_LIMIT),
       ],
       { concurrency: 'unbounded' }
     ).pipe(Effect.orDie);

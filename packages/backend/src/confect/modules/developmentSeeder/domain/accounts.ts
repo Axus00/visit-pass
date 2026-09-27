@@ -1,7 +1,7 @@
 /**
  * Accounts seeded into every development deployment. The WorkOS environment
  * behind a linked worktree is disposable, so these credentials never reach a
- * real user base. `seedDomain` gives each account its Membresías; see
+ * real user base. `seedSampleData` gives each account its Membresías; see
  * `sampleData.ts`.
  *
  * Use `example.org`: every unclaimed WorkOS environment ships a "Test
