@@ -72,6 +72,10 @@ Temporal (un Visitante, un día, un Ingreso), Evento (una lista de invitados par
 El código QR que habilita a un Visitante concreto dentro de una Autorización. Codifica un identificador opaco que el Portero resuelve contra el sistema. Vale el día completo, en hora local de la Unidad residencial. Un Pase de Temporal o Evento queda usado tras su Ingreso; regenerarlo reemplaza el anterior.
 _Avoid_: QR (a secas), ticket, token
 
+**Código del Pase**:
+Identificador corto y legible de un Pase, único para siempre dentro de su Unidad residencial. Vale lo mismo que el QR: el Portero lo digita cuando no puede escanear y el Pase se valida con las mismas reglas.
+_Avoid_: ID corto, PIN, token
+
 **Pase rechazado**:
 Un Pase escaneado que no habilita el Ingreso, con un motivo (cancelado, vencido, aún no vigente, día no permitido, ya usado, reemplazado, Apartamento sin Residente activo). El Portero puede forzar el ingreso con un Registro manual.
 
