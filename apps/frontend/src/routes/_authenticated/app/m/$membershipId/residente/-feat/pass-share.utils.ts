@@ -82,29 +82,25 @@ export function passImageFileName(visitorName: string) {
 }
 
 /**
- * Sends the Pase link: the native share sheet on touch devices (where WhatsApp
- * lives), else WhatsApp Web through `wa.me`.
+ * Sends the Pase message from `buildPassShareText`: the native share sheet on
+ * touch devices (where WhatsApp lives), else WhatsApp Web through `wa.me`. The
+ * text already carries the link, so it is shared alone; adding `url` would
+ * repeat the link in apps that append it.
  */
-export async function sharePassLink({
-  text,
-  url,
-}: {
-  text: string;
-  url: string;
-}): Promise<'shared' | 'cancelled' | 'whatsApp'> {
+export async function sharePassLink(
+  text: string
+): Promise<'shared' | 'cancelled' | 'whatsApp'> {
   const openWhatsApp = () => {
     window.open(whatsAppShareUrl(text), '_blank', 'noopener,noreferrer');
     return 'whatsApp' as const;
   };
   const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
   const canShareNatively =
-    isTouchDevice &&
-    'canShare' in navigator &&
-    navigator.canShare({ text, url });
+    isTouchDevice && 'canShare' in navigator && navigator.canShare({ text });
 
   if (!canShareNatively) return openWhatsApp();
 
-  return navigator.share({ text, url }).then(
+  return navigator.share({ text }).then(
     () => 'shared' as const,
     (error: unknown) => {
       const isCancelled =

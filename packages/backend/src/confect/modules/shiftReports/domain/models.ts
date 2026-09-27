@@ -57,24 +57,26 @@ export const ShiftReportsDocSchema = SystemFields.extendWithSystemFields(
 // -*******************************************************************************-
 
 export const RequestShiftReportDto = Schema.Struct({
-  shiftId: Id('shifts'),
+  ...Struct.pick(ShiftReportsTableSchema.fields, ['shiftId']),
   sendEmail: Schema.Boolean,
 });
 
 export type RequestShiftReportDto = typeof RequestShiftReportDto.Type;
 
 export const ShiftReportSummary = Schema.Struct({
-  _id: Id('shiftReports'),
-  _creationTime: Schema.Finite,
-  shiftId: Id('shifts'),
+  ...Struct.pick(ShiftReportsDocSchema.fields, [
+    '_id',
+    '_creationTime',
+    'shiftId',
+    'fileName',
+    'status',
+    'emailStatus',
+    'recipients',
+    'failureMessage',
+    'completedAt',
+  ]),
   porterName: Schema.String,
-  fileName: Schema.String,
-  status: ShiftReportStatus,
   downloadUrl: Schema.NullOr(Schema.String),
-  emailStatus: ShiftReportEmailStatus,
-  recipients: Schema.Array(Schema.String),
-  failureMessage: Schema.optional(Schema.String),
-  completedAt: Schema.optional(Schema.Finite),
 });
 
 export type ShiftReportSummary = typeof ShiftReportSummary.Type;

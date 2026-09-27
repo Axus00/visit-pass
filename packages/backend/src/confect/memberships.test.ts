@@ -348,6 +348,55 @@ describe('memberships', () => {
       }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect(
+    'lists the newest Residente even behind more than 1000 Porteros',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* TestFixtures.seedTwoUnits;
+        const admin = confect.withIdentity(TestFixtures.identityOf('adminA'));
+
+        yield* confect.run(
+          Effect.gen(function* () {
+            const writer = yield* DatabaseWriter;
+
+            yield* Effect.forEach(
+              Array.from({ length: 1000 }, (_, index) => index),
+              (index) =>
+                writer.table('memberships').insert({
+                  residentialUnitId: world.unitA,
+                  email: `porter.${index}@example.test`,
+                  role: 'porter',
+                  status: 'pending',
+                }),
+              { discard: true }
+            );
+          }).pipe(Effect.orDie)
+        );
+
+        const newestResident = yield* admin.mutation(
+          refs.public.memberships.invite,
+          {
+            membershipId: world.adminA,
+            email: 'newest.resident@example.test',
+            role: 'resident',
+            apartmentId: world.apartmentA102,
+            occupancyType: 'owner',
+          }
+        );
+
+        const members = yield* admin.query(
+          refs.public.memberships.listForUnit,
+          { membershipId: world.adminA }
+        );
+        const listedIds = members.map(({ _id }) => _id);
+
+        EffectVitestUtils.assertTrue(listedIds.includes(newestResident));
+        EffectVitestUtils.assertTrue(listedIds.includes(world.residentA));
+        EffectVitestUtils.assertTrue(listedIds.includes(world.adminA));
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('keeps every unit’s Membresías to its own Administradores', () =>
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;

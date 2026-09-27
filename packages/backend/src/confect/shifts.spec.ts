@@ -69,10 +69,13 @@ export default GroupSpec.make()
   // Public — Administrador
   // -*******************************************************************************-
   .addFunction(
-    /** Administrador: open and scheduled Turnos plus the latest closed ones. */
+    /**
+     * Administrador: open Turnos, the scheduled ones still ahead or recently
+     * missed as of `now` (soonest first), and the latest closed ones.
+     */
     FunctionSpec.publicQuery({
       name: 'listForUnit',
-      args: () => ({ membershipId: Id('memberships') }),
+      args: () => ({ membershipId: Id('memberships'), now: Schema.Finite }),
       returns: () => Schema.Array(ShiftsDomain.ShiftSummary),
       error: () => MembershipsDomain.AccessDeniedError,
     }).middleware(RequireUserIdentity)

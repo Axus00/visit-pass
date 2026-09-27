@@ -16,8 +16,11 @@ import * as Users from './modules/users';
 /** A Usuario belongs to a handful of units; this bounds a runaway account. */
 const MEMBERSHIPS_PER_USER_LIMIT = 100;
 
-/** Staff plus Residentes of a large copropiedad fit in one page. */
-const MEMBERSHIPS_PER_UNIT_LIMIT = 1000;
+/**
+ * Read per Rol, newest first, so a crowded Rol never pushes another out; the
+ * same bound the unit dashboard counts with.
+ */
+const MEMBERSHIPS_PER_ROLE_LIMIT = 2000;
 
 const APARTMENTS_PER_UNIT_LIMIT = 2000;
 
@@ -139,23 +142,34 @@ const listForUnitImpl = FunctionImpl.make(
         ['administrator']
       );
 
-      const [memberships, apartments] = yield* Effect.all(
-        [
-          reader
-            .table('memberships')
-            .index('by_residentialUnitId_and_role', (q) =>
-              q.eq('residentialUnitId', membership.residentialUnitId)
-            )
-            .take(MEMBERSHIPS_PER_UNIT_LIMIT),
-          reader
-            .table('apartments')
-            .index('by_residentialUnitId_and_tower_and_number', (q) =>
-              q.eq('residentialUnitId', membership.residentialUnitId)
-            )
-            .take(APARTMENTS_PER_UNIT_LIMIT),
-        ],
-        { concurrency: 'unbounded' }
-      ).pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
+      const membershipsWithRole = (role: Memberships.Role) =>
+        reader
+          .table('memberships')
+          .index(
+            'by_residentialUnitId_and_role',
+            (q) =>
+              q
+                .eq('residentialUnitId', membership.residentialUnitId)
+                .eq('role', role),
+            'desc'
+          )
+          .take(MEMBERSHIPS_PER_ROLE_LIMIT);
+
+      const [administrators, porters, residents, apartments] =
+        yield* Effect.all(
+          [
+            membershipsWithRole('administrator'),
+            membershipsWithRole('porter'),
+            membershipsWithRole('resident'),
+            reader
+              .table('apartments')
+              .index('by_residentialUnitId_and_tower_and_number', (q) =>
+                q.eq('residentialUnitId', membership.residentialUnitId)
+              )
+              .take(APARTMENTS_PER_UNIT_LIMIT),
+          ],
+          { concurrency: 'unbounded' }
+        ).pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
 
       const apartmentLabels = new Map(
         apartments.map((apartment) => [
@@ -165,7 +179,7 @@ const listForUnitImpl = FunctionImpl.make(
       );
 
       return yield* Effect.forEach(
-        memberships,
+        [...administrators, ...porters, ...residents],
         (member) =>
           Effect.gen(function* () {
             const user = Predicate.isUndefined(member.userId)

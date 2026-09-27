@@ -112,9 +112,13 @@ export function AdmissiblePassCard({
   token: string;
   /** False without an open Turno. */
   canRegister: boolean;
-  /** Lets the page hold this card while the Pase's state changes underneath. */
-  onSubmittingChange: (isSubmitting: boolean) => void;
-  onRegistered: () => void;
+  /**
+   * Lets the page hold this card while the Pase's state changes underneath.
+   * Reports the token so a late settle only touches the Pase it belongs to.
+   */
+  onSubmittingChange: (token: string, isSubmitting: boolean) => void;
+  /** Runs with the registered token, which may no longer be the current scan. */
+  onRegistered: (token: string) => void;
   onScanAnother: () => void;
 }) {
   const { membershipId } = MembershipRouteFeat.useCurrentMembership();
@@ -132,7 +136,7 @@ export function AdmissiblePassCard({
       const plate = value.plate.trim().toUpperCase();
       const visitorDocument = value.visitorDocument.trim();
 
-      onSubmittingChange(true);
+      onSubmittingChange(token, true);
       const result = await AppRouteFeat.settleMutation(
         registerPassEntry({
           membershipId,
@@ -143,13 +147,13 @@ export function AdmissiblePassCard({
       );
 
       if (Result.isFailure(result)) {
-        onSubmittingChange(false);
+        onSubmittingChange(token, false);
         toast.error(VisitPass.describeBackendError(result.failure));
         return;
       }
 
       toast.success('Ingreso registrado', { description: pass.visitorName });
-      onRegistered();
+      onRegistered(token);
     },
   });
 

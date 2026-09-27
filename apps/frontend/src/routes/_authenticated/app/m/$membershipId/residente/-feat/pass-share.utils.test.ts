@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import * as VisitPass from '#modules/visit-pass';
 
@@ -8,6 +8,7 @@ import {
   formatWeekdays,
   passImageFileName,
   passPageUrl,
+  sharePassLink,
   whatsAppShareUrl,
 } from './pass-share.utils';
 
@@ -104,5 +105,63 @@ describe('passImageFileName', () => {
       'pase-maria-jose-pena.png'
     );
     expect(passImageFileName('  ')).toBe('pase-visitante.png');
+  });
+});
+
+describe('sharePassLink', () => {
+  const text =
+    'Hola Ana, te autoricé para ingresar a Edificio Central: hoy. Muestra este Pase en portería junto con tu documento de identidad: https://visitpass.co/p/abc';
+
+  const stubDevice = ({
+    isTouchDevice,
+    share = vi.fn(() => Promise.resolve()),
+  }: {
+    isTouchDevice: boolean;
+    share?: (data: ShareData) => Promise<void>;
+  }) => {
+    const open = vi.fn();
+    const canShare = vi.fn(() => true);
+    vi.stubGlobal('window', {
+      matchMedia: () => ({ matches: isTouchDevice }),
+      open,
+    });
+    vi.stubGlobal('navigator', { canShare, share });
+
+    return { open, canShare, share };
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('shares only the text, which already carries the link once', async () => {
+    const { canShare, share, open } = stubDevice({ isTouchDevice: true });
+
+    await expect(sharePassLink(text)).resolves.toBe('shared');
+    expect(canShare).toHaveBeenCalledWith({ text });
+    expect(share).toHaveBeenCalledWith({ text });
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('reports a dismissed share sheet as cancelled', async () => {
+    const { open } = stubDevice({
+      isTouchDevice: true,
+      share: () => Promise.reject(new DOMException('', 'AbortError')),
+    });
+
+    await expect(sharePassLink(text)).resolves.toBe('cancelled');
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('opens WhatsApp Web with the text off touch devices', async () => {
+    const { open, share } = stubDevice({ isTouchDevice: false });
+
+    await expect(sharePassLink(text)).resolves.toBe('whatsApp');
+    expect(share).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledWith(
+      whatsAppShareUrl(text),
+      '_blank',
+      'noopener,noreferrer'
+    );
   });
 });

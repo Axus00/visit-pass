@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
 
-import { QueryResult, useMutation, useQuery } from '@confect/react';
+import { QueryResult, useMutation } from '@confect/react';
 import { createFileRoute } from '@tanstack/react-router';
 import * as Predicate from 'effect/Predicate';
 import * as Result from 'effect/Result';
@@ -56,8 +56,9 @@ function AdminShiftsPage() {
     null
   );
 
-  const shifts = useQuery(refs.public.shifts.listForUnit, {
+  const shifts = VisitPass.useStableQuery(refs.public.shifts.listForUnit, {
     membershipId: membership.membershipId,
+    now,
   });
   // Read the selected Turno from the live list so the sheet follows its status.
   const selectedShift = QueryResult.isSuccess(shifts)

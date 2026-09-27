@@ -196,7 +196,7 @@ function PassShareBody({ shared }: { shared: SharedAuthorization }) {
         <Button
           size="lg"
           className="w-full"
-          onClick={() => void sharePassLink({ text: shareText, url })}
+          onClick={() => void sharePassLink(shareText)}
         >
           <MessageCircle data-icon="inline-start" />
           Enviar por WhatsApp

@@ -27,25 +27,20 @@ export function toMemberDisplayName(args: {
   return args.membership.displayName ?? args.membership.email;
 }
 
-/** Lowercase ASCII words joined by dashes, so the name is safe on any disk. */
-function toSlug(text: string) {
-  const slug = text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-  return slug.length > 0 ? slug : 'unidad';
-}
-
 /** `reporte-turno-<unit-slug>-<YYYY-MM-DD>-<HHmm>.xlsx`, local to the unit. */
 export function toShiftReportFileName(args: {
   readonly residentialUnitName: string;
   readonly shiftStart: number;
   readonly timeZone: string;
 }) {
-  const slug = toSlug(args.residentialUnitName);
+  // Lowercase ASCII words joined by dashes, so the name is safe on any disk.
+  const unitSlug = args.residentialUnitName
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  const slug = unitSlug.length > 0 ? unitSlug : 'unidad';
   const timestamp = formatFileTimestamp(args.shiftStart, args.timeZone);
 
   return `reporte-turno-${slug}-${timestamp}.xlsx`;

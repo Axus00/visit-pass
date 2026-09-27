@@ -269,8 +269,9 @@ function RecentVisitsCard({ now }: { now: number }) {
 
 function OnDutyCard({ now }: { now: number }) {
   const membership = MembershipRouteFeat.useCurrentMembership();
-  const shifts = useQuery(refs.public.shifts.listForUnit, {
+  const shifts = VisitPass.useStableQuery(refs.public.shifts.listForUnit, {
     membershipId: membership.membershipId,
+    now,
   });
 
   return (

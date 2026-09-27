@@ -382,6 +382,7 @@ describe('shifts', () => {
 
         const listed = yield* adminA.query(shifts.listForUnit, {
           membershipId: world.adminA,
+          now,
         });
         EffectVitestUtils.deepStrictEqual(
           listed.map((shift) => [shift._id, shift.status]),
@@ -424,6 +425,7 @@ describe('shifts', () => {
 
         const afterwards = yield* adminA.query(shifts.listForUnit, {
           membershipId: world.adminA,
+          now,
         });
         EffectVitestUtils.strictEqual(afterwards.length, 1);
         EffectVitestUtils.strictEqual(afterwards[0]?.status, 'closed');
@@ -433,6 +435,66 @@ describe('shifts', () => {
         );
         EffectVitestUtils.assertTrue(
           Predicate.isNotUndefined(afterwards[0]?.endedAt)
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'lists the soonest planned Turnos to the Administrador behind many later ones',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const adminA = yield* PorteriaFixtures.as('adminA');
+        const now = PorteriaFixtures.wallClockMillis();
+
+        const plannedShift = (daysAhead: number) => ({
+          residentialUnitId: world.unitA,
+          porterMembershipId: world.porterA,
+          plannedStart: now + daysAhead * 24 * MILLIS_PER_HOUR,
+          plannedEnd: now + daysAhead * 24 * MILLIS_PER_HOUR + MILLIS_PER_HOUR,
+          status: 'scheduled' as const,
+        });
+
+        const soonest = yield* adminA.mutation(shifts.schedule, {
+          membershipId: world.adminA,
+          porterMembershipId: world.porterA,
+          plannedStart: now + 24 * MILLIS_PER_HOUR,
+          plannedEnd: now + 25 * MILLIS_PER_HOUR,
+        });
+
+        // Missed long ago, then planned later but created after the soonest.
+        yield* confect.run(
+          Effect.forEach(
+            [-2, ...Array.from({ length: 150 }, (_, index) => index + 2)],
+            (daysAhead) =>
+              Effect.gen(function* () {
+                const writer = yield* DatabaseWriter;
+
+                yield* writer.table('shifts').insert(plannedShift(daysAhead));
+              }),
+            { discard: true }
+          ).pipe(Effect.orDie)
+        );
+
+        const listed = yield* adminA.query(shifts.listForUnit, {
+          membershipId: world.adminA,
+          now,
+        });
+        const listedIds = listed.map((shift) => shift._id);
+
+        EffectVitestUtils.strictEqual(listedIds[0], soonest);
+        EffectVitestUtils.assertTrue(
+          listed.every(
+            (shift) =>
+              (shift.plannedEnd ?? 0) > Shifts.earliestStartablePlannedEnd(now)
+          )
+        );
+        EffectVitestUtils.deepStrictEqual(
+          listed.map((shift) => shift.plannedStart),
+          listed
+            .map((shift) => shift.plannedStart)
+            .toSorted((a, b) => (a ?? 0) - (b ?? 0))
         );
       }).pipe(Effect.provide(TestConfect.layer))
   );

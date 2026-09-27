@@ -7,7 +7,7 @@ import {
   Mail,
 } from 'lucide-react';
 
-import { Badge, cn } from '@repo/ui';
+import { Badge, cn, tw } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
@@ -15,11 +15,11 @@ import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId
 import { SHIFT_REPORT_EMAIL_LABELS } from './admin.models';
 
 const EMAIL_TONES = {
-  notRequested: 'text-muted-foreground',
-  pending: 'text-muted-foreground',
-  sent: 'text-success',
-  failed: 'text-destructive',
-  notConfigured: 'text-warning',
+  notRequested: tw`text-muted-foreground`,
+  pending: tw`text-muted-foreground`,
+  sent: tw`text-success`,
+  failed: tw`text-destructive`,
+  notConfigured: tw`text-warning`,
 } as const satisfies Record<
   VisitPass.ShiftReportSummary['emailStatus'],
   string

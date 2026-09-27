@@ -110,6 +110,15 @@ const getOverviewImpl = FunctionImpl.make(
         Effect.catchTag(['GetByIdFailure', 'DocumentDecodeError'], Effect.die)
       );
 
+      // A Membresía whose Usuario was deleted no longer counts as active.
+      const [activeResidents, activePorters] = yield* Effect.all(
+        [
+          Memberships.filterActiveMembers(residents),
+          Memberships.filterActiveMembers(porters),
+        ],
+        { concurrency: 'unbounded' }
+      );
+
       const today = Calendar.toLocalDate(args.now, unit.timeZone);
       const allMemberships = [...residents, ...porters, ...administrators];
 
@@ -122,11 +131,8 @@ const getOverviewImpl = FunctionImpl.make(
           visitRetentionMonths: unit.visitRetentionMonths,
         },
         apartmentCount: apartments.length,
-        activeResidentCount: residents.filter(
-          (resident) => resident.status === 'active'
-        ).length,
-        porterCount: porters.filter((porter) => porter.status === 'active')
-          .length,
+        activeResidentCount: activeResidents.length,
+        porterCount: activePorters.length,
         pendingMembershipCount: allMemberships.filter(
           (member) => member.status === 'pending'
         ).length,
@@ -176,8 +182,9 @@ const listApartmentsImpl = FunctionImpl.make(
         { concurrency: 'unbounded' }
       ).pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
 
-      const activeResidentApartmentIds = residents
-        .filter((resident) => resident.status === 'active')
+      // A Residente whose Usuario was deleted no longer counts.
+      const activeResidents = yield* Memberships.filterActiveMembers(residents);
+      const activeResidentApartmentIds = activeResidents
         .map((resident) => resident.apartmentId)
         .filter(Predicate.isNotUndefined);
 

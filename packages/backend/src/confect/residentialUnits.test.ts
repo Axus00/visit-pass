@@ -3,7 +3,7 @@ import * as EffectVitestUtils from '@effect/vitest/utils';
 import * as Effect from 'effect/Effect';
 
 import refs from './_generated/refs';
-import { DatabaseWriter } from './_generated/services';
+import { DatabaseReader, DatabaseWriter } from './_generated/services';
 import * as Memberships from './modules/memberships';
 import * as ResidentialUnits from './modules/residentialUnits';
 import * as Visits from './modules/visits';
@@ -188,6 +188,49 @@ describe('residentialUnits', () => {
           new Memberships.AccessDeniedError()
         );
       }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect('stops counting active Membresías whose Usuario was deleted', () =>
+    Effect.gen(function* () {
+      const confect = yield* TestConfect.TestConfect;
+      const world = yield* TestFixtures.seedTwoUnits;
+      const admin = confect.withIdentity(TestFixtures.identityOf('adminA'));
+
+      // The Membresías stay active; only their Usuarios are soft-deleted.
+      yield* confect.run(
+        Effect.forEach(
+          ['residentA', 'porterA'],
+          (key) =>
+            Effect.gen(function* () {
+              const reader = yield* DatabaseReader;
+              const writer = yield* DatabaseWriter;
+
+              const user = yield* reader
+                .table('users')
+                .get('by_externalId', key);
+              yield* writer.table('users').patch(user._id, { deletedAt: 0 });
+            }),
+          { discard: true }
+        ).pipe(Effect.orDie)
+      );
+
+      const [overview, apartments] = yield* Effect.all([
+        admin.query(refs.public.residentialUnits.getOverview, {
+          membershipId: world.adminA,
+          now: NOW,
+        }),
+        admin.query(refs.public.residentialUnits.listApartments, {
+          membershipId: world.adminA,
+        }),
+      ]);
+
+      EffectVitestUtils.strictEqual(overview.activeResidentCount, 0);
+      EffectVitestUtils.strictEqual(overview.porterCount, 0);
+      EffectVitestUtils.deepStrictEqual(
+        apartments.map(({ activeResidentCount }) => activeResidentCount),
+        [0, 0, 0]
+      );
+    }).pipe(Effect.provide(TestConfect.layer))
   );
 
   it.effect('keeps Apartamentos and settings inside their own unit', () =>

@@ -252,7 +252,10 @@ const listMineImpl = FunctionImpl.make(
 // Public — Administrador
 // -*******************************************************************************-
 
-/** Open Turnos, then scheduled ones soonest first, then the latest closed. */
+/**
+ * Open Turnos, then scheduled ones still startable at `now` soonest first,
+ * then the latest closed.
+ */
 const listForUnitImpl = FunctionImpl.make(
   databaseSchema,
   shiftsSpec,
@@ -283,7 +286,18 @@ const listForUnitImpl = FunctionImpl.make(
       const [openShifts, scheduledShifts, closedShifts] = yield* Effect.all(
         [
           shiftsWithStatus('open', OPEN_FOR_UNIT_LIMIT),
-          shiftsWithStatus('scheduled', SCHEDULED_SCAN_LIMIT),
+          // Soonest planned end first, so the Turnos due next are never
+          // crowded out by ones planned far ahead or missed long ago.
+          reader
+            .table('shifts')
+            .index('by_residentialUnitId_and_status_and_plannedEnd', (q) =>
+              q
+                .eq('residentialUnitId', membership.residentialUnitId)
+                .eq('status', 'scheduled')
+                .gt('plannedEnd', Shifts.earliestStartablePlannedEnd(args.now))
+            )
+            .take(SCHEDULED_SCAN_LIMIT)
+            .pipe(Effect.orDie),
           shiftsWithStatus('closed', CLOSED_FOR_UNIT_LIMIT),
         ],
         { concurrency: 'unbounded' }

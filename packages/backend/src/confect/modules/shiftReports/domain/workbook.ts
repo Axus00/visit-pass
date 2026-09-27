@@ -61,24 +61,22 @@ const XLSX_CONTENT_TYPE =
 /** MIME type of the generated `.xlsx` file. */
 export const XLSX_MIME_TYPE = `${XLSX_CONTENT_TYPE}.sheet`;
 
-/** Whether XML 1.0 allows the code point; lone surrogates and most controls are out. */
-function isXmlCharacter(character: string) {
-  const codePoint = character.codePointAt(0) ?? 0;
-
-  return (
-    codePoint === 0x9 ||
-    codePoint === 0xa ||
-    codePoint === 0xd ||
-    (codePoint >= 0x20 && codePoint <= 0xd7ff) ||
-    (codePoint >= 0xe000 && codePoint <= 0xfffd) ||
-    codePoint >= 0x10000
-  );
-}
-
 /** Drops characters XML 1.0 forbids, then escapes markup. */
 function escapeXml(text: string) {
   return Array.from(text)
-    .filter(isXmlCharacter)
+    .filter((character) => {
+      // Lone surrogates and most control characters are out.
+      const codePoint = character.codePointAt(0) ?? 0;
+
+      return (
+        codePoint === 0x9 ||
+        codePoint === 0xa ||
+        codePoint === 0xd ||
+        (codePoint >= 0x20 && codePoint <= 0xd7ff) ||
+        (codePoint >= 0xe000 && codePoint <= 0xfffd) ||
+        codePoint >= 0x10000
+      );
+    })
     .join('')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -95,97 +93,72 @@ function toColumnName(index: number): string {
   return rest === 0 ? letter : `${toColumnName(rest - 1)}${letter}`;
 }
 
-function toCellXml(cell: Cell, reference: string, style: number) {
-  const styleAttribute = style === 0 ? '' : ` s="${style}"`;
-
-  if (Predicate.isNull(cell)) return '';
-  if (Predicate.isNumber(cell))
-    return `<c r="${reference}"${styleAttribute}><v>${cell}</v></c>`;
-
-  return `<c r="${reference}" t="inlineStr"${styleAttribute}><is><t xml:space="preserve">${escapeXml(cell)}</t></is></c>`;
-}
-
-function toSheetXml(sheet: Sheet) {
-  const columns = sheet.columnWidths
-    .map(
-      (width, index) =>
-        `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`
-    )
-    .join('');
-
-  const rows = sheet.rows
-    .map((row, rowIndex) => {
-      const rowNumber = rowIndex + 1;
-      const isHeader = sheet.headerRow && rowIndex === 0;
-      const cells = row
-        .map((cell, columnIndex) =>
-          toCellXml(
-            cell,
-            `${toColumnName(columnIndex)}${rowNumber}`,
-            isHeader ? 1 : 0
-          )
-        )
-        .join('');
-
-      return `<row r="${rowNumber}">${cells}</row>`;
-    })
-    .join('');
-
-  const frozenHeader = sheet.headerRow
-    ? '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
-    : '';
-
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${frozenHeader}<cols>${columns}</cols><sheetData>${rows}</sheetData></worksheet>`;
-}
-
 function isVoided(visit: ShiftReportVisitRow) {
   return Predicate.isNotUndefined(visit.voidedAt);
 }
 
-function toVisitRow(visit: ShiftReportVisitRow, timeZone: string): Row {
-  const voidNote = isVoided(visit)
-    ? `Anulada: ${visit.voidReason ?? 'sin motivo'}`
-    : null;
-  const overrideNote = Predicate.isUndefined(visit.overriddenRejection)
-    ? null
-    : `Ingreso forzado: ${PASS_REJECTION_LABELS[visit.overriddenRejection]}`;
-  const notes = [voidNote, overrideNote].filter(Predicate.isNotNull);
-  const observation = notes.length > 0 ? notes.join(' · ') : null;
+/**
+ * The XML parts of the Reporte de turno workbook, keyed by their path inside
+ * the `.xlsx` zip: a "Visitas" sheet with one row per Visita in Ingreso order,
+ * voided ones last, and a "Resumen" sheet with the Turno and its totals. Dates
+ * are text in the unit's time zone, so the file reads the same wherever it is
+ * opened.
+ */
+export function buildShiftReportWorkbookParts(args: {
+  readonly content: ShiftReportContent;
+  readonly generatedAt: number;
+}): Record<string, string> {
+  const { content, generatedAt } = args;
+  const { timeZone } = content;
 
-  return [
-    visit.visitorName,
-    visit.visitorDocument ?? null,
-    visit.apartmentLabel,
-    VISIT_TYPE_LABELS[visit.visitType],
-    VISIT_ORIGIN_LABELS[visit.origin],
-    visit.plate ?? null,
-    formatLocalDateTime(visit.enteredAt, timeZone),
-    Predicate.isUndefined(visit.exitedAt)
+  const visits = [...content.visits].sort(
+    (left, right) =>
+      Number(isVoided(left)) - Number(isVoided(right)) ||
+      left.enteredAt - right.enteredAt
+  );
+
+  const visitRows = visits.map((visit): Row => {
+    const voidNote = isVoided(visit)
+      ? `Anulada: ${visit.voidReason ?? 'sin motivo'}`
+      : null;
+    const overrideNote = Predicate.isUndefined(visit.overriddenRejection)
       ? null
-      : formatLocalDateTime(visit.exitedAt, timeZone),
-    visit.entryPorterName,
-    observation,
-  ];
-}
+      : `Ingreso forzado: ${PASS_REJECTION_LABELS[visit.overriddenRejection]}`;
+    const notes = [voidNote, overrideNote].filter(Predicate.isNotNull);
+    const observation = notes.length > 0 ? notes.join(' · ') : null;
 
-/** Voided Visitas are listed but never counted. */
-function toSummaryRows(content: ShiftReportContent, generatedAt: number) {
+    return [
+      visit.visitorName,
+      visit.visitorDocument ?? null,
+      visit.apartmentLabel,
+      VISIT_TYPE_LABELS[visit.visitType],
+      VISIT_ORIGIN_LABELS[visit.origin],
+      visit.plate ?? null,
+      formatLocalDateTime(visit.enteredAt, timeZone),
+      Predicate.isUndefined(visit.exitedAt)
+        ? null
+        : formatLocalDateTime(visit.exitedAt, timeZone),
+      visit.entryPorterName,
+      observation,
+    ];
+  });
+
+  // Voided Visitas are listed but never counted.
   const countedVisits = content.visits.filter((visit) => !isVoided(visit));
   const count = (predicate: (visit: ShiftReportVisitRow) => boolean) =>
     countedVisits.filter(predicate).length;
   const formatInstant = (epochMillis: number | undefined, fallback: string) =>
     Predicate.isUndefined(epochMillis)
       ? fallback
-      : formatLocalDateTime(epochMillis, content.timeZone);
+      : formatLocalDateTime(epochMillis, timeZone);
 
-  return [
+  const summaryRows = [
     ['Reporte de turno', null],
     ['Unidad residencial', content.residentialUnitName],
     ['Portero', content.porterName],
     ['Inicio del turno', formatInstant(content.shiftStartedAt, 'Sin iniciar')],
     ['Fin del turno', formatInstant(content.shiftEndedAt, 'Turno abierto')],
-    ['Generado', formatLocalDateTime(generatedAt, content.timeZone)],
+    ['Generado', formatLocalDateTime(generatedAt, timeZone)],
     [null, null],
     ['Total de visitas', countedVisits.length],
     ['Por Pase QR', count((visit) => visit.origin === 'pass')],
@@ -206,48 +179,62 @@ function toSummaryRows(content: ShiftReportContent, generatedAt: number) {
       content.visits.length - countedVisits.length,
     ],
   ] satisfies ReadonlyArray<Row>;
-}
-
-/**
- * The XML parts of the Reporte de turno workbook, keyed by their path inside
- * the `.xlsx` zip: a "Visitas" sheet with one row per Visita in Ingreso order,
- * voided ones last, and a "Resumen" sheet with the Turno and its totals. Dates
- * are text in the unit's time zone, so the file reads the same wherever it is
- * opened.
- */
-export function buildShiftReportWorkbookParts(args: {
-  readonly content: ShiftReportContent;
-  readonly generatedAt: number;
-}): Record<string, string> {
-  const visits = [...args.content.visits].sort(
-    (left, right) =>
-      Number(isVoided(left)) - Number(isVoided(right)) ||
-      left.enteredAt - right.enteredAt
-  );
 
   const sheets: ReadonlyArray<Sheet> = [
     {
       name: 'Visitas',
       columnWidths: [28, 16, 18, 14, 16, 10, 18, 18, 24, 36],
       headerRow: true,
-      rows: [
-        VISIT_COLUMNS,
-        ...visits.map((visit) => toVisitRow(visit, args.content.timeZone)),
-      ],
+      rows: [VISIT_COLUMNS, ...visitRows],
     },
     {
       name: 'Resumen',
       columnWidths: [24, 36],
       headerRow: false,
-      rows: toSummaryRows(args.content, args.generatedAt),
+      rows: summaryRows,
     },
   ];
 
   const sheetParts = Object.fromEntries(
-    sheets.map((sheet, index) => [
-      `xl/worksheets/sheet${index + 1}.xml`,
-      toSheetXml(sheet),
-    ])
+    sheets.map((sheet, index) => {
+      const columns = sheet.columnWidths
+        .map(
+          (width, columnIndex) =>
+            `<col min="${columnIndex + 1}" max="${columnIndex + 1}" width="${width}" customWidth="1"/>`
+        )
+        .join('');
+
+      const rows = sheet.rows
+        .map((row, rowIndex) => {
+          const rowNumber = rowIndex + 1;
+          const isHeader = sheet.headerRow && rowIndex === 0;
+          // Style 1 is the bold header font in `xl/styles.xml`.
+          const styleAttribute = isHeader ? ' s="1"' : '';
+          const cells = row
+            .map((cell, columnIndex) => {
+              const reference = `${toColumnName(columnIndex)}${rowNumber}`;
+
+              if (Predicate.isNull(cell)) return '';
+              if (Predicate.isNumber(cell))
+                return `<c r="${reference}"${styleAttribute}><v>${cell}</v></c>`;
+
+              return `<c r="${reference}" t="inlineStr"${styleAttribute}><is><t xml:space="preserve">${escapeXml(cell)}</t></is></c>`;
+            })
+            .join('');
+
+          return `<row r="${rowNumber}">${cells}</row>`;
+        })
+        .join('');
+
+      const frozenHeader = sheet.headerRow
+        ? '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+        : '';
+
+      const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">${frozenHeader}<cols>${columns}</cols><sheetData>${rows}</sheetData></worksheet>`;
+
+      return [`xl/worksheets/sheet${index + 1}.xml`, sheetXml];
+    })
   );
 
   const sheetOverrides = sheets

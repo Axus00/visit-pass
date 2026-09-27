@@ -27,16 +27,20 @@ function PorteriaScanPage() {
   const { membershipId } = MembershipRouteFeat.useCurrentMembership();
   const navigate = useNavigate();
   const shiftState = PorteriaRouteFeat.usePorterShiftState();
-  const now = VisitPass.useNow();
   /**
    * The Pase being checked and when it was read. `now` stays fixed per scan so
    * the resolution does not re-subscribe (and remount the card) every minute.
    */
   const [scan, setScan] = useState<{ token: string; now: number } | null>(null);
   const token = scan?.token ?? null;
-  /** Holds the admitted Pase while its Ingreso saves and the Pase turns used. */
-  const [heldResolution, setHeldResolution] =
-    useState<PorteriaRouteFeat.PassResolution | null>(null);
+  /**
+   * Holds an admitted Pase while its Ingreso saves and the Pase turns used,
+   * keyed by token so it never stands in for a Pase scanned since.
+   */
+  const [heldResolution, setHeldResolution] = useState<{
+    token: string;
+    resolution: PorteriaRouteFeat.PassResolution;
+  } | null>(null);
 
   const liveResolution = useQuery(
     refs.public.visits.resolvePass,
@@ -44,15 +48,35 @@ function PorteriaScanPage() {
       ? 'skip'
       : { membershipId, token: scan.token, now: scan.now }
   );
-  const resolution =
-    heldResolution ??
-    (QueryResult.isSuccess(liveResolution) ? liveResolution.value : null);
+  const isHeldForScan =
+    Predicate.isNotNull(heldResolution) && heldResolution.token === token;
+  const liveValue = QueryResult.isSuccess(liveResolution)
+    ? liveResolution.value
+    : null;
+  const resolution = isHeldForScan ? heldResolution.resolution : liveValue;
   const hasNoOpenShift =
     Predicate.isNotNull(shiftState) && Predicate.isNull(shiftState.openShift);
 
   const scanAnother = () => {
     setHeldResolution(null);
     setScan(null);
+  };
+
+  /** Stamps each scan with the real time it was read, not the ticking `now`. */
+  const startScan = (nextToken: string) => {
+    setHeldResolution(null);
+    setScan({ token: nextToken, now: Date.now() });
+  };
+
+  /**
+   * Clears a registered Pase, unless the Portero already moved on to another
+   * one while its Ingreso was saving.
+   */
+  const finishRegistration = (registeredToken: string) => {
+    setHeldResolution((held) =>
+      held?.token === registeredToken ? null : held
+    );
+    setScan((current) => (current?.token === registeredToken ? null : current));
   };
 
   const acceptCode = (rawValue: string) => {
@@ -64,7 +88,7 @@ function PorteriaScanPage() {
     }
 
     navigator.vibrate?.(80);
-    setScan({ token: parsedToken, now });
+    startScan(parsedToken);
     return true;
   };
 
@@ -103,13 +127,19 @@ function PorteriaScanPage() {
             Match.value(resolution).pipe(
               Match.when({ outcome: 'admissible' }, ({ pass }) => (
                 <PorteriaRouteFeat.AdmissiblePassCard
+                  key={token}
                   pass={pass}
                   token={token}
                   canRegister={!hasNoOpenShift}
-                  onSubmittingChange={(isSubmitting) =>
-                    setHeldResolution(isSubmitting ? resolution : null)
+                  onSubmittingChange={(submittingToken, isSubmitting) =>
+                    setHeldResolution((held) => {
+                      if (isSubmitting)
+                        return { token: submittingToken, resolution };
+
+                      return held?.token === submittingToken ? null : held;
+                    })
                   }
-                  onRegistered={scanAnother}
+                  onRegistered={finishRegistration}
                   onScanAnother={scanAnother}
                 />
               )),
@@ -141,12 +171,7 @@ function PorteriaScanPage() {
           )}
         </div>
 
-        <ManualCodeCard
-          onToken={(nextToken) => {
-            setHeldResolution(null);
-            setScan({ token: nextToken, now });
-          }}
-        />
+        <ManualCodeCard onToken={startScan} />
       </div>
     </>
   );

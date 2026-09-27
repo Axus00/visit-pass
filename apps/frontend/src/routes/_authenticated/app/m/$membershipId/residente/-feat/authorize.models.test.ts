@@ -79,6 +79,14 @@ describe('buildCreateAuthorizationPayload', () => {
     });
   });
 
+  it('sends a cleared Servicio end date as missing', () => {
+    expect(
+      buildCreateAuthorizationPayload(
+        temporary({ type: 'service', endDate: '' })
+      )
+    ).toHaveProperty('endDate', undefined);
+  });
+
   it('sends the range and weekdays for Servicio', () => {
     const payload = buildCreateAuthorizationPayload(
       temporary({ type: 'service', endDate: '2026-10-31', weekdays: [2, 4] })
@@ -115,6 +123,47 @@ describe('validateAuthorizeForm', () => {
       validateAuthorizeForm(temporary({ startDate: '2026-09-25' }), today)
         ?.fields
     ).toHaveProperty('startDate');
+  });
+
+  it('asks for a cleared Servicio end date instead of calling it out of order', () => {
+    expect(
+      validateAuthorizeForm(temporary({ type: 'service', endDate: '' }), today)
+        ?.fields
+    ).toEqual({ endDate: 'Indica la fecha final.' });
+  });
+
+  it('asks for a cleared start date instead of calling it past', () => {
+    expect(
+      validateAuthorizeForm(temporary({ startDate: '' }), today)?.fields
+    ).toEqual({ startDate: 'Indica la fecha.' });
+    expect(
+      validateAuthorizeForm(
+        temporary({
+          type: 'event',
+          startDate: '',
+          guests: [{ name: 'Ana', document: '' }],
+        }),
+        today
+      )?.fields
+    ).toEqual({ startDate: 'Indica la fecha.' });
+    expect(
+      validateAuthorizeForm(
+        temporary({ type: 'service', startDate: '', endDate: '2026-10-31' }),
+        today
+      )?.fields
+    ).toEqual({ startDate: 'Indica la fecha de inicio.' });
+  });
+
+  it('keeps the field errors alongside a missing start date', () => {
+    expect(
+      validateAuthorizeForm(
+        temporary({ startDate: '', visitorName: '' }),
+        today
+      )?.fields
+    ).toEqual({
+      startDate: 'Indica la fecha.',
+      visitorName: 'Escribe el nombre del Visitante.',
+    });
   });
 
   it('points Servicio range and weekday problems at their fields', () => {

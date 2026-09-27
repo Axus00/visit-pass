@@ -123,7 +123,8 @@ export function buildCreateAuthorizationPayload(
   return {
     type: 'service',
     startDate: values.startDate,
-    endDate: values.endDate,
+    // A cleared "Fecha final" reads as missing, not as an empty date.
+    endDate: optionalText(values.endDate),
     weekdays: values.weekdays,
     visitors: [visitor],
   };
@@ -167,8 +168,9 @@ const REASON_FIELD = {
 
 /**
  * Form-level check: field rules for the fields the chosen type
- * shows, then the backend's own validity rules. Returns TanStack Form's
- * `{ fields }` shape, or `undefined` when the form can be sent.
+ * shows, then the backend's own validity rules once there is a start date to
+ * run them on. Returns TanStack Form's `{ fields }` shape, or `undefined` when
+ * the form can be sent.
  */
 export function validateAuthorizeForm(
   values: AuthorizeFormValues,
@@ -177,9 +179,19 @@ export function validateAuthorizeForm(
   const eventNameTooLong =
     values.type === 'event' &&
     values.eventName.trim().length > AuthorizationsShared.EVENT_NAME_MAX_LENGTH;
+  const isMissingStartDate = values.startDate.trim().length === 0;
+  const missingStartDateMessage =
+    values.type === 'service'
+      ? 'Indica la fecha de inicio.'
+      : 'Indica la fecha.';
+  const startDateCheck = [
+    'startDate',
+    isMissingStartDate ? missingStartDateMessage : undefined,
+  ] as const;
   const fieldChecks: ReadonlyArray<readonly [string, string | undefined]> =
     values.type === 'event'
       ? [
+          startDateCheck,
           [
             'eventName',
             eventNameTooLong
@@ -195,12 +207,15 @@ export function validateAuthorizeForm(
           ]),
         ]
       : [
+          startDateCheck,
           ['visitorName', validateVisitorName(values.visitorName)],
           ['visitorDocument', validateVisitorDocument(values.visitorDocument)],
         ];
   const fields: FieldErrors = Object.fromEntries(
     fieldChecks.filter(([, error]) => Predicate.isNotUndefined(error))
   );
+
+  if (isMissingStartDate) return { fields };
 
   const validity = AuthorizationsShared.resolveAuthorizationValidity(
     buildCreateAuthorizationPayload(values),

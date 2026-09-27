@@ -29,20 +29,6 @@ const ResendEmailRequestJson = Schema.fromJsonString(
   })
 );
 
-function toBase64(bytes: Uint8Array) {
-  const chunkCount = Math.ceil(bytes.length / BASE64_CHUNK_SIZE);
-  const binary = Array.from({ length: chunkCount }, (_, index) =>
-    String.fromCharCode(
-      ...bytes.subarray(
-        index * BASE64_CHUNK_SIZE,
-        (index + 1) * BASE64_CHUNK_SIZE
-      )
-    )
-  ).join('');
-
-  return btoa(binary);
-}
-
 /**
  * Sends through Resend's REST API, because `@convex-dev/resend` cannot attach
  * files. Reads `RESEND_API_KEY` and `SHIFT_REPORT_FROM_EMAIL` per call and
@@ -59,6 +45,18 @@ export const resendShiftReportMailerLayer = Layer.succeed(
 
       if (!isConfigured) return 'notConfigured' as const;
 
+      // Resend takes the attachment as base64; `btoa` needs a binary string.
+      const { content } = args.attachment;
+      const chunkCount = Math.ceil(content.length / BASE64_CHUNK_SIZE);
+      const contentBinary = Array.from({ length: chunkCount }, (_, index) =>
+        String.fromCharCode(
+          ...content.subarray(
+            index * BASE64_CHUNK_SIZE,
+            (index + 1) * BASE64_CHUNK_SIZE
+          )
+        )
+      ).join('');
+
       const body = yield* Schema.encodeEffect(ResendEmailRequestJson)({
         from,
         to: args.to.slice(0, MAX_RECIPIENTS),
@@ -67,7 +65,7 @@ export const resendShiftReportMailerLayer = Layer.succeed(
         attachments: [
           {
             filename: args.attachment.fileName,
-            content: toBase64(args.attachment.content),
+            content: btoa(contentBinary),
           },
         ],
       }).pipe(Effect.orDie);

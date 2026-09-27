@@ -6,8 +6,7 @@ import type { Id } from '#convex/_generated/dataModel';
 import { DatabaseReader } from '../../../_generated/services';
 import * as AuthorizationsDomain from '../../authorizations/domain';
 import * as CalendarDomain from '../../calendar/domain';
-import * as UsersApplication from '../../users/application';
-import * as UsersDomain from '../../users/domain';
+import * as MembershipsApplication from '../../memberships/application';
 
 /** Voided Visitas may stay open; a live one is the newest, read first. */
 const OPEN_VISITS_PER_PASS_LIMIT = 10;
@@ -89,19 +88,10 @@ export const evaluatePassByToken = Effect.fn('Visits.evaluatePassByToken')(
         : [passId, ...chainEndingAt(replacedPassId)];
     };
 
-    // An active Membresía always links a Usuario; a deleted one no longer counts.
-    const [residentUsers, openVisits] = yield* Effect.all(
+    // A Residente whose Usuario was deleted no longer counts.
+    const [liveResidents, openVisits] = yield* Effect.all(
       [
-        Effect.forEach(
-          activeResidents
-            .map((membership) => membership.userId)
-            .filter(Predicate.isNotUndefined),
-          (userId) =>
-            UsersApplication.getOneById(userId).pipe(
-              UsersDomain.isActiveOrNull
-            ),
-          { concurrency: 'unbounded' }
-        ),
+        MembershipsApplication.filterActiveMembers(activeResidents),
         Effect.forEach(
           chainEndingAt(pass._id),
           (passId) =>
@@ -123,7 +113,7 @@ export const evaluatePassByToken = Effect.fn('Visits.evaluatePassByToken')(
       pass,
       authorization,
       today: CalendarDomain.toLocalDate(args.now, unit.timeZone),
-      apartmentHasActiveResident: residentUsers.some(Predicate.isNotNull),
+      apartmentHasActiveResident: liveResidents.length > 0,
       visitorIsInside: openVisits
         .flat()
         .some((visit) => Predicate.isUndefined(visit.voidedAt)),
