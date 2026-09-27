@@ -50,8 +50,8 @@ The owning domain module defines the complete persisted field schema. Files unde
 
 ```ts
 export default Table.make(
-    () => ExampleWorkflowsDomain.ExampleWorkflowRunsTableSchema
-).index('by_requestedBy', ['requestedBy']);
+    () => ShiftReportsDomain.ShiftReportsTableSchema
+).index('by_shiftId', ['shiftId']);
 ```
 
 Build derived DTOs and projections from the owning `<Entities>TableSchema` with `mapFields`, `Struct.pick`, and `Struct.omit`, so every persisted field is defined once.
@@ -72,7 +72,7 @@ This keeps two sensitive load graphs pure:
 
 Convex's V8 runtime rejects dynamic `import()`, so `refs`-dependent code moves into `*.impl.ts`.
 
-Use namespace imports for module and cross-layer APIs. Name a module barrel `<Module>` (`ExampleWorkflows`), a cross-module layer `<Module><Layer>` (`UsersDomain`), and an intra-module layer `<Layer>` (`Domain`). Within the same layer, use plain named imports (`import { identifier } from './file'`).
+Use namespace imports for module and cross-layer APIs. Name a module barrel `<Module>` (`ShiftReports`), a cross-module layer `<Module><Layer>` (`UsersDomain`), and an intra-module layer `<Layer>` (`Domain`). Within the same layer, use plain named imports (`import { identifier } from './file'`).
 
 Common violations have misleading symptoms:
 

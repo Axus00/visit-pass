@@ -36,13 +36,15 @@ export function InputField({
   const error = getFieldErrorMessage(field);
   const hasNumberValue = typeof field.state.value === 'number';
   const shouldUseNumericPattern = numeric && !hasNumberValue;
+  // A cleared number input reads as NaN; show it empty instead of passing NaN.
+  const inputValue = Number.isNaN(field.state.value) ? '' : field.state.value;
 
   const labelElement = (
     <Label htmlFor={inputId} className="gap-1">
       {label}
       {required ? <span className="text-destructive">*</span> : null}
       {optional ? (
-        <span className="font-normal text-muted-foreground">(Optional)</span>
+        <span className="font-normal text-muted-foreground">(opcional)</span>
       ) : null}
     </Label>
   );
@@ -50,7 +52,7 @@ export function InputField({
   return (
     <div
       className="flex flex-col gap-1.5"
-      data-invalid={error ? '' : undefined}
+      data-invalid={Predicate.isNull(error) ? undefined : ''}
     >
       {Predicate.isUndefined(labelHint) ? (
         labelElement
@@ -67,7 +69,7 @@ export function InputField({
         inputMode={numeric ? 'numeric' : inputMode}
         pattern={shouldUseNumericPattern ? '[0-9]*' : inputProps.pattern}
         type={hasNumberValue ? 'number' : inputProps.type}
-        value={field.state.value}
+        value={inputValue}
         onBlur={field.handleBlur}
         onChange={(event) => {
           const nextValue = hasNumberValue
@@ -78,10 +80,12 @@ export function InputField({
 
           field.handleChange(nextValue);
         }}
-        aria-invalid={error !== null}
+        aria-invalid={Predicate.isNotNull(error)}
         aria-required={required}
       />
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {Predicate.isNull(error) ? null : (
+        <p className="text-xs text-destructive">{error}</p>
+      )}
     </div>
   );
 }
@@ -90,9 +94,9 @@ export function getFieldErrorMessage(field: AnyFieldApi) {
   const firstError = field.state.meta.errors.at(0) as
     { message?: string } | string | undefined;
 
-  if (!firstError) return null;
+  if (Predicate.isUndefined(firstError)) return null;
 
-  return typeof firstError === 'string'
+  return Predicate.isString(firstError)
     ? firstError
     : (firstError.message ?? null);
 }

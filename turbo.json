@@ -28,7 +28,9 @@
         "CONVEX_SITE_URL",
         "WORKOS_API_KEY",
         "WORKOS_CLIENT_ID",
-        "WORKOS_WEBHOOK_SECRET"
+        "WORKOS_WEBHOOK_SECRET",
+        "RESEND_API_KEY",
+        "SHIFT_REPORT_FROM_EMAIL"
       ],
       "outputs": []
     },

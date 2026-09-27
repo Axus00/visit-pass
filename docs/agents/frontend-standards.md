@@ -29,7 +29,7 @@ Forms.useAppForm({ ... });
 ```ts
 import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 
-AppRouteFeat.ExampleWorkflowPanel;
+AppRouteFeat.useMyAccess();
 ```
 
 ## Forms
