@@ -18,6 +18,7 @@ import * as Shifts from './modules/shifts';
 const LIST_FOR_APARTMENT_LATEST_LIMIT = 50;
 /** Active Autorizaciones still valid today or later, however old. */
 const LIST_FOR_APARTMENT_CURRENT_LIMIT = 200;
+/** A Residente's whole Favoritos list; `createFavorite` refuses past it. */
 const FAVORITES_LIMIT = 200;
 
 // -*******************************************************************************-
@@ -457,7 +458,11 @@ const listFavoritesImpl = FunctionImpl.make(
 
       const favorites = yield* reader
         .table('favorites')
-        .index('by_membershipId', (q) => q.eq('membershipId', membership._id))
+        .index(
+          'by_membershipId',
+          (q) => q.eq('membershipId', membership._id),
+          'desc'
+        )
         .take(FAVORITES_LIMIT)
         .pipe(Effect.orDie);
 
@@ -484,11 +489,23 @@ const createFavoriteImpl = FunctionImpl.make(
   'createFavorite',
   (args) =>
     Effect.gen(function* () {
+      const reader = yield* DatabaseReader;
       const writer = yield* DatabaseWriter;
 
       const { membership } = yield* Authorizations.requireResidentApartment(
         args.membershipId
       );
+
+      // Reading up to the cap is enough to tell the list is full.
+      const favorites = yield* reader
+        .table('favorites')
+        .index('by_membershipId', (q) => q.eq('membershipId', membership._id))
+        .take(FAVORITES_LIMIT)
+        .pipe(Effect.orDie);
+      if (favorites.length >= FAVORITES_LIMIT)
+        return yield* new Authorizations.FavoriteLimitReachedError({
+          limit: FAVORITES_LIMIT,
+        });
 
       return yield* writer
         .table('favorites')

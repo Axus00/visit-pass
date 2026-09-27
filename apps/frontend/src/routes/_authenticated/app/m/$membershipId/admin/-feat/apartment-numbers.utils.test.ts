@@ -73,6 +73,22 @@ describe('parseApartmentNumbers', () => {
     expect(failure('101, 1o2-/x')).toContain('1o2-/x');
   });
 
+  it('rejects range ends past the safe integers without expanding them', () => {
+    const startedAt = performance.now();
+
+    expect(failure('9007199254740993-9007199254740993')).toContain(
+      '9007199254740993-9007199254740993'
+    );
+    expect(performance.now() - startedAt).toBeLessThan(1000);
+  });
+
+  it('rejects range ends longer than an Apartamento number', () => {
+    const longEnd = `${'0'.repeat(20)}1`;
+
+    expect(failure(`1-${longEnd}`)).toContain(longEnd);
+    expect(failure(`${longEnd}-2`)).toContain(longEnd);
+  });
+
   it('rejects more numbers than one batch allows', () => {
     expect(failure(`1-${MAX_APARTMENTS_PER_BATCH + 1}`)).toContain(
       String(MAX_APARTMENTS_PER_BATCH)

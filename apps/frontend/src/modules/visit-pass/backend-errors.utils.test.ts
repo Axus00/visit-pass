@@ -12,6 +12,28 @@ describe('describeBackendError', () => {
     ).toBe('La unidad alcanzó el máximo de 2000 Apartamentos.');
   });
 
+  it('names the Favoritos limit the Residente reached', () => {
+    expect(
+      describeBackendError({
+        _tag: 'Authorizations/FavoriteLimitReachedError',
+        limit: 200,
+      })
+    ).toBe(
+      'Llegaste al máximo de 200 Favoritos; elimina alguno para guardar otro.'
+    );
+  });
+
+  it('asks to cancel a Turno when the unit has too many scheduled', () => {
+    expect(
+      describeBackendError({
+        _tag: 'Shifts/InvalidShiftScheduleError',
+        reason: 'tooManyScheduled',
+      })
+    ).toBe(
+      'La unidad ya tiene el máximo de Turnos programados; cancela alguno antes de programar otro.'
+    );
+  });
+
   it('describes a reason before its tag', () => {
     expect(
       describeBackendError({

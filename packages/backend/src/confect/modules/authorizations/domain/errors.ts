@@ -36,6 +36,12 @@ export class PassNotActiveError extends Schema.TaggedError<PassNotActiveError>()
   {}
 ) {}
 
+/** A Residente keeps at most as many Favoritos as their list shows. */
+export class FavoriteLimitReachedError extends Schema.TaggedError<FavoriteLimitReachedError>()(
+  'Authorizations/FavoriteLimitReachedError',
+  { limit: Schema.Finite }
+) {}
+
 export class FavoriteNotFoundError extends Schema.TaggedError<FavoriteNotFoundError>()(
   'Authorizations/FavoriteNotFoundError',
   {}

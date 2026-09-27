@@ -91,6 +91,8 @@ export const MembershipDetail = Schema.Struct({
   /** The linked Usuario's name once active, else the name the Administrador typed. */
   name: Schema.optional(Schema.String),
   apartmentLabel: Schema.optional(Schema.String),
+  /** The linked Usuario was deleted: the seat can no longer sign in or be relied on. */
+  isAccountDeleted: Schema.Boolean,
 });
 
 export type MembershipDetail = typeof MembershipDetail.Type;

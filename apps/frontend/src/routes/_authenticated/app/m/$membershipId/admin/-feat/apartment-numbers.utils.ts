@@ -37,6 +37,17 @@ export function parseApartmentNumbers(
       const [, startText = '', endText = ''] = range;
       const start = Number(startText);
       const end = Number(endText);
+      // Ends past the safe integers would never finish the expansion loop.
+      const hasValidEnds = [startText, endText].every(
+        (rangeEnd) =>
+          rangeEnd.length <= ResidentialUnitsShared.APARTMENT_PART_MAX_LENGTH &&
+          Number.isSafeInteger(Number(rangeEnd))
+      );
+
+      if (!hasValidEnds)
+        return Result.fail(
+          `No entendemos «${token}». Usa números como 101 o rangos como 101-104.`
+        );
 
       if (end < start)
         return Result.fail(

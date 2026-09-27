@@ -93,11 +93,14 @@ function PorteriaScanPage() {
     return true;
   };
 
-  const goToManualEntry = (search: ManualEntrySearch) =>
+  /** The prefill travels in history state, keeping personal data out of the URL. */
+  const goToManualEntry = (
+    manualEntryPrefill?: PorteriaRouteFeat.ManualEntryPrefill
+  ) =>
     void navigate({
       to: '/app/m/$membershipId/porteria/registro',
       params: { membershipId },
-      search,
+      state: { manualEntryPrefill },
     });
 
   return (
@@ -156,10 +159,10 @@ function PorteriaScanPage() {
                   onForceManualEntry={() =>
                     goToManualEntry({
                       token,
-                      name: pass.visitorName,
-                      document: pass.visitorDocument,
+                      visitorName: pass.visitorName,
+                      visitorDocument: pass.visitorDocument,
                       apartmentId: pass.apartmentId,
-                      visitType: pass.type,
+                      type: pass.type,
                       reason,
                     })
                   }
@@ -168,7 +171,7 @@ function PorteriaScanPage() {
               Match.when({ outcome: 'notFound' }, () => (
                 <PorteriaRouteFeat.PassNotFoundCard
                   onScanAnother={scanAnother}
-                  onManualEntry={() => goToManualEntry({})}
+                  onManualEntry={() => goToManualEntry()}
                 />
               )),
               Match.exhaustive
@@ -181,15 +184,6 @@ function PorteriaScanPage() {
     </>
   );
 }
-
-type ManualEntrySearch = {
-  token?: string | undefined;
-  name?: string | undefined;
-  document?: string | undefined;
-  apartmentId?: string | undefined;
-  visitType?: VisitPass.VisitType | undefined;
-  reason?: VisitPass.PassRejectionReason | undefined;
-};
 
 function ResolvingCard({
   error,

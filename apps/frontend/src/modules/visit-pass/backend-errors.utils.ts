@@ -34,6 +34,10 @@ const MESSAGES_BY_TAG: Record<
   'Authorizations/PassNotFoundError': 'El Pase no existe.',
   'Authorizations/PassNotActiveError': 'El Pase ya no está vigente.',
   'Authorizations/FavoriteNotFoundError': 'El Favorito no existe.',
+  'Authorizations/FavoriteLimitReachedError': ({ limit }) =>
+    Predicate.isNumber(limit)
+      ? `Llegaste al máximo de ${limit} Favoritos; elimina alguno para guardar otro.`
+      : 'Llegaste al máximo de Favoritos; elimina alguno para guardar otro.',
   'Visits/VisitNotFoundError': 'La Visita no existe.',
   'Visits/VisitAlreadyExitedError': 'La Salida ya estaba registrada.',
   'Visits/VisitAlreadyVoidedError': 'La Visita ya estaba anulada.',
@@ -64,6 +68,8 @@ const MESSAGES_BY_REASON: Record<string, string> = {
   singleVisitorRequired: 'Este tipo de Autorización admite un solo Visitante.',
   tooLong: 'Un Turno no puede durar más de 24 horas.',
   endsInThePast: 'El Turno ya habría terminado. Elige un horario futuro.',
+  tooManyScheduled:
+    'La unidad ya tiene el máximo de Turnos programados; cancela alguno antes de programar otro.',
   notAPorter: 'La Membresía elegida no es de un Portero activo.',
   shiftNotStarted:
     'El Turno aún no ha comenzado; genera el Reporte cuando esté en curso o cerrado.',

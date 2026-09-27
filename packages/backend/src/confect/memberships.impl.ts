@@ -182,23 +182,28 @@ const listForUnitImpl = FunctionImpl.make(
         [...administrators, ...porters, ...residents],
         (member) =>
           Effect.gen(function* () {
-            // A pending invitation shows only what the Administrador typed, so
-            // it never reveals whether the email has an account.
-            const isLinked =
-              member.status !== 'pending' &&
-              Predicate.isNotUndefined(member.userId);
+            // Only activation links a Usuario, so a pending invitation never
+            // reveals whether the email has an account.
+            const { userId } = member;
+            const linkedUser = Predicate.isUndefined(userId)
+              ? null
+              : yield* Users.getOneById(userId).pipe(Users.isActiveOrNull);
 
-            const user = isLinked
-              ? yield* Users.getOneById(member.userId)
-              : null;
+            const isAccountDeleted =
+              Predicate.isNotUndefined(userId) && Predicate.isNull(linkedUser);
 
-            // The linked Usuario's name, else the name the Administrador typed.
-            const userName = Predicate.isNull(user)
-              ? ''
-              : [user.firstName, user.lastName]
+            // An active seat shows its Usuario's current name; pending and
+            // revoked rows keep what was stored, so a unit never follows a
+            // departed person.
+            const isNamedByUser =
+              member.status === 'active' && Predicate.isNotNull(linkedUser);
+
+            const userName = isNamedByUser
+              ? [linkedUser.firstName, linkedUser.lastName]
                   .filter(Predicate.isNotNull)
                   .join(' ')
-                  .trim();
+                  .trim()
+              : '';
 
             return {
               _id: member._id,
@@ -213,6 +218,7 @@ const listForUnitImpl = FunctionImpl.make(
                 : apartmentLabels.get(member.apartmentId),
               occupancyType: member.occupancyType,
               activatedAt: member.activatedAt,
+              isAccountDeleted,
             };
           }),
         { concurrency: 'unbounded' }

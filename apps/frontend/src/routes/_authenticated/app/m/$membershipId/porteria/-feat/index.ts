@@ -7,7 +7,11 @@ export {
 export { PassScanner } from './pass-scanner.components';
 export { parsePassToken } from './pass-token.utils';
 export { usePorterShiftState } from './porter-shift.hooks';
-export type { ApartmentSummary, PassResolution } from './porteria.models';
+export type {
+  ApartmentSummary,
+  ManualEntryPrefill,
+  PassResolution,
+} from './porteria.models';
 export { PrivacyNotice } from './privacy-notice.components';
 export { ShiftDetailSheet } from './shift-detail-sheet.components';
 export { describeShiftWindow, shiftElapsedMillis } from './shift-format.utils';

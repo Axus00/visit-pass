@@ -12,6 +12,7 @@ import * as Shifts from './modules/shifts';
 import shiftsSpec from './shifts.spec';
 
 const UPCOMING_LIMIT = 5;
+/** Future Turnos a unit lists; `schedule` refuses past it. */
 const SCHEDULED_SCAN_LIMIT = 100;
 const LIST_MINE_LIMIT = 20;
 const OPEN_FOR_UNIT_LIMIT = 50;
@@ -375,6 +376,23 @@ const scheduleImpl = FunctionImpl.make(
       if (isTooLong)
         return yield* new Shifts.InvalidShiftScheduleError({
           reason: 'tooLong',
+        });
+
+      // The same range `listForUnit` shows, so every scheduled Turno stays
+      // visible to the Administrador.
+      const futureScheduledShifts = yield* reader
+        .table('shifts')
+        .index('by_residentialUnitId_and_status_and_plannedEnd', (q) =>
+          q
+            .eq('residentialUnitId', membership.residentialUnitId)
+            .eq('status', 'scheduled')
+            .gt('plannedEnd', Shifts.earliestStartablePlannedEnd(now))
+        )
+        .take(SCHEDULED_SCAN_LIMIT)
+        .pipe(Effect.orDie);
+      if (futureScheduledShifts.length >= SCHEDULED_SCAN_LIMIT)
+        return yield* new Shifts.InvalidShiftScheduleError({
+          reason: 'tooManyScheduled',
         });
 
       return yield* writer

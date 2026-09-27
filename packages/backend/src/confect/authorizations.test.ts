@@ -613,6 +613,63 @@ describe('authorizations', () => {
       }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect('refuses a Favorito past what the list can show', () =>
+    Effect.gen(function* () {
+      const confect = yield* TestConfect.TestConfect;
+      const world = yield* PorteriaFixtures.seedPorteria;
+      const residentA = yield* PorteriaFixtures.as('residentA');
+
+      yield* confect.run(
+        Effect.gen(function* () {
+          const writer = yield* DatabaseWriter;
+
+          yield* Effect.forEach(
+            Array.from({ length: 199 }, (_, index) => index),
+            (index) =>
+              writer.table('favorites').insert({
+                residentialUnitId: world.unitA,
+                membershipId: world.residentA,
+                visitorName: `Visitante ${index}`,
+                relationship: 'friend',
+              }),
+            { discard: true }
+          );
+        }).pipe(Effect.orDie)
+      );
+
+      yield* residentA.mutation(authorizations.createFavorite, {
+        membershipId: world.residentA,
+        visitorName: 'Último',
+        relationship: 'family',
+      });
+
+      const [overflow, favorites] = yield* Effect.all(
+        [
+          Effect.result(
+            residentA.mutation(authorizations.createFavorite, {
+              membershipId: world.residentA,
+              visitorName: 'Sobrante',
+              relationship: 'family',
+            })
+          ),
+          residentA.query(authorizations.listFavorites, {
+            membershipId: world.residentA,
+          }),
+        ],
+        { concurrency: 'unbounded' }
+      );
+
+      EffectVitestUtils.assertFailure(
+        overflow,
+        new Authorizations.FavoriteLimitReachedError({ limit: 200 })
+      );
+      EffectVitestUtils.strictEqual(favorites.length, 200);
+      EffectVitestUtils.assertTrue(
+        favorites.some((favorite) => favorite.visitorName === 'Último')
+      );
+    }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect(
     'denies a Membresía that is not the caller’s or not a Residente',
     () =>

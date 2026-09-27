@@ -102,7 +102,11 @@ export default GroupSpec.make()
         ...AuthorizationsDomain.CreateFavoriteDto.fields,
       }),
       returns: () => Id('favorites'),
-      error: () => MembershipsDomain.AccessDeniedError,
+      error: () =>
+        Schema.Union([
+          MembershipsDomain.AccessDeniedError,
+          AuthorizationsDomain.FavoriteLimitReachedError,
+        ]),
     }).middleware(RequireUserIdentity)
   )
   .addFunction(

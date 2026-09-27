@@ -30,6 +30,8 @@ export class InvalidShiftScheduleError extends Schema.TaggedError<InvalidShiftSc
       'endsInThePast',
       'tooLong',
       'notAPorter',
+      /** The unit already has as many future Turnos as its listing shows. */
+      'tooManyScheduled',
     ]),
   }
 ) {}

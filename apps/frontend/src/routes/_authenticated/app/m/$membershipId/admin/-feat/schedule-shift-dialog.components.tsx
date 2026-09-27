@@ -36,10 +36,13 @@ export function ScheduleShiftDialog({
     refs.public.memberships.listForUnit,
     open ? { membershipId: membership.membershipId } : 'skip'
   );
+  // A deleted Usuario can no longer sign in to work the Turno.
   const porters = QueryResult.isSuccess(membershipsResult)
     ? membershipsResult.value.filter(
         (candidate) =>
-          candidate.role === 'porter' && candidate.status === 'active'
+          candidate.role === 'porter' &&
+          candidate.status === 'active' &&
+          !candidate.isAccountDeleted
       )
     : [];
 

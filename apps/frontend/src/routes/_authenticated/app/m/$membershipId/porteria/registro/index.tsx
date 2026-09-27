@@ -1,6 +1,9 @@
 import { QueryResult, useMutation, useQuery } from '@confect/react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import * as Effect from 'effect/Effect';
+import {
+  createFileRoute,
+  useLocation,
+  useNavigate,
+} from '@tanstack/react-router';
 import * as Predicate from 'effect/Predicate';
 import * as Result from 'effect/Result';
 import * as Schema from 'effect/Schema';
@@ -26,65 +29,9 @@ import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 import * as PorteriaRouteFeat from '#routes/_authenticated/app/m/$membershipId/porteria/-feat';
 
-/** Search values may arrive as numbers (a document typed into the URL). */
-const SearchText = Schema.optionalKey(
-  Schema.UndefinedOr(Schema.Union([Schema.String, Schema.Finite])).pipe(
-    Schema.catchDecoding(() => Effect.succeedSome(undefined))
-  )
-);
-
-const ManualEntrySearchSchema = Schema.Struct({
-  token: SearchText,
-  name: SearchText,
-  document: SearchText,
-  apartmentId: SearchText,
-  visitType: Schema.optionalKey(
-    Schema.UndefinedOr(VisitsShared.VisitType).pipe(
-      Schema.catchDecoding(() => Effect.succeedSome(undefined))
-    )
-  ),
-  reason: Schema.optionalKey(
-    Schema.UndefinedOr(AuthorizationsShared.PassRejectionReason).pipe(
-      Schema.catchDecoding(() => Effect.succeedSome(undefined))
-    )
-  ),
-});
-
-const toText = (value: string | number | undefined) =>
-  Predicate.isUndefined(value) ? undefined : String(value);
-
-/** Every key is optional, so plain links to the Registro manual need no search. */
-type ManualEntrySearch = {
-  token?: string;
-  name?: string;
-  document?: string;
-  apartmentId?: string;
-  visitType?: VisitPass.VisitType;
-  reason?: VisitPass.PassRejectionReason;
-};
-
 export const Route = createFileRoute(
   '/_authenticated/app/m/$membershipId/porteria/registro/'
 )({
-  /** Prefill from a rejected Pase the Portero decides to admit anyway. */
-  validateSearch: (search): ManualEntrySearch => {
-    // oxlint-disable-next-line effecttsgo/schema-sync -- TanStack Router requires synchronous search validation.
-    const decoded = Schema.decodeSync(ManualEntrySearchSchema)(search);
-
-    return {
-      token: toText(decoded.token),
-      name: toText(decoded.name),
-      document: toText(decoded.document),
-      apartmentId: toText(decoded.apartmentId),
-      visitType: decoded.visitType,
-      reason: decoded.reason,
-    };
-  },
-  /**
-   * The form reads its prefill once, so another prefill (or none) remounts it
-   * instead of keeping the previous Visitante beside the new `token`.
-   */
-  remountDeps: ({ search }) => search,
   component: PorteriaManualEntryPage,
 });
 
@@ -104,8 +51,25 @@ const RegisterManualEntryFormStandardSchema = Forms.toSpanishStandardSchema(
 
 const VISIT_TYPES = ['temporary', 'event', 'service'] as const;
 
+/**
+ * Prefills from a rejected Pase the Portero decides to admit anyway, read from
+ * history state; without it (a plain link or a new tab) the form starts blank.
+ */
 function PorteriaManualEntryPage() {
-  const search = Route.useSearch();
+  const prefill = useLocation({
+    select: (location) => location.state.manualEntryPrefill,
+  });
+
+  // The form reads its prefill once, so another Pase (or none) remounts it
+  // instead of keeping the previous Visitante beside the new token.
+  return <ManualEntryForm key={prefill?.token ?? 'blank'} prefill={prefill} />;
+}
+
+function ManualEntryForm({
+  prefill,
+}: {
+  prefill: PorteriaRouteFeat.ManualEntryPrefill | undefined;
+}) {
   const { membershipId } = MembershipRouteFeat.useCurrentMembership();
   const navigate = useNavigate();
   const shiftState = PorteriaRouteFeat.usePorterShiftState();
@@ -120,7 +84,7 @@ function PorteriaManualEntryPage() {
     : null;
   const hasNoOpenShift =
     Predicate.isNotNull(shiftState) && Predicate.isNull(shiftState.openShift);
-  const forcedReason = search.reason;
+  const forcedReason = prefill?.reason;
 
   const goHome = () =>
     void navigate({
@@ -130,10 +94,10 @@ function PorteriaManualEntryPage() {
 
   const form = Forms.useAppForm({
     defaultValues: {
-      visitorName: search.name ?? '',
-      visitorDocument: search.document ?? '',
-      apartmentId: search.apartmentId ?? '',
-      visitType: search.visitType ?? ('temporary' as VisitPass.VisitType),
+      visitorName: prefill?.visitorName ?? '',
+      visitorDocument: prefill?.visitorDocument ?? '',
+      apartmentId: prefill?.apartmentId ?? '',
+      visitType: prefill?.type ?? ('temporary' as VisitPass.VisitType),
       plate: '',
     },
     validators: { onSubmit: RegisterManualEntryFormStandardSchema },
@@ -155,7 +119,7 @@ function PorteriaManualEntryPage() {
           apartmentId: apartment._id,
           visitType: value.visitType,
           plate: plate.length > 0 ? plate : undefined,
-          rejectedPassToken: search.token,
+          rejectedPassToken: prefill?.token,
         })
       );
 

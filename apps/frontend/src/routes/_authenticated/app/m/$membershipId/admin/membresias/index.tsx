@@ -199,6 +199,9 @@ function MembershipRow({
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="truncate font-medium">{displayName}</span>
             {isCurrent ? <Badge variant="outline">Tú</Badge> : null}
+            {member.isAccountDeleted ? (
+              <Badge variant="destructive">Usuario eliminado</Badge>
+            ) : null}
           </p>
           {Predicate.isUndefined(member.name) ? null : (
             <p className="truncate text-sm text-muted-foreground">
@@ -244,7 +247,10 @@ function MembershipRow({
   );
 }
 
-/** "Revocar" button that confirms, then revokes the Membresía. */
+/**
+ * "Revocar" button that confirms, then revokes the Membresía. It stays on a
+ * deleted Usuario's Membresía so the Administrador can clean the seat up.
+ */
 function RevokeMembershipDialog({
   member,
 }: {

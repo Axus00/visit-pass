@@ -74,7 +74,9 @@ const listForShiftImpl = FunctionImpl.make(
         .take(LIST_LIMIT)
         .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
 
-      return yield* ShiftReports.toShiftReportSummaries(reports);
+      const summaries = yield* ShiftReports.toShiftReportSummaries(reports);
+
+      return summaries.map(ShiftReports.presentShiftReportSummary);
     })
 );
 
@@ -101,7 +103,9 @@ const listForUnitImpl = FunctionImpl.make(
         .take(LIST_LIMIT)
         .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
 
-      return yield* ShiftReports.toShiftReportSummaries(reports);
+      const summaries = yield* ShiftReports.toShiftReportSummaries(reports);
+
+      return summaries.map(ShiftReports.presentShiftReportSummary);
     })
 );
 

@@ -180,8 +180,9 @@ export const loadShiftReportContent = Effect.fn(
 });
 
 /**
- * Projects reports for the client, resolving porter names and download URLs.
- * A report whose Turno was deleted still lists, under a placeholder name.
+ * Loads what a report summary shows, resolving porter names and download URLs.
+ * A report whose Turno was deleted still lists, with a null `porterName`; the
+ * caller words it and the `failureReason` for the client.
  */
 export const toShiftReportSummaries = Effect.fn(
   'ShiftReports.toShiftReportSummaries'
@@ -206,7 +207,7 @@ export const toShiftReportSummaries = Effect.fn(
           );
 
         const name = Predicate.isNull(shift)
-          ? Domain.DELETED_SHIFT_PORTER_NAME
+          ? null
           : yield* getMemberDisplayName(shift.porterMembershipId);
 
         return [shiftId, name] as const;
@@ -225,21 +226,19 @@ export const toShiftReportSummaries = Effect.fn(
               Effect.catchTag('BlobNotFoundError', () => Effect.succeed(null))
             );
 
-        const summary: Domain.ShiftReportSummary = {
+        return {
           _id: report._id,
           _creationTime: report._creationTime,
           shiftId: report.shiftId,
-          porterName: porterNames.get(report.shiftId) ?? '',
+          porterName: porterNames.get(report.shiftId) ?? null,
           fileName: report.fileName,
           status: report.status,
           downloadUrl,
           emailStatus: report.emailStatus,
           recipients: report.recipients,
-          failureMessage: Domain.deriveShiftReportFailureMessage(report),
+          failureReason: report.failureReason,
           completedAt: report.completedAt,
         };
-
-        return summary;
       }),
     { concurrency: 'unbounded' }
   );

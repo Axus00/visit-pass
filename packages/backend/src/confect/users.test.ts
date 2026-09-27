@@ -388,6 +388,62 @@ describe('users', () => {
       }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect('leaves a revoked Membresía under the email it left with', () =>
+    Effect.gen(function* () {
+      const confect = yield* TestConfect.TestConfect;
+      const world = yield* TestFixtures.seedTwoUnits;
+      const admin = confect.withIdentity(TestFixtures.identityOf('adminA'));
+
+      yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+        workosUser: makeWorkOSUser(),
+      });
+      const [porterSeat, residentSeat] = yield* Effect.all(
+        [
+          admin.mutation(refs.public.memberships.invite, {
+            membershipId: world.adminA,
+            email: userEmail,
+            role: 'porter',
+          }),
+          admin.mutation(refs.public.memberships.invite, {
+            membershipId: world.adminA,
+            email: userEmail,
+            role: 'resident',
+            apartmentId: world.apartmentA102,
+            occupancyType: 'tenant',
+          }),
+        ],
+        { concurrency: 'unbounded' }
+      );
+      // The next WorkOS sync activates both invitations.
+      yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+        workosUser: makeWorkOSUser(),
+      });
+      yield* admin.mutation(refs.public.memberships.revoke, {
+        membershipId: world.adminA,
+        targetMembershipId: porterSeat,
+      });
+
+      yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+        workosUser: makeWorkOSUser({ email: 'renamed@example.test' }),
+      });
+
+      const members = yield* admin.query(refs.public.memberships.listForUnit, {
+        membershipId: world.adminA,
+      });
+
+      EffectVitestUtils.deepStrictEqual(
+        [porterSeat, residentSeat].map((seatId) => {
+          const seat = members.find(({ _id }) => _id === seatId);
+          return { email: seat?.email, status: seat?.status };
+        }),
+        [
+          { email: userEmail, status: 'revoked' },
+          { email: 'renamed@example.test', status: 'active' },
+        ]
+      );
+    }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('answers the signed-in User through `me`', () =>
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;

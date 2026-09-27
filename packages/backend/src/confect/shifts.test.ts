@@ -158,6 +158,55 @@ describe('shifts', () => {
     }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect(
+    'refuses a scheduled Turno past what the unit’s listing shows',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* PorteriaFixtures.seedPorteria;
+        const adminA = yield* PorteriaFixtures.as('adminA');
+        const now = PorteriaFixtures.wallClockMillis();
+
+        // A Turno missed long ago no longer counts against the unit.
+        yield* confect.run(
+          Effect.forEach(
+            [-2, ...Array.from({ length: 99 }, (_, index) => index + 2)],
+            (daysAhead) =>
+              Effect.gen(function* () {
+                const writer = yield* DatabaseWriter;
+
+                yield* writer.table('shifts').insert({
+                  residentialUnitId: world.unitA,
+                  porterMembershipId: world.porterA,
+                  plannedStart: now + daysAhead * 24 * MILLIS_PER_HOUR,
+                  plannedEnd:
+                    now + daysAhead * 24 * MILLIS_PER_HOUR + MILLIS_PER_HOUR,
+                  status: 'scheduled',
+                });
+              }),
+            { discard: true }
+          ).pipe(Effect.orDie)
+        );
+
+        const schedule = Effect.result(
+          adminA.mutation(shifts.schedule, {
+            membershipId: world.adminA,
+            porterMembershipId: world.porterA,
+            plannedStart: now + MILLIS_PER_HOUR,
+            plannedEnd: now + 2 * MILLIS_PER_HOUR,
+          })
+        );
+
+        const lastFitting = yield* schedule;
+        EffectVitestUtils.assertTrue(Result.isSuccess(lastFitting));
+
+        EffectVitestUtils.assertFailure(
+          yield* schedule,
+          new Shifts.InvalidShiftScheduleError({ reason: 'tooManyScheduled' })
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('starts only the Portero’s own scheduled Turno', () =>
     Effect.gen(function* () {
       const world = yield* PorteriaFixtures.seedPorteria;

@@ -145,7 +145,8 @@ const upsertFromWorkOSImpl = FunctionImpl.make(
         [
           // Moves the Membresías still under an earlier email onto the current
           // one, so the Administrador sees it and the old address is free to
-          // invite again.
+          // invite again. A revoked row keeps the email it left with, so a
+          // unit never follows a departed person's new address.
           Effect.gen(function* () {
             const userMemberships = yield* reader
               .table('memberships')
@@ -155,7 +156,9 @@ const upsertFromWorkOSImpl = FunctionImpl.make(
 
             yield* Effect.forEach(
               userMemberships.filter(
-                (membership) => membership.email !== reactivatedUser.email
+                (membership) =>
+                  membership.status !== 'revoked' &&
+                  membership.email !== reactivatedUser.email
               ),
               (membership) =>
                 writer

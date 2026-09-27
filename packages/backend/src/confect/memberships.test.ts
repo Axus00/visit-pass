@@ -216,6 +216,70 @@ describe('memberships', () => {
       }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect(
+    'names only active seats after their Usuario and flags deleted accounts',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* TestFixtures.seedTwoUnits;
+        const admin = confect.withIdentity(TestFixtures.identityOf('adminA'));
+
+        yield* confect.run(
+          Effect.gen(function* () {
+            const reader = yield* DatabaseReader;
+            const writer = yield* DatabaseWriter;
+            const userOf = (key: string) =>
+              reader
+                .table('users')
+                .get(
+                  'by_identityTokenIdentifier',
+                  TestFixtures.identityOf(key).tokenIdentifier
+                );
+
+            const [residentUser, revokedUser] = yield* Effect.all(
+              [userOf('residentA'), userOf('revokedA')],
+              { concurrency: 'unbounded' }
+            );
+
+            yield* Effect.all(
+              [
+                writer.table('users').patch(residentUser._id, { deletedAt: 0 }),
+                // The departed Administrador renames their account elsewhere.
+                writer
+                  .table('users')
+                  .patch(revokedUser._id, { firstName: 'Renombrado' }),
+              ],
+              { concurrency: 'unbounded' }
+            );
+          }).pipe(Effect.orDie)
+        );
+
+        const members = yield* admin.query(
+          refs.public.memberships.listForUnit,
+          { membershipId: world.adminA }
+        );
+
+        EffectVitestUtils.deepStrictEqual(
+          [world.adminA, world.residentA, world.revokedA, world.pendingA].map(
+            (membershipId) => {
+              const member = members.find(({ _id }) => _id === membershipId);
+              return {
+                status: member?.status,
+                name: member?.name,
+                isAccountDeleted: member?.isAccountDeleted,
+              };
+            }
+          ),
+          [
+            { status: 'active', name: 'adminA Test', isAccountDeleted: false },
+            { status: 'active', name: undefined, isAccountDeleted: true },
+            { status: 'revoked', name: undefined, isAccountDeleted: false },
+            { status: 'pending', name: undefined, isAccountDeleted: false },
+          ]
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('rejects invitations that break the Rol rules', () =>
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;

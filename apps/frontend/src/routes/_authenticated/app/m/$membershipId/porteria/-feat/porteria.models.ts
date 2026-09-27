@@ -18,3 +18,25 @@ export type ResolvedPass = Extract<
 export type ApartmentSummary = Ref.Returns<
   typeof refs.public.residentialUnits.listApartments
 >[number];
+
+type RejectedPassResolution = Extract<PassResolution, { outcome: 'rejected' }>;
+
+/**
+ * A rejected Pase the Portero admits anyway, handed from Escanear to the
+ * Registro manual through history state so the Visitante's details and the
+ * Pase token never enter the URL or the browser history list.
+ */
+export type ManualEntryPrefill = Pick<
+  ResolvedPass,
+  'visitorName' | 'visitorDocument' | 'apartmentId' | 'type'
+> & {
+  token: string;
+  reason: RejectedPassResolution['reason'];
+};
+
+declare module '@tanstack/react-router' {
+  interface HistoryState {
+    /** Set by Escanear's "Registrar como ingreso manual"; absent otherwise. */
+    manualEntryPrefill?: ManualEntryPrefill;
+  }
+}
