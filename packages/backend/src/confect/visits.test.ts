@@ -591,6 +591,46 @@ describe('visits', () => {
     }).pipe(Effect.provide(TestConfect.layer))
   );
 
+  it.effect('never shows a short document whole to Residentes', () =>
+    Effect.gen(function* () {
+      const world = yield* PorteriaFixtures.seedPorteria;
+      const porterA = yield* PorteriaFixtures.as('porterA');
+      const coResidentA = yield* PorteriaFixtures.as('coResidentA');
+      yield* openShiftForPorterA(world);
+
+      yield* Effect.forEach(
+        ['ABC', 'ABCD', 'ABCDE'],
+        (visitorDocument) =>
+          porterA.mutation(visits.registerManualEntry, {
+            membershipId: world.porterA,
+            visitorName: `Visitante ${visitorDocument}`,
+            visitorDocument,
+            apartmentId: world.apartmentA101,
+            visitType: 'service',
+          }),
+        { discard: true }
+      );
+
+      const forApartment = yield* coResidentA.query(visits.listForApartment, {
+        membershipId: world.coResidentA,
+      });
+
+      EffectVitestUtils.deepStrictEqual(
+        forApartment
+          .map(({ visitorName, visitorDocument }) => [
+            visitorName,
+            visitorDocument,
+          ])
+          .sort(([left = ''], [right = '']) => left.localeCompare(right)),
+        [
+          ['Visitante ABC', '••••'],
+          ['Visitante ABCD', '••••D'],
+          ['Visitante ABCDE', '••••DE'],
+        ]
+      );
+    }).pipe(Effect.provide(TestConfect.layer))
+  );
+
   it.effect('rejects the old QR of a regenerated Pase as replaced', () =>
     Effect.gen(function* () {
       const world = yield* PorteriaFixtures.seedPorteria;

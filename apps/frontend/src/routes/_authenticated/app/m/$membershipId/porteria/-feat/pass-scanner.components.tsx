@@ -4,6 +4,7 @@ import {
   Flashlight,
   FlashlightOff,
   LoaderCircle,
+  RotateCcw,
 } from 'lucide-react';
 
 import { Button, cn } from '@repo/ui';
@@ -26,18 +27,22 @@ const STATUS_COPY: Partial<
   failed: {
     title: 'No se pudo leer con la cámara',
     description:
-      'Cierra otras apps que la estén usando y vuelve a intentarlo, o ingresa el código del Pase abajo.',
+      'Cierra otras apps que la estén usando y reintenta, o ingresa el código del Pase abajo.',
   },
 };
 
 /**
  * Full-width rear-camera viewport with a high-contrast tracking frame. It
- * mounts the camera while rendered, so unmount it once a Pase is read.
+ * mounts the camera while rendered, so unmount it once a Pase is read. After a
+ * camera failure it offers `onRetry`, which should remount it (bump its `key`)
+ * to open the camera again.
  */
 export function PassScanner({
   onCode,
+  onRetry,
 }: {
   onCode: (rawValue: string) => boolean;
+  onRetry: () => void;
 }) {
   const { videoRef, status, hasTorch, isTorchOn, toggleTorch } =
     usePassScanner(onCode);
@@ -109,6 +114,16 @@ export function PassScanner({
           <p className="max-w-sm text-sm text-white/80">
             {failureCopy.description}
           </p>
+          {status === 'failed' ? (
+            <Button
+              variant="secondary"
+              className="mt-2 h-12 px-6 text-base"
+              onClick={onRetry}
+            >
+              <RotateCcw aria-hidden="true" />
+              Reintentar
+            </Button>
+          ) : null}
         </div>
       ) : null}
     </div>

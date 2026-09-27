@@ -74,6 +74,43 @@ export default GroupSpec.make()
         ]),
     }).middleware(RequireUserIdentity)
   )
+  .addFunction(
+    /**
+     * Superadmin: invites another Administrador to an existing Unidad
+     * residencial, e.g. when the first invitation went to a mistyped email.
+     */
+    FunctionSpec.publicMutation({
+      name: 'inviteAdministrator',
+      args: () => ({
+        residentialUnitId: Id('residentialUnits'),
+        ...ResidentialUnitsDomain.InviteAdministratorDto.fields,
+      }),
+      returns: () => Id('memberships'),
+      error: () =>
+        Schema.Union([
+          ResidentialUnitsDomain.NotSuperadminError,
+          ResidentialUnitsDomain.ResidentialUnitNotFoundError,
+          MembershipsDomain.InvalidMembershipError,
+          MembershipsDomain.MembershipAlreadyExistsError,
+        ]),
+    }).middleware(RequireUserIdentity)
+  )
+  .addFunction(
+    /** Superadmin: withdraws a still-pending Administrador invitation of a unit. */
+    FunctionSpec.publicMutation({
+      name: 'revokeAdministratorInvitation',
+      args: () => ({
+        residentialUnitId: Id('residentialUnits'),
+        email: Schema.String,
+      }),
+      returns: () => Schema.Null,
+      error: () =>
+        Schema.Union([
+          ResidentialUnitsDomain.NotSuperadminError,
+          MembershipsDomain.MembershipNotFoundError,
+        ]),
+    }).middleware(RequireUserIdentity)
+  )
 
   // -*******************************************************************************-
   // Internal

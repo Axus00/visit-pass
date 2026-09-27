@@ -114,7 +114,9 @@ const IMAGE_HEIGHT = IMAGE_QR_TOP + IMAGE_QR_SIZE + 160;
 
 /**
  * Saves a printable Pase image: the QR with the unit, Visitante and validity.
- * Built synchronously so the share call keeps the click's user activation.
+ * Touch devices get the share sheet (to send it or keep it in the gallery);
+ * everything else downloads the file. Built synchronously so the share call
+ * keeps the click's user activation.
  */
 export async function savePassImage({
   qrCanvas,
@@ -177,10 +179,15 @@ export async function savePassImage({
   const file = new File([bytes], passImageFileName(visitorName), {
     type: 'image/png',
   });
+  // Desktop browsers that can share files (Chrome on Windows) would open the OS
+  // share sheet instead of saving, so only touch devices try it.
+  const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
   const canShareFile =
-    'canShare' in navigator && navigator.canShare({ files: [file] });
+    isTouchDevice &&
+    'canShare' in navigator &&
+    navigator.canShare({ files: [file] });
   // A share sheet that fails for any reason but a dismissal falls back to a
-  // download, as does a browser that cannot share files at all.
+  // download, as does a device that cannot share files at all.
   const shareOutcome = canShareFile
     ? await navigator.share({ files: [file], title: 'Pase de visitante' }).then(
         () => 'shared' as const,

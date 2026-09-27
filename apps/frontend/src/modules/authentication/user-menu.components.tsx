@@ -47,7 +47,7 @@ export function UserAvatarMenu({ user }: { user: AuthUser }) {
                 ? getUserDisplayName(user.firstName, user.lastName)
                 : 'Sesión iniciada'}
             </p>
-            {user.email ? (
+            {Predicate.isNotNull(user.email) ? (
               <p className="truncate text-sm text-muted-foreground">
                 {user.email}
               </p>
@@ -140,7 +140,7 @@ function UserSessionInfo({
         )}
       >
         <span className="truncate font-medium">{displayName}</span>
-        {user.email ? (
+        {Predicate.isNotNull(user.email) ? (
           <span className="truncate text-xs text-muted-foreground">
             {user.email}
           </span>

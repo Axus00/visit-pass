@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import * as Predicate from 'effect/Predicate';
 import { QrCode, ShieldCheck } from 'lucide-react';
 
 import { Button } from '@repo/ui';
@@ -50,7 +51,7 @@ function QuickPassHero() {
       />
       <div className="relative flex max-w-xl flex-col gap-3">
         <p className="w-fit rounded-full bg-white/15 px-3 py-1 text-xs font-semibold tracking-[0.08em] uppercase">
-          {membership.apartmentLabel
+          {Predicate.isNotUndefined(membership.apartmentLabel)
             ? `Apartamento ${membership.apartmentLabel}`
             : 'Acceso express'}
         </p>

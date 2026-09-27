@@ -253,7 +253,7 @@ function RevokeMembershipDialog({
   const membership = MembershipRouteFeat.useCurrentMembership();
   const revoke = useMutation(refs.public.memberships.revoke);
   const displayName = member.name ?? member.email;
-  const apartmentSuffix = member.apartmentLabel
+  const apartmentSuffix = Predicate.isNotUndefined(member.apartmentLabel)
     ? ` en ${member.apartmentLabel}`
     : '';
 
@@ -275,7 +275,7 @@ function RevokeMembershipDialog({
   };
 
   return (
-    <MembershipRouteFeat.ConfirmActionDialog
+    <AppRouteFeat.ConfirmActionDialog
       trigger={<Button variant="ghost" size="sm" />}
       triggerContent={
         <>

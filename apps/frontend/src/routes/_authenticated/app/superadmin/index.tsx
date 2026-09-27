@@ -12,9 +12,11 @@ import {
   Building2,
   CircleCheck,
   Crown,
+  MailX,
   MapPin,
   ShieldAlert,
   UserCog,
+  UserPlus,
 } from 'lucide-react';
 
 import refs from '@repo/backend/refs';
@@ -43,6 +45,21 @@ export const Route = createFileRoute('/_authenticated/app/superadmin/')({
   component: SuperadminPage,
 });
 
+const ADMINISTRATOR_FIELDS = {
+  administratorEmail: Schema.String.check(
+    Schema.makeFilter(
+      (email: string) =>
+        MembershipsShared.isPlausibleEmailAddress(email.trim()) ||
+        'Escribe un correo válido, como nombre@correo.com.'
+    )
+  ),
+  administratorName: Schema.String.check(
+    Schema.isMaxLength(ResidentialUnitsShared.NAME_MAX_LENGTH, {
+      message: `Usa máximo ${ResidentialUnitsShared.NAME_MAX_LENGTH} caracteres.`,
+    })
+  ),
+};
+
 const CreateUnitFormStandardSchema = Forms.toSpanishStandardSchema(
   Schema.Struct({
     name: Schema.String.check(
@@ -63,19 +80,12 @@ const CreateUnitFormStandardSchema = Forms.toSpanishStandardSchema(
         message: `Usa máximo ${ResidentialUnitsShared.NAME_MAX_LENGTH} caracteres.`,
       })
     ),
-    administratorEmail: Schema.String.check(
-      Schema.makeFilter(
-        (email: string) =>
-          MembershipsShared.isPlausibleEmailAddress(email.trim()) ||
-          'Escribe un correo válido, como nombre@correo.com.'
-      )
-    ),
-    administratorName: Schema.String.check(
-      Schema.isMaxLength(ResidentialUnitsShared.NAME_MAX_LENGTH, {
-        message: `Usa máximo ${ResidentialUnitsShared.NAME_MAX_LENGTH} caracteres.`,
-      })
-    ),
+    ...ADMINISTRATOR_FIELDS,
   })
+);
+
+const InviteAdministratorFormStandardSchema = Forms.toSpanishStandardSchema(
+  Schema.Struct(ADMINISTRATOR_FIELDS)
 );
 
 type PlatformUnitSummary = Ref.Returns<
@@ -87,7 +97,7 @@ type CreatedUnit = {
   readonly administratorEmail: string;
 };
 
-/** Platform page: every Unidad residencial, and creating one with its first Administrador. */
+/** Platform page: every Unidad residencial, creating one with its first Administrador, and fixing its Administrador invitations. */
 function SuperadminPage() {
   const { user } = useAuth();
   const access = AppRouteFeat.useMyAccess();
@@ -222,25 +232,224 @@ function UnitList({
                   : `${unit.apartmentCount} Apartamentos`}
               </Badge>
             </div>
-            <div className="flex items-start gap-2 pl-13 text-sm">
-              <UserCog
-                className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                aria-hidden="true"
-              />
+            <div className="flex flex-col gap-2 pl-13 text-sm">
               {unit.administratorEmails.length === 0 ? (
-                <span className="text-muted-foreground">
-                  Sin Administradores activos
-                </span>
+                <p className="text-muted-foreground">
+                  Sin Administradores ni invitaciones
+                </p>
               ) : (
-                <span className="min-w-0 break-all text-muted-foreground">
-                  {unit.administratorEmails.join(', ')}
-                </span>
+                <ul
+                  aria-label={`Administradores de ${unit.name}`}
+                  className="flex flex-col gap-1"
+                >
+                  {unit.administratorEmails.map((email) => (
+                    <li key={email} className="flex items-center gap-2">
+                      <UserCog
+                        className="size-4 shrink-0 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1 break-all text-muted-foreground">
+                        {email}
+                      </span>
+                      <RevokeAdministratorInvitationDialog
+                        unit={unit}
+                        email={email}
+                      />
+                    </li>
+                  ))}
+                </ul>
               )}
+              <InviteAdministratorButton unit={unit} />
             </div>
           </Card>
         </li>
       ))}
     </ul>
+  );
+}
+
+/** "Invitar Administrador" button that opens the invitation form for `unit`. */
+function InviteAdministratorButton({ unit }: { unit: PlatformUnitSummary }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-fit"
+        onClick={() => setOpen(true)}
+      >
+        <UserPlus aria-hidden="true" />
+        Invitar Administrador
+      </Button>
+      <InviteAdministratorDialog
+        unit={unit}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
+  );
+}
+
+/**
+ * Invites another Administrador to `unit` by email, e.g. when the first one's
+ * email was mistyped. The Membresía stays pending until that email signs in.
+ */
+function InviteAdministratorDialog({
+  unit,
+  open,
+  onOpenChange,
+}: {
+  unit: PlatformUnitSummary;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const inviteAdministrator = useMutation(
+    refs.public.residentialUnits.inviteAdministrator
+  );
+
+  const form = Forms.useAppForm({
+    defaultValues: { administratorEmail: '', administratorName: '' },
+    validators: { onSubmit: InviteAdministratorFormStandardSchema },
+    onSubmit: async ({ value, formApi }) => {
+      const administratorName = value.administratorName.trim();
+      const administratorEmail = value.administratorEmail.trim();
+
+      const result = await AppRouteFeat.settleMutation(
+        inviteAdministrator({
+          residentialUnitId: unit._id,
+          administratorEmail,
+          administratorName:
+            administratorName.length > 0 ? administratorName : undefined,
+        })
+      );
+
+      if (Result.isFailure(result)) {
+        toast.error(VisitPass.describeBackendError(result.failure));
+        return;
+      }
+
+      toast.success(
+        `Invitaste a ${administratorEmail} como Administrador de ${unit.name}.`,
+        {
+          description: `Aún no enviamos correos: compártele el enlace ${window.location.origin}. La Membresía se activa cuando inicie sesión con este correo.`,
+          duration: 10_000,
+        }
+      );
+      formApi.reset();
+      onOpenChange(false);
+    },
+  });
+
+  const close = () => {
+    form.reset();
+    onOpenChange(false);
+  };
+
+  return (
+    <CommonUI.FormDialog
+      open={open}
+      onOpenChange={(next) => (next ? onOpenChange(true) : close())}
+      title="Invitar Administrador"
+      description={`Registra el correo con el que el Administrador de ${unit.name} iniciará sesión. Si ya tiene cuenta, su Membresía queda activa de inmediato.`}
+      onSubmit={() => void form.handleSubmit()}
+      actions={
+        <>
+          <Button type="button" variant="outline" onClick={close}>
+            Cancelar
+          </Button>
+          <form.Subscribe selector={(state) => state.isSubmitting}>
+            {(isSubmitting) => (
+              <Button type="submit" disabled={isSubmitting}>
+                Invitar
+              </Button>
+            )}
+          </form.Subscribe>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4 pb-1">
+        <form.AppField name="administratorEmail">
+          {(field) => (
+            <field.InputField
+              label="Correo"
+              type="email"
+              autoComplete="off"
+              placeholder="administracion@correo.com"
+              required
+              autoFocus
+            />
+          )}
+        </form.AppField>
+        <form.AppField name="administratorName">
+          {(field) => (
+            <field.InputField
+              label="Nombre"
+              optional
+              placeholder="Se muestra hasta que inicie sesión"
+              maxLength={ResidentialUnitsShared.NAME_MAX_LENGTH}
+            />
+          )}
+        </form.AppField>
+      </div>
+    </CommonUI.FormDialog>
+  );
+}
+
+/**
+ * "Retirar invitación" button that confirms, then withdraws the pending
+ * Administrador invitation for `email`. An accepted one is left untouched.
+ */
+function RevokeAdministratorInvitationDialog({
+  unit,
+  email,
+}: {
+  unit: PlatformUnitSummary;
+  email: string;
+}) {
+  const revokeInvitation = useMutation(
+    refs.public.residentialUnits.revokeAdministratorInvitation
+  );
+
+  const handleRevoke = async () => {
+    const result = await AppRouteFeat.settleMutation(
+      revokeInvitation({ residentialUnitId: unit._id, email })
+    );
+
+    if (Result.isFailure(result)) {
+      const isNotPending = Predicate.isTagged(
+        result.failure,
+        'Memberships/MembershipNotFoundError'
+      );
+
+      toast.error(
+        isNotPending
+          ? `${email} ya aceptó su invitación o no tiene una pendiente; no se retiró.`
+          : VisitPass.describeBackendError(result.failure)
+      );
+      return false;
+    }
+
+    toast.success(`Retiraste la invitación de ${email}.`);
+    return true;
+  };
+
+  return (
+    <AppRouteFeat.ConfirmActionDialog
+      trigger={<Button variant="ghost" size="xs" />}
+      triggerContent={
+        <>
+          <MailX aria-hidden="true" />
+          Retirar invitación
+        </>
+      }
+      title="¿Retirar esta invitación?"
+      description={`Solo se retira si ${email} aún no ha iniciado sesión para aceptarla. Si ya es Administrador activo de ${unit.name}, su Membresía no cambia.`}
+      confirmLabel="Retirar invitación"
+      destructive
+      onConfirm={handleRevoke}
+    />
   );
 }
 

@@ -13,6 +13,7 @@ import * as ShiftsShared from '@repo/backend/shared/shifts';
 import { Badge, Button, Card, cn, tw } from '@repo/ui';
 
 import * as VisitPass from '#modules/visit-pass';
+import * as AppRouteFeat from '#routes/_authenticated/app/-feat';
 import * as MembershipRouteFeat from '#routes/_authenticated/app/m/$membershipId/-feat';
 
 import { useShiftActions } from './porter-shift.hooks';
@@ -178,7 +179,7 @@ function OpenShiftCard({
           Desde las {VisitPass.formatTime(startedAt, residentialUnitTimeZone)}
         </p>
       </div>
-      <MembershipRouteFeat.ConfirmActionDialog
+      <AppRouteFeat.ConfirmActionDialog
         trigger={
           <Button
             variant="secondary"

@@ -2,6 +2,7 @@ import { describe, it } from '@effect/vitest';
 import * as EffectVitestUtils from '@effect/vitest/utils';
 import * as Effect from 'effect/Effect';
 import * as Predicate from 'effect/Predicate';
+import * as Schema from 'effect/Schema';
 
 import refs from './_generated/refs';
 import { DatabaseReader, DatabaseWriter } from './_generated/services';
@@ -40,30 +41,30 @@ describe('residentialUnits', () => {
           yield* shift(world.unitA, world.porterA, 'closed');
           const shiftB = yield* shift(world.unitB, world.adminB, 'open');
 
-          const visit = (args: {
+          const visit = ({
+            unitB = false,
+            voided = false,
+            ...args
+          }: {
             unitB?: boolean;
             enteredAt: string;
             exitedAt?: string;
             voided?: boolean;
           }) =>
             writer.table('visits').insert({
-              residentialUnitId: args.unitB ? world.unitB : world.unitA,
-              apartmentId: args.unitB
-                ? world.apartmentB101
-                : world.apartmentA101,
+              residentialUnitId: unitB ? world.unitB : world.unitA,
+              apartmentId: unitB ? world.apartmentB101 : world.apartmentA101,
               visitorName: 'Visitante',
               visitType: 'temporary',
               origin: 'manual',
-              shiftId: args.unitB ? shiftB : shiftA,
-              entryPorterMembershipId: args.unitB
-                ? world.adminB
-                : world.porterA,
+              shiftId: unitB ? shiftB : shiftA,
+              entryPorterMembershipId: unitB ? world.adminB : world.porterA,
               enteredAt: Date.parse(args.enteredAt),
               exitedAt: Predicate.isUndefined(args.exitedAt)
                 ? undefined
                 : Date.parse(args.exitedAt),
               privacyNoticeVersion: Visits.PRIVACY_NOTICE_VERSION,
-              voidedAt: args.voided ? Date.parse(args.enteredAt) : undefined,
+              voidedAt: voided ? Date.parse(args.enteredAt) : undefined,
             });
 
           // Today in Bogotá, gone.
@@ -324,10 +325,10 @@ describe('residentialUnits', () => {
   it.effect('reserves the platform functions to Superadmins', () =>
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;
-      yield* TestFixtures.seedTwoUnits;
+      const world = yield* TestFixtures.seedTwoUnits;
       const adminA = confect.withIdentity(TestFixtures.identityOf('adminA'));
 
-      const [listing, creation] = yield* Effect.all(
+      const denials = yield* Effect.all(
         [
           Effect.result(adminA.query(refs.public.residentialUnits.listAll, {})),
           Effect.result(
@@ -337,18 +338,27 @@ describe('residentialUnits', () => {
               administratorEmail: 'admin@example.test',
             })
           ),
+          Effect.result(
+            adminA.mutation(refs.public.residentialUnits.inviteAdministrator, {
+              residentialUnitId: world.unitA,
+              administratorEmail: 'admin@example.test',
+            })
+          ),
+          Effect.result(
+            adminA.mutation(
+              refs.public.residentialUnits.revokeAdministratorInvitation,
+              { residentialUnitId: world.unitA, email: 'admin@example.test' }
+            )
+          ),
         ],
         { concurrency: 'unbounded' }
       );
 
-      EffectVitestUtils.assertFailure(
-        listing,
-        new ResidentialUnits.NotSuperadminError()
-      );
-      EffectVitestUtils.assertFailure(
-        creation,
-        new ResidentialUnits.NotSuperadminError()
-      );
+      for (const denial of denials)
+        EffectVitestUtils.assertFailure<unknown, unknown>(
+          denial,
+          new ResidentialUnits.NotSuperadminError()
+        );
     }).pipe(Effect.provide(TestConfect.layer))
   );
 
@@ -473,5 +483,210 @@ describe('residentialUnits', () => {
           [{ residentialUnitId: createdId, role: 'administrator' }]
         );
       }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'lets the Superadmin replace a mistyped Administrador invitation',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        yield* TestFixtures.seedTwoUnits;
+
+        yield* confect.mutation(
+          refs.internal.residentialUnits.grantSuperadmin,
+          { email: 'outsider@example.test' }
+        );
+        const superadmin = confect.withIdentity(
+          TestFixtures.identityOf('outsider')
+        );
+
+        const unitId = yield* superadmin.mutation(
+          refs.public.residentialUnits.create,
+          {
+            name: 'Conjunto Nuevo',
+            city: 'Cali',
+            administratorEmail: 'nuevo.admn@example.test',
+          }
+        );
+
+        yield* superadmin.mutation(
+          refs.public.residentialUnits.revokeAdministratorInvitation,
+          { residentialUnitId: unitId, email: ' Nuevo.Admn@Example.test ' }
+        );
+        yield* superadmin.mutation(
+          refs.public.residentialUnits.inviteAdministrator,
+          {
+            residentialUnitId: unitId,
+            administratorEmail: 'Nuevo.Admin@Example.test',
+            administratorName: 'Nuevo Admin',
+          }
+        );
+
+        const units = yield* superadmin.query(
+          refs.public.residentialUnits.listAll,
+          {}
+        );
+
+        EffectVitestUtils.deepStrictEqual(
+          units.find(({ _id }) => _id === unitId)?.administratorEmails,
+          ['nuevo.admin@example.test']
+        );
+
+        const [revokedTwice, duplicate, invalidEmail] = yield* Effect.all(
+          [
+            Effect.result(
+              superadmin.mutation(
+                refs.public.residentialUnits.revokeAdministratorInvitation,
+                { residentialUnitId: unitId, email: 'nuevo.admn@example.test' }
+              )
+            ),
+            Effect.result(
+              superadmin.mutation(
+                refs.public.residentialUnits.inviteAdministrator,
+                {
+                  residentialUnitId: unitId,
+                  administratorEmail: 'nuevo.admin@example.test',
+                }
+              )
+            ),
+            Effect.result(
+              superadmin.mutation(
+                refs.public.residentialUnits.inviteAdministrator,
+                { residentialUnitId: unitId, administratorEmail: 'nadie' }
+              )
+            ),
+          ],
+          { concurrency: 'unbounded' }
+        );
+
+        EffectVitestUtils.assertFailure(
+          revokedTwice,
+          new Memberships.MembershipNotFoundError()
+        );
+        EffectVitestUtils.assertFailure(
+          duplicate,
+          new Memberships.MembershipAlreadyExistsError({
+            email: 'nuevo.admin@example.test',
+          })
+        );
+        EffectVitestUtils.assertFailure(
+          invalidEmail,
+          new Memberships.InvalidMembershipError({ reason: 'invalidEmail' })
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'invites an Administrador with an account as active, and never revokes active or non-Administrador Membresías',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* TestFixtures.seedTwoUnits;
+
+        yield* confect.mutation(
+          refs.internal.residentialUnits.grantSuperadmin,
+          { email: 'outsider@example.test' }
+        );
+        const superadmin = confect.withIdentity(
+          TestFixtures.identityOf('outsider')
+        );
+
+        // `adminB` has an account, so the Membresía in unit A is active at once.
+        const invitedId = yield* superadmin.mutation(
+          refs.public.residentialUnits.inviteAdministrator,
+          {
+            residentialUnitId: world.unitA,
+            administratorEmail: 'adminb@example.test',
+          }
+        );
+
+        const revocations = yield* Effect.forEach(
+          [
+            'adminb@example.test',
+            'admina@example.test',
+            // A pending Portero, not an Administrador.
+            'pendinga@example.test',
+          ],
+          (email) =>
+            Effect.result(
+              superadmin.mutation(
+                refs.public.residentialUnits.revokeAdministratorInvitation,
+                { residentialUnitId: world.unitA, email }
+              )
+            ),
+          { concurrency: 'unbounded' }
+        );
+
+        for (const revocation of revocations)
+          EffectVitestUtils.assertFailure(
+            revocation,
+            new Memberships.MembershipNotFoundError()
+          );
+
+        const statuses = yield* confect.run(
+          Effect.gen(function* () {
+            const reader = yield* DatabaseReader;
+
+            const statusOf = (membershipId: typeof invitedId) =>
+              reader
+                .table('memberships')
+                .get(membershipId)
+                .pipe(Effect.map(({ status }) => status));
+
+            return yield* Effect.all(
+              {
+                invited: statusOf(invitedId),
+                adminA: statusOf(world.adminA),
+                pendingA: statusOf(world.pendingA),
+              },
+              { concurrency: 'unbounded' }
+            );
+          }).pipe(Effect.orDie),
+          Schema.Struct({
+            invited: Memberships.MembershipStatus,
+            adminA: Memberships.MembershipStatus,
+            pendingA: Memberships.MembershipStatus,
+          })
+        );
+
+        EffectVitestUtils.deepStrictEqual(statuses, {
+          invited: 'active',
+          adminA: 'active',
+          pendingA: 'pending',
+        });
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect('refuses to invite an Administrador into a missing unit', () =>
+    Effect.gen(function* () {
+      const confect = yield* TestConfect.TestConfect;
+      const world = yield* TestFixtures.seedTwoUnits;
+
+      yield* confect.mutation(refs.internal.residentialUnits.grantSuperadmin, {
+        email: 'outsider@example.test',
+      });
+
+      yield* confect.run(
+        Effect.gen(function* () {
+          const writer = yield* DatabaseWriter;
+
+          yield* writer.table('residentialUnits').delete(world.unitB);
+        }).pipe(Effect.orDie)
+      );
+
+      const invitation = yield* Effect.result(
+        confect
+          .withIdentity(TestFixtures.identityOf('outsider'))
+          .mutation(refs.public.residentialUnits.inviteAdministrator, {
+            residentialUnitId: world.unitB,
+            administratorEmail: 'nuevo@example.test',
+          })
+      );
+
+      EffectVitestUtils.assertFailure(
+        invitation,
+        new ResidentialUnits.ResidentialUnitNotFoundError()
+      );
+    }).pipe(Effect.provide(TestConfect.layer))
   );
 });

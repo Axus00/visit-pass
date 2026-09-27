@@ -9,3 +9,8 @@ export class NotSuperadminError extends Schema.TaggedError<NotSuperadminError>()
   'ResidentialUnits/NotSuperadminError',
   {}
 ) {}
+
+export class ResidentialUnitNotFoundError extends Schema.TaggedError<ResidentialUnitNotFoundError>()(
+  'ResidentialUnits/ResidentialUnitNotFoundError',
+  {}
+) {}

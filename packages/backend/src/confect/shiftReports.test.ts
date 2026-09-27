@@ -76,7 +76,10 @@ const seedWorld = Effect.gen(function* () {
 
       const { unitA, unitB } = yield* Effect.all(
         Record.map(
-          { unitA: 'Conjunto Los Álamos', unitB: 'Edificio Central' },
+          {
+            unitA: 'Conjunto Los Álamos (Etapa 2)',
+            unitB: 'Edificio Central',
+          },
           (name) =>
             writer.table('residentialUnits').insert({
               name,
@@ -375,7 +378,8 @@ describe('shiftReports', () => {
       );
 
       EffectVitestUtils.deepStrictEqual(report, {
-        fileName: 'reporte-turno-conjunto-los-alamos-2026-09-26-1405.xlsx',
+        fileName:
+          'reporte-turno-conjunto-los-alamos-etapa-2-2026-09-26-1405.xlsx',
         status: 'generating',
         emailStatus: 'pending',
         recipients: ['adminA@example.test'],

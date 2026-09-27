@@ -26,115 +26,6 @@ interface SeededUnit {
   readonly at: (days: number, time: string) => number;
 }
 
-/**
- * Inserts `sample` with its Apartamentos and hands it to `populate`, unless a
- * unit with that name exists: setup reseeds on every run, so the first run's
- * data stays and later runs change nothing.
- */
-const seedUnitOnce = Effect.fn('DevelopmentSeeder.seedUnitOnce')(function* <
-  E,
-  R,
->(
-  sample: Domain.SampleUnit,
-  populate: (unit: SeededUnit) => Effect.Effect<void, E, R>
-) {
-  const reader = yield* DatabaseReader;
-  const writer = yield* DatabaseWriter;
-
-  const existing = yield* reader
-    .table('residentialUnits')
-    .index('by_name', (q) => q.eq('name', sample.name))
-    .first();
-
-  if (Option.isSome(existing)) {
-    yield* Effect.logInfo('Sample unit already seeded', { name: sample.name });
-    return;
-  }
-
-  const timeZone = CalendarDomain.DEFAULT_TIME_ZONE;
-  const residentialUnitId = yield* writer.table('residentialUnits').insert({
-    name: sample.name,
-    city: sample.city,
-    timeZone,
-    visitRetentionMonths: ResidentialUnitsDomain.DEFAULT_VISIT_RETENTION_MONTHS,
-  });
-
-  const apartmentEntries = yield* Effect.forEach(
-    // Apartamento numbers floor by floor in every tower: `101`, `102`, …, `201`, …
-    sample.towers.flatMap((tower) =>
-      Array.from({ length: sample.floors }, (_, floorIndex) =>
-        Array.from(
-          { length: sample.apartmentsPerFloor },
-          (__, apartmentIndex) => ({
-            tower,
-            number: `${floorIndex + 1}${String(apartmentIndex + 1).padStart(2, '0')}`,
-          })
-        )
-      ).flat()
-    ),
-    ({ tower, number }) =>
-      writer
-        .table('apartments')
-        .insert({ residentialUnitId, tower, number })
-        .pipe(
-          Effect.map(
-            (apartmentId) => [`${tower}·${number}`, apartmentId] as const
-          )
-        )
-  );
-  const apartmentIdsByKey = new Map(apartmentEntries);
-
-  const now = yield* Clock.currentTimeMillis;
-  const today = CalendarDomain.toLocalDate(now, timeZone);
-
-  yield* populate({
-    residentialUnitId,
-    apartment: (tower, number) => {
-      const apartmentId = apartmentIdsByKey.get(`${tower}·${number}`);
-
-      if (Predicate.isUndefined(apartmentId))
-        throw new Error(`Sample Apartamento ${tower}·${number} is missing`);
-
-      return apartmentId;
-    },
-    today,
-    // Exact for zones without daylight saving, such as Colombia's.
-    at: (days, time) => {
-      const wallClockAsUtc = Date.parse(
-        `${CalendarDomain.addDays(today, days)}T${time}:00Z`
-      );
-
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone,
-        hourCycle: 'h23',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      }).formatToParts(wallClockAsUtc);
-
-      const part = (type: Intl.DateTimeFormatPartTypes) =>
-        Number(parts.find((candidate) => candidate.type === type)?.value ?? 0);
-
-      const zoneWallClockAsUtc = Date.UTC(
-        part('year'),
-        part('month') - 1,
-        part('day'),
-        part('hour'),
-        part('minute'),
-        part('second')
-      );
-      const zoneOffsetMillis = zoneWallClockAsUtc - wallClockAsUtc;
-
-      return wallClockAsUtc - zoneOffsetMillis;
-    },
-  });
-
-  yield* Effect.logInfo('Sample unit seeded', { name: sample.name });
-});
-
 interface SampleVisitor {
   readonly name: string;
   readonly document?: string;
@@ -660,8 +551,125 @@ const populateMirador = Effect.fn('DevelopmentSeeder.populateMirador')(
  */
 export const seedSampleData = Effect.fn('DevelopmentSeeder.seedSampleData')(
   function* () {
+    const reader = yield* DatabaseReader;
+    const writer = yield* DatabaseWriter;
+
     yield* ResidentialUnitsApplication.grantSuperadmin(Domain.SUPERADMIN_EMAIL);
-    yield* seedUnitOnce(Domain.ALMENDROS, populateAlmendros);
-    yield* seedUnitOnce(Domain.MIRADOR, populateMirador);
+
+    // Inserts each sample unit with its Apartamentos and hands it to its
+    // `populate`, unless a unit with that name exists: setup reseeds on every
+    // run, so the first run's data stays and later runs change nothing.
+    yield* Effect.forEach(
+      [
+        [Domain.ALMENDROS, populateAlmendros],
+        [Domain.MIRADOR, populateMirador],
+      ] as const,
+      ([sample, populate]) =>
+        Effect.gen(function* () {
+          const existing = yield* reader
+            .table('residentialUnits')
+            .index('by_name', (q) => q.eq('name', sample.name))
+            .first();
+
+          if (Option.isSome(existing)) {
+            yield* Effect.logInfo('Sample unit already seeded', {
+              name: sample.name,
+            });
+            return;
+          }
+
+          const timeZone = CalendarDomain.DEFAULT_TIME_ZONE;
+          const residentialUnitId = yield* writer
+            .table('residentialUnits')
+            .insert({
+              name: sample.name,
+              city: sample.city,
+              timeZone,
+              visitRetentionMonths:
+                ResidentialUnitsDomain.DEFAULT_VISIT_RETENTION_MONTHS,
+            });
+
+          const apartmentEntries = yield* Effect.forEach(
+            // Apartamento numbers floor by floor in every tower: `101`, `102`, …, `201`, …
+            sample.towers.flatMap((tower) =>
+              Array.from({ length: sample.floors }, (_, floorIndex) =>
+                Array.from(
+                  { length: sample.apartmentsPerFloor },
+                  (__, apartmentIndex) => ({
+                    tower,
+                    number: `${floorIndex + 1}${String(apartmentIndex + 1).padStart(2, '0')}`,
+                  })
+                )
+              ).flat()
+            ),
+            ({ tower, number }) =>
+              writer
+                .table('apartments')
+                .insert({ residentialUnitId, tower, number })
+                .pipe(
+                  Effect.map(
+                    (apartmentId) =>
+                      [`${tower}·${number}`, apartmentId] as const
+                  )
+                )
+          );
+          const apartmentIdsByKey = new Map(apartmentEntries);
+
+          const now = yield* Clock.currentTimeMillis;
+          const today = CalendarDomain.toLocalDate(now, timeZone);
+
+          yield* populate({
+            residentialUnitId,
+            apartment: (tower, number) => {
+              const apartmentId = apartmentIdsByKey.get(`${tower}·${number}`);
+
+              if (Predicate.isUndefined(apartmentId))
+                throw new Error(
+                  `Sample Apartamento ${tower}·${number} is missing`
+                );
+
+              return apartmentId;
+            },
+            today,
+            // Exact for zones without daylight saving, such as Colombia's.
+            at: (days, time) => {
+              const wallClockAsUtc = Date.parse(
+                `${CalendarDomain.addDays(today, days)}T${time}:00Z`
+              );
+
+              const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone,
+                hourCycle: 'h23',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              }).formatToParts(wallClockAsUtc);
+
+              const part = (type: Intl.DateTimeFormatPartTypes) =>
+                Number(
+                  parts.find((candidate) => candidate.type === type)?.value ?? 0
+                );
+
+              const zoneWallClockAsUtc = Date.UTC(
+                part('year'),
+                part('month') - 1,
+                part('day'),
+                part('hour'),
+                part('minute'),
+                part('second')
+              );
+              const zoneOffsetMillis = zoneWallClockAsUtc - wallClockAsUtc;
+
+              return wallClockAsUtc - zoneOffsetMillis;
+            },
+          });
+
+          yield* Effect.logInfo('Sample unit seeded', { name: sample.name });
+        }),
+      { discard: true }
+    );
   }
 );

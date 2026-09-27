@@ -267,7 +267,7 @@ export function FavoriteCard({
             </p>
           ) : null}
         </div>
-        <MembershipRouteFeat.ConfirmActionDialog
+        <AppRouteFeat.ConfirmActionDialog
           trigger={
             <Button
               variant="ghost"

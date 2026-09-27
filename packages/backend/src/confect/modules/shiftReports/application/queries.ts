@@ -17,22 +17,6 @@ const VISITS_PER_REPORT_LIMIT = 2000;
 // API
 // -*******************************************************************************-
 
-export const getOneReportByIdOrNull = Effect.fn(
-  'ShiftReports.getOneReportByIdOrNull'
-)(function* (shiftReportId: Id<'shiftReports'>) {
-  const reader = yield* DatabaseReader;
-
-  return yield* reader
-    .table('shiftReports')
-    .get(shiftReportId)
-    .pipe(
-      Effect.catchTags({
-        GetByIdFailure: () => Effect.succeed(null),
-        DocumentDecodeError: Effect.die,
-      })
-    );
-});
-
 /**
  * Names a Membresía the way reports show it. Membresías are never deleted, so
  * a dangling reference is a defect.
@@ -193,47 +177,6 @@ export const loadShiftReportContent = Effect.fn(
   };
 
   return content;
-});
-
-/** What the email step sends; `null` once the file is gone or was never stored. */
-export const loadShiftReportEmail = Effect.fn(
-  'ShiftReports.loadShiftReportEmail'
-)(function* (shiftReportId: Id<'shiftReports'>) {
-  const reader = yield* DatabaseReader;
-
-  const report = yield* reader
-    .table('shiftReports')
-    .get(shiftReportId)
-    .pipe(Effect.orDie);
-
-  if (Predicate.isUndefined(report.fileId)) return null;
-
-  const [unit, shift] = yield* Effect.all(
-    [
-      reader
-        .table('residentialUnits')
-        .get(report.residentialUnitId)
-        .pipe(Effect.orDie),
-      reader.table('shifts').get(report.shiftId).pipe(Effect.orDie),
-    ],
-    { concurrency: 'unbounded' }
-  );
-
-  const porterName = yield* getMemberDisplayName(shift.porterMembershipId);
-
-  const email: Domain.ShiftReportEmail = {
-    fileName: report.fileName,
-    recipients: report.recipients,
-    fileId: report.fileId,
-    residentialUnitName: unit.name,
-    porterName,
-    shiftStartLabel: Domain.formatLocalDateTime(
-      shift.startedAt ?? shift.plannedStart ?? shift._creationTime,
-      unit.timeZone
-    ),
-  };
-
-  return email;
 });
 
 /**

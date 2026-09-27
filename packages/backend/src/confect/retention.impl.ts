@@ -3,16 +3,25 @@ import * as Clock from 'effect/Clock';
 import * as Duration from 'effect/Duration';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
+import * as Predicate from 'effect/Predicate';
 
 import refs from './_generated/refs';
 import databaseSchema from './_generated/schema';
-import { DatabaseReader, Scheduler } from './_generated/services';
+import {
+  DatabaseReader,
+  DatabaseWriter,
+  Scheduler,
+  StorageWriter,
+} from './_generated/services';
 import * as Calendar from './modules/calendar';
 import * as Retention from './modules/retention';
 import retentionSpec from './retention.spec';
 
 /** Unidades residenciales fanned out per transaction. */
 const UNITS_PER_BATCH = 50;
+
+/** Reportes de turno deleted per transaction, each with its file. */
+const SHIFT_REPORTS_PER_BATCH = 100;
 
 // -*******************************************************************************-
 // Internal
@@ -156,15 +165,40 @@ const purgeUnusedPassesImpl = FunctionImpl.make(
     })
 );
 
+/** Deletes the Reportes de turno created before `cutoff` with their files, oldest first. */
 const purgeShiftReportsImpl = FunctionImpl.make(
   databaseSchema,
   retentionSpec,
   'purgeShiftReports',
   (args) =>
     Effect.gen(function* () {
+      const reader = yield* DatabaseReader;
+      const writer = yield* DatabaseWriter;
+      const storageWriter = yield* StorageWriter;
       const scheduler = yield* Scheduler;
 
-      const mayHaveMore = yield* Retention.purgeShiftReportsBatch(args.cutoff);
+      const reports = yield* reader
+        .table('shiftReports')
+        .index('by_creation_time', (q) => q.lt('_creationTime', args.cutoff))
+        .take(SHIFT_REPORTS_PER_BATCH)
+        .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
+
+      yield* Effect.forEach(
+        reports,
+        (report) =>
+          Effect.gen(function* () {
+            if (Predicate.isNotUndefined(report.fileId))
+              yield* storageWriter
+                .delete(report.fileId)
+                .pipe(Effect.catchTag('BlobNotFoundError', () => Effect.void));
+
+            yield* writer.table('shiftReports').delete(report._id);
+          }),
+        { concurrency: 'unbounded', discard: true }
+      );
+
+      // A full batch means more may remain.
+      const mayHaveMore = reports.length === SHIFT_REPORTS_PER_BATCH;
 
       if (mayHaveMore)
         yield* scheduler.runAfter(

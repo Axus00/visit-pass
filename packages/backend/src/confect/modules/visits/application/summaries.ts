@@ -9,7 +9,8 @@ import * as Domain from '../domain';
 
 /**
  * Projects Visitas for display, loading each Apartamento and entry Portero
- * once. `maskDocuments` hides all but the last digits, for Residentes.
+ * once. `maskDocuments` hides all but a short suffix of each document, for
+ * Residentes.
  */
 export const toVisitSummaries = Effect.fn('Visits.toVisitSummaries')(function* (
   visits: ReadonlyArray<VisitsDoc>,
@@ -44,12 +45,16 @@ export const toVisitSummaries = Effect.fn('Visits.toVisitSummaries')(function* (
     const shouldMaskDocument =
       options.maskDocuments && Predicate.isNotUndefined(visitorDocument);
 
+    // At most the last four characters and never the first three, so a
+    // short document is never shown whole.
+    const shownDocument = shouldMaskDocument
+      ? `••••${visitorDocument.slice(3).slice(-4)}`
+      : visitorDocument;
+
     return {
       _id: visit._id,
       visitorName: visit.visitorName,
-      visitorDocument: shouldMaskDocument
-        ? `••••${visitorDocument.slice(-4)}`
-        : visitorDocument,
+      visitorDocument: shownDocument,
       plate: visit.plate,
       apartmentId: visit.apartmentId,
       apartmentLabel: apartmentLabels.get(visit.apartmentId) ?? '',

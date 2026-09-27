@@ -325,7 +325,7 @@ function ShiftActionDialog({
   };
 
   return (
-    <MembershipRouteFeat.ConfirmActionDialog
+    <AppRouteFeat.ConfirmActionDialog
       trigger={<Button variant={copy.triggerVariant} size="sm" />}
       triggerContent={
         <>

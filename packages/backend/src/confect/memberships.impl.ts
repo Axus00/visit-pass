@@ -186,14 +186,19 @@ const listForUnitImpl = FunctionImpl.make(
               ? null
               : yield* Users.getOneById(member.userId);
 
+            // The signed-in Usuario's name, else the name the Administrador typed.
+            const userName = Predicate.isNull(user)
+              ? ''
+              : [user.firstName, user.lastName]
+                  .filter(Predicate.isNotNull)
+                  .join(' ')
+                  .trim();
+
             return {
               _id: member._id,
               _creationTime: member._creationTime,
               email: member.email,
-              name: Memberships.formatMemberName({
-                user,
-                displayName: member.displayName,
-              }),
+              name: userName.length > 0 ? userName : member.displayName,
               role: member.role,
               status: member.status,
               apartmentId: member.apartmentId,

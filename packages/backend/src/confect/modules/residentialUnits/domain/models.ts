@@ -105,6 +105,15 @@ export const CreateResidentialUnitDto = Schema.Struct({
 
 export type CreateResidentialUnitDto = typeof CreateResidentialUnitDto.Type;
 
+export const InviteAdministratorDto = Schema.Struct(
+  Struct.pick(CreateResidentialUnitDto.fields, [
+    'administratorEmail',
+    'administratorName',
+  ])
+);
+
+export type InviteAdministratorDto = typeof InviteAdministratorDto.Type;
+
 export const UpdateResidentialUnitDto = Schema.Struct({
   name: Name,
   city: Name,

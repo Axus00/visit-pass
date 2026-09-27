@@ -7,13 +7,20 @@ import * as Predicate from 'effect/Predicate';
 
 import refs from './_generated/refs';
 import databaseSchema from './_generated/schema';
-import { DatabaseWriter, Scheduler } from './_generated/services';
+import {
+  DatabaseReader,
+  DatabaseWriter,
+  Scheduler,
+} from './_generated/services';
 import RequireUserIdentity from './middleware/RequireUserIdentity.impl';
 import * as Authentication from './modules/authentication';
 import * as Memberships from './modules/memberships';
 import * as Users from './modules/users';
 import * as WorkOS from './modules/workos';
 import usersSpec from './users.spec';
+
+/** A Usuario belongs to a handful of units; this bounds a runaway account. */
+const MEMBERSHIPS_PER_USER_LIMIT = 100;
 
 // -*******************************************************************************-
 // Public
@@ -59,6 +66,7 @@ const upsertFromWorkOSImpl = FunctionImpl.make(
   'upsertFromWorkOS',
   (args) =>
     Effect.gen(function* () {
+      const reader = yield* DatabaseReader;
       const writer = yield* DatabaseWriter;
       const scheduler = yield* Scheduler;
 
@@ -102,7 +110,7 @@ const upsertFromWorkOSImpl = FunctionImpl.make(
 
       const targetUser = userByExternalId ?? userByEmail;
 
-      if (!targetUser) {
+      if (Predicate.isNull(targetUser)) {
         const createdUserId = yield* writer
           .table('users')
           .insert(createUserDto)
@@ -135,7 +143,37 @@ const upsertFromWorkOSImpl = FunctionImpl.make(
 
       yield* Effect.all(
         [
-          Memberships.syncEmailForUser(reactivatedUser),
+          // Moves the Membresías still under an earlier email onto the current
+          // one, so the Administrador sees it and the old address is free to
+          // invite again.
+          Effect.gen(function* () {
+            const userMemberships = yield* reader
+              .table('memberships')
+              .index('by_userId', (q) => q.eq('userId', reactivatedUser._id))
+              .take(MEMBERSHIPS_PER_USER_LIMIT)
+              .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
+
+            yield* Effect.forEach(
+              userMemberships.filter(
+                (membership) => membership.email !== reactivatedUser.email
+              ),
+              (membership) =>
+                writer
+                  .table('memberships')
+                  .patch(membership._id, { email: reactivatedUser.email })
+                  .pipe(
+                    Effect.catchTag(
+                      [
+                        'GetByIdFailure',
+                        'DocumentDecodeError',
+                        'DocumentEncodeError',
+                      ],
+                      Effect.die
+                    )
+                  ),
+              { concurrency: 'unbounded', discard: true }
+            );
+          }),
           Memberships.activatePendingForUser(reactivatedUser),
         ],
         { concurrency: 'unbounded' }
@@ -156,7 +194,7 @@ const softDeleteByExternalIdImpl = FunctionImpl.make(
       const user = yield* Users.getOneByExternalId(args.externalId).pipe(
         Users.isActiveOrNull
       );
-      if (!user) return false as const;
+      if (Predicate.isNull(user)) return false as const;
 
       const now = yield* Clock.currentTimeMillis;
 

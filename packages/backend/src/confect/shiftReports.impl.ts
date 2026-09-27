@@ -151,12 +151,19 @@ const recordFileImpl = FunctionImpl.make(
   'recordFile',
   (args) =>
     Effect.gen(function* () {
+      const reader = yield* DatabaseReader;
       const writer = yield* DatabaseWriter;
       const storageWriter = yield* StorageWriter;
 
-      const report = yield* ShiftReports.getOneReportByIdOrNull(
-        args.shiftReportId
-      );
+      const report = yield* reader
+        .table('shiftReports')
+        .get(args.shiftReportId)
+        .pipe(
+          Effect.catchTags({
+            GetByIdFailure: () => Effect.succeed(null),
+            DocumentDecodeError: Effect.die,
+          })
+        );
 
       // Retention deleted the row while the file was being built.
       if (Predicate.isNull(report)) {
@@ -181,11 +188,51 @@ const recordFileImpl = FunctionImpl.make(
     })
 );
 
+/** What the email step sends; `null` once the file is gone or was never stored. */
 const getEmailImpl = FunctionImpl.make(
   databaseSchema,
   shiftReportsSpec,
   'getEmail',
-  (args) => ShiftReports.loadShiftReportEmail(args.shiftReportId)
+  (args) =>
+    Effect.gen(function* () {
+      const reader = yield* DatabaseReader;
+
+      const report = yield* reader
+        .table('shiftReports')
+        .get(args.shiftReportId)
+        .pipe(Effect.orDie);
+
+      if (Predicate.isUndefined(report.fileId)) return null;
+
+      const [unit, shift] = yield* Effect.all(
+        [
+          reader
+            .table('residentialUnits')
+            .get(report.residentialUnitId)
+            .pipe(Effect.orDie),
+          reader.table('shifts').get(report.shiftId).pipe(Effect.orDie),
+        ],
+        { concurrency: 'unbounded' }
+      );
+
+      const porterName = yield* ShiftReports.getMemberDisplayName(
+        shift.porterMembershipId
+      );
+
+      const email: ShiftReports.ShiftReportEmail = {
+        fileName: report.fileName,
+        recipients: report.recipients,
+        fileId: report.fileId,
+        residentialUnitName: unit.name,
+        porterName,
+        shiftStartLabel: ShiftReports.formatLocalDateTime(
+          shift.startedAt ?? shift.plannedStart ?? shift._creationTime,
+          unit.timeZone
+        ),
+      };
+
+      return email;
+    })
 );
 
 const sendEmailImpl = FunctionImpl.make(
@@ -232,11 +279,18 @@ const terminalizeImpl = FunctionImpl.make(
   'terminalize',
   (args) =>
     Effect.gen(function* () {
+      const reader = yield* DatabaseReader;
       const writer = yield* DatabaseWriter;
 
-      const report = yield* ShiftReports.getOneReportByIdOrNull(
-        args.shiftReportId
-      );
+      const report = yield* reader
+        .table('shiftReports')
+        .get(args.shiftReportId)
+        .pipe(
+          Effect.catchTags({
+            GetByIdFailure: () => Effect.succeed(null),
+            DocumentDecodeError: Effect.die,
+          })
+        );
 
       if (Predicate.isNull(report)) {
         yield* Effect.logWarning(

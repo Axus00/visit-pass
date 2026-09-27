@@ -55,6 +55,8 @@ function PorteriaScanPage() {
   const resolution = isHeldForScan ? heldResolution.resolution : liveValue;
   const hasNoOpenShift =
     Predicate.isNotNull(shiftState) && Predicate.isNull(shiftState.openShift);
+  /** Bumped by "Reintentar" to remount the scanner, which reopens the camera. */
+  const [scannerAttempt, setScannerAttempt] = useState(0);
 
   const scanAnother = () => {
     setHeldResolution(null);
@@ -111,7 +113,11 @@ function PorteriaScanPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
         <div className="flex min-w-0 flex-col gap-4">
           {Predicate.isNull(token) ? (
-            <PorteriaRouteFeat.PassScanner onCode={acceptCode} />
+            <PorteriaRouteFeat.PassScanner
+              key={scannerAttempt}
+              onCode={acceptCode}
+              onRetry={() => setScannerAttempt((attempt) => attempt + 1)}
+            />
           ) : Predicate.isNull(resolution) ? (
             <ResolvingCard
               error={

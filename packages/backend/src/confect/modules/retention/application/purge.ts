@@ -5,11 +5,7 @@ import * as Predicate from 'effect/Predicate';
 
 import type { Id } from '#convex/_generated/dataModel';
 
-import {
-  DatabaseReader,
-  DatabaseWriter,
-  StorageWriter,
-} from '../../../_generated/services';
+import { DatabaseReader, DatabaseWriter } from '../../../_generated/services';
 import * as CalendarDomain from '../../calendar/domain';
 import * as Domain from '../domain';
 
@@ -21,8 +17,6 @@ const AUTHORIZATIONS_PER_BATCH = 25;
 
 /** An Evento holds at most 100 Pases; this leaves headroom. */
 const PASSES_PER_AUTHORIZATION_LIMIT = 200;
-
-const SHIFT_REPORTS_PER_BATCH = 100;
 
 /** Where a paginated sweep stops; the caller reschedules when `isDone` is false. */
 export interface SweepProgress {
@@ -279,39 +273,4 @@ export const purgeUnusedPassesPage = Effect.fn(
   };
 
   return progress;
-});
-
-/**
- * Deletes one batch of Reportes de turno created before `cutoff` with their
- * files, oldest first. Answers whether a full batch was deleted, meaning more
- * may remain.
- */
-export const purgeShiftReportsBatch = Effect.fn(
-  'Retention.purgeShiftReportsBatch'
-)(function* (cutoff: number) {
-  const reader = yield* DatabaseReader;
-  const writer = yield* DatabaseWriter;
-  const storageWriter = yield* StorageWriter;
-
-  const reports = yield* reader
-    .table('shiftReports')
-    .index('by_creation_time', (q) => q.lt('_creationTime', cutoff))
-    .take(SHIFT_REPORTS_PER_BATCH)
-    .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
-
-  yield* Effect.forEach(
-    reports,
-    (report) =>
-      Effect.gen(function* () {
-        if (Predicate.isNotUndefined(report.fileId))
-          yield* storageWriter
-            .delete(report.fileId)
-            .pipe(Effect.catchTag('BlobNotFoundError', () => Effect.void));
-
-        yield* writer.table('shiftReports').delete(report._id);
-      }),
-    { concurrency: 'unbounded', discard: true }
-  );
-
-  return reports.length === SHIFT_REPORTS_PER_BATCH;
 });

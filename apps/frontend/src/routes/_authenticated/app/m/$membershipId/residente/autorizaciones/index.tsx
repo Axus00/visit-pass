@@ -39,15 +39,21 @@ const EMPTY_TAB_COPY = {
 
 function ResidenteAutorizacionesPage() {
   const membership = MembershipRouteFeat.useCurrentMembership();
-  const now = VisitPass.useNow();
+  // The query and the tabs only use the calendar day, so an hourly clock keeps
+  // the heavy query from re-running every minute. Its ticks land on hour
+  // boundaries, which include local midnight in whole-hour zones like Bogotá.
+  const hourlyNow = VisitPass.useNow(3_600_000);
   const authorizations = VisitPass.useStableQuery(
     refs.public.authorizations.listForApartment,
     {
       membershipId: membership.membershipId,
-      now,
+      now: hourlyNow,
     }
   );
-  const today = VisitPass.todayIn(membership.residentialUnitTimeZone, now);
+  const today = VisitPass.todayIn(
+    membership.residentialUnitTimeZone,
+    hourlyNow
+  );
   const [tab, setTab] =
     useState<ResidenteRouteFeat.AuthorizationTab>('current');
   const share = ResidenteRouteFeat.usePassShare();

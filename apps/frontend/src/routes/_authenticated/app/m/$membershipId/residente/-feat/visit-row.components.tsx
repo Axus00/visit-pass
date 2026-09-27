@@ -59,7 +59,7 @@ export function VisitRow({
       : VisitPass.formatDateTime(visit.exitedAt, timeZone);
   const details = [
     visit.visitorDocument,
-    visit.plate ? `Placa ${visit.plate}` : undefined,
+    Predicate.isNotUndefined(visit.plate) ? `Placa ${visit.plate}` : undefined,
     VisitPass.VISIT_ORIGIN_LABELS[visit.origin],
   ].filter(Predicate.isNotUndefined);
 

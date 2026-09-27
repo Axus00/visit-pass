@@ -95,18 +95,37 @@ export const requestShiftReport = Effect.fn('ShiftReports.requestShiftReport')(
         reason: 'noRecipients',
       });
 
+    // `reporte-turno-<unit-slug>-<YYYY-MM-DD>-<HHmm>.xlsx`, local to the unit.
+    // The slug is lowercase ASCII words joined by dashes, safe on any disk.
+    const unitSlug = unit.name
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const startParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: unit.timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(
+      shift.startedAt ?? shift.plannedStart ?? shift._creationTime
+    );
+    // Zero-padded wall-clock part of the shift start in the unit's time zone.
+    const startPart = (type: Intl.DateTimeFormatPartTypes) =>
+      startParts.find((candidate) => candidate.type === type)?.value ?? '';
+    const fileName = `reporte-turno-${unitSlug.length > 0 ? unitSlug : 'unidad'}-${startPart('year')}-${startPart('month')}-${startPart('day')}-${startPart('hour')}${startPart('minute')}.xlsx`;
+
     return yield* writer
       .table('shiftReports')
       .insert({
         residentialUnitId: shift.residentialUnitId,
         shiftId: shift._id,
         requestedByMembershipId: membership._id,
-        fileName: Domain.toShiftReportFileName({
-          residentialUnitName: unit.name,
-          shiftStart:
-            shift.startedAt ?? shift.plannedStart ?? shift._creationTime,
-          timeZone: unit.timeZone,
-        }),
+        fileName,
         status: 'generating',
         emailStatus: args.sendEmail ? 'pending' : 'notRequested',
         recipients,

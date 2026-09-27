@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { useMutation } from '@confect/react';
+import * as Predicate from 'effect/Predicate';
 import * as Result from 'effect/Result';
 import { CalendarDays, RefreshCw, Share2, XCircle } from 'lucide-react';
 
@@ -125,7 +126,7 @@ export function AuthorizationCard({
             {describePassValidity(authorization)}
           </p>
           <p className="text-xs text-muted-foreground">
-            {authorization.createdByName
+            {Predicate.isNotUndefined(authorization.createdByName)
               ? `Creada por ${authorization.createdByName}`
               : 'Creada'}{' '}
             ·{' '}
@@ -180,7 +181,7 @@ export function AuthorizationCard({
                   >
                     <Share2 />
                   </Button>
-                  <MembershipRouteFeat.ConfirmActionDialog
+                  <AppRouteFeat.ConfirmActionDialog
                     trigger={
                       <Button
                         variant="ghost"
@@ -230,7 +231,7 @@ export function AuthorizationCard({
       ) : null}
 
       {isCurrent ? (
-        <MembershipRouteFeat.ConfirmActionDialog
+        <AppRouteFeat.ConfirmActionDialog
           trigger={
             <Button variant="destructive" size="sm" className="self-start" />
           }

@@ -80,7 +80,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </p>
               <p className="truncate text-xs text-muted-foreground">
                 {VisitPass.ROLE_LABELS[membership.role]}
-                {membership.apartmentLabel
+                {Predicate.isNotUndefined(membership.apartmentLabel)
                   ? ` · ${membership.apartmentLabel}`
                   : null}
               </p>
@@ -186,7 +186,7 @@ function MembershipSwitcher() {
           </span>
           <span className="truncate text-xs text-sidebar-primary">
             {VisitPass.ROLE_LABELS[membership.role]}
-            {membership.apartmentLabel
+            {Predicate.isNotUndefined(membership.apartmentLabel)
               ? ` · ${membership.apartmentLabel}`
               : null}
           </span>
@@ -240,7 +240,7 @@ function MembershipMenuItems({
             </span>
             <span className="truncate text-xs text-muted-foreground">
               {VisitPass.ROLE_LABELS[candidate.role]}
-              {candidate.apartmentLabel
+              {Predicate.isNotUndefined(candidate.apartmentLabel)
                 ? ` · ${candidate.apartmentLabel}`
                 : null}
             </span>

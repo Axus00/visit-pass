@@ -13,6 +13,8 @@ const MESSAGES_BY_TAG: Record<string, string> = {
   'Memberships/CannotRevokeOwnMembershipError':
     'No puedes revocar tu propia Membresía.',
   'ResidentialUnits/ApartmentNotFoundError': 'El Apartamento no existe.',
+  'ResidentialUnits/ResidentialUnitNotFoundError':
+    'La Unidad residencial no existe.',
   'ResidentialUnits/NotSuperadminError': 'Solo un Superadmin puede hacer esto.',
   'Authorizations/AuthorizationNotFoundError': 'La Autorización no existe.',
   'Authorizations/PassNotFoundError': 'El Pase no existe.',

@@ -170,15 +170,3 @@ describe('buildShiftReportWorkbookParts', () => {
     ]);
   });
 });
-
-describe('toShiftReportFileName', () => {
-  it('names the file after the unit and the local start of the Turno', () => {
-    expect(
-      Domain.toShiftReportFileName({
-        residentialUnitName: 'Conjunto Los Álamos (Etapa 2)',
-        shiftStart: ENTERED_AT,
-        timeZone: TIME_ZONE,
-      })
-    ).toBe('reporte-turno-conjunto-los-alamos-etapa-2-2026-09-26-1405.xlsx');
-  });
-});

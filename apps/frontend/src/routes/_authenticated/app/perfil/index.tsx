@@ -212,10 +212,10 @@ function MembershipLinks({
                 </span>
                 <span className="truncate text-sm text-muted-foreground">
                   {VisitPass.ROLE_LABELS[membership.role]}
-                  {membership.apartmentLabel
+                  {Predicate.isNotUndefined(membership.apartmentLabel)
                     ? ` · ${membership.apartmentLabel}`
                     : null}
-                  {membership.occupancyType
+                  {Predicate.isNotUndefined(membership.occupancyType)
                     ? ` · ${VisitPass.OCCUPANCY_LABELS[membership.occupancyType]}`
                     : null}
                 </span>

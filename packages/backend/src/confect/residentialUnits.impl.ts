@@ -1,4 +1,5 @@
 import { FunctionImpl, GroupImpl } from '@confect/server';
+import * as Clock from 'effect/Clock';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
 import * as Option from 'effect/Option';
@@ -10,6 +11,7 @@ import databaseSchema from './_generated/schema';
 import { DatabaseReader, DatabaseWriter } from './_generated/services';
 import RequireUserIdentity from './middleware/RequireUserIdentity.impl';
 import * as Calendar from './modules/calendar';
+import * as CommonEmailAddresses from './modules/commonEmailAddresses';
 import * as Memberships from './modules/memberships';
 import * as ResidentialUnits from './modules/residentialUnits';
 import residentialUnitsSpec from './residentialUnits.spec';
@@ -23,6 +25,9 @@ const OPEN_SHIFTS_LIMIT = 100;
 const VISITS_COUNT_LIMIT = 2000;
 const UNITS_LIMIT = 500;
 const ADMINISTRATORS_PER_UNIT_LIMIT = 50;
+
+/** Enough for the pending invitations one email can accumulate. */
+const PENDING_PER_EMAIL_LIMIT = 100;
 
 /**
  * Wider than any calendar day in any time zone, so scanning Ingresos since
@@ -388,6 +393,103 @@ const createImpl = FunctionImpl.make(
     })
 );
 
+/**
+ * Same invitation as `create`: active at once when the Usuario already signed
+ * in, else pending until they do.
+ */
+const inviteAdministratorImpl = FunctionImpl.make(
+  databaseSchema,
+  residentialUnitsSpec,
+  'inviteAdministrator',
+  (args) =>
+    Effect.gen(function* () {
+      const reader = yield* DatabaseReader;
+
+      yield* ResidentialUnits.requireSuperadmin();
+
+      const unit = yield* reader
+        .table('residentialUnits')
+        .get(args.residentialUnitId)
+        .pipe(
+          Effect.catchTags({
+            GetByIdFailure: () => Effect.succeed(null),
+            DocumentDecodeError: Effect.die,
+          })
+        );
+
+      if (Predicate.isNull(unit))
+        return yield* new ResidentialUnits.ResidentialUnitNotFoundError();
+
+      return yield* Memberships.inviteMember(unit._id, {
+        email: args.administratorEmail,
+        displayName: args.administratorName,
+        role: 'administrator',
+      }).pipe(
+        // An Administrador invitation names no Apartamento.
+        Effect.catchTag('ResidentialUnits/ApartmentNotFoundError', Effect.die)
+      );
+    })
+);
+
+/**
+ * Revokes every pending Administrador Membresía of the unit under `email`;
+ * active ones stay, since only the Administradores themselves revoke those.
+ */
+const revokeAdministratorInvitationImpl = FunctionImpl.make(
+  databaseSchema,
+  residentialUnitsSpec,
+  'revokeAdministratorInvitation',
+  (args) =>
+    Effect.gen(function* () {
+      const reader = yield* DatabaseReader;
+      const writer = yield* DatabaseWriter;
+
+      yield* ResidentialUnits.requireSuperadmin();
+
+      const pendingMemberships = yield* reader
+        .table('memberships')
+        .index('by_email_and_status', (q) =>
+          q
+            .eq('email', CommonEmailAddresses.normalizeEmailAddress(args.email))
+            .eq('status', 'pending')
+        )
+        .take(PENDING_PER_EMAIL_LIMIT)
+        .pipe(Effect.catchTag('DocumentDecodeError', Effect.die));
+
+      const invitations = pendingMemberships.filter(
+        (membership) =>
+          membership.residentialUnitId === args.residentialUnitId &&
+          membership.role === 'administrator'
+      );
+
+      if (invitations.length === 0)
+        return yield* new Memberships.MembershipNotFoundError();
+
+      const now = yield* Clock.currentTimeMillis;
+
+      yield* Effect.forEach(
+        invitations,
+        (invitation) =>
+          writer
+            .table('memberships')
+            .patch(invitation._id, { status: 'revoked', revokedAt: now })
+            .pipe(
+              Effect.catchTag(
+                [
+                  'GetByIdFailure',
+                  'DocumentDecodeError',
+                  'DocumentEncodeError',
+                ],
+                Effect.die
+              )
+            ),
+        { concurrency: 'unbounded', discard: true }
+      );
+
+      return null;
+    })
+);
+
 // -*******************************************************************************-
 // Internal
 // -*******************************************************************************-
@@ -410,6 +512,8 @@ export default GroupImpl.make(databaseSchema, residentialUnitsSpec).pipe(
   Layer.provide(updateImpl),
   Layer.provide(listAllImpl),
   Layer.provide(createImpl),
+  Layer.provide(inviteAdministratorImpl),
+  Layer.provide(revokeAdministratorInvitationImpl),
   Layer.provide(grantSuperadminImpl),
   Layer.provide(RequireUserIdentity),
   GroupImpl.finalize
