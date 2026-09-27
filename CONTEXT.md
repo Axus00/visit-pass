@@ -53,7 +53,7 @@ Membresía con rol portero. Registra ingresos y salidas durante su Turno.
 _Avoid_: Guardia, vigilante, celador
 
 **Administrador**:
-Membresía con rol administrador. Da de alta apartamentos, residentes, porteros y turnos, y recibe los Reportes de turno.
+Membresía con rol administrador. Da de alta apartamentos, residentes y porteros, y recibe los Reportes de turno.
 _Avoid_: Admin, administradora, gerente
 
 **Superadmin**:
@@ -112,8 +112,8 @@ _Avoid_: Check-out
 ### Portería
 
 **Turno**:
-El periodo de trabajo de un Portero en una Unidad residencial: un horario planeado por el Administrador más la marcación real de inicio y fin que hace el Portero.
-_Avoid_: Jornada, horario (es solo la parte planeada)
+El periodo de trabajo de un Portero en una Unidad residencial, delimitado por el inicio y el fin que el propio Portero marca. Nadie lo programa por adelantado.
+_Avoid_: Jornada, horario
 
 **Reporte de turno**:
 El listado de las Visitas registradas durante un Turno, exportable a Excel y enviable por correo al Administrador.
