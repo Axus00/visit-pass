@@ -88,14 +88,14 @@ Identificador corto y legible de un Pase, único para siempre dentro de su Unida
 _Avoid_: ID corto, PIN, token
 
 **Pase rechazado**:
-Un Pase escaneado que no habilita el Ingreso, con un motivo (cancelado, vencido, aún no vigente, día no permitido, ya usado, reemplazado, Apartamento sin Residente activo). El Portero puede forzar el ingreso con un Registro manual.
+Un Pase escaneado o digitado que no habilita el Ingreso, con un motivo (no válido en esta unidad, reemplazado, cancelado, vencido, aún no vigente, día no permitido, ya usado, Apartamento sin Residente activo). El Portero puede forzar el ingreso con un Registro manual. Un Pase cuyo Visitante sigue dentro no se rechaza: volver a escanearlo registra su Salida.
 
 **Registro manual**:
-Alta de una Visita hecha por el Portero sin un Pase válido: nombre, documento, Apartamento destino, Tipo de visita y placa opcional. Incluye el ingreso forzado tras un Pase rechazado.
+Alta de una Visita hecha por el Portero sin un Pase válido: nombre, tipo y número de documento (opcional para un menor de edad), Apartamento destino, Tipo de visita y placa opcional. Incluye el ingreso forzado tras un Pase rechazado.
 _Avoid_: Visita espontánea, walk-in
 
 **Visita**:
-La presencia real de un Visitante en la Unidad residencial, originada por un Pase o un Registro manual. Tiene un Ingreso y, opcionalmente, una Salida: está abierta hasta que el Portero registra la Salida, y nunca se cierra sola. Una Visita registrada por error se anula con motivo, no se borra.
+La presencia real de un Visitante en la Unidad residencial, originada por un Pase o un Registro manual. Tiene un Ingreso y, opcionalmente, una Salida: está abierta hasta que el Portero registra la Salida, y nunca se cierra sola. Una Visita registrada por error se anula con motivo, no se borra, y solo la anula el Portero que registró su Ingreso.
 _Avoid_: Entrada (es el momento, no la visita), acceso
 
 **Tipo de visita**:
@@ -106,7 +106,7 @@ El momento en que el Portero deja entrar al Visitante y lo registra.
 _Avoid_: Check-in, entrada
 
 **Salida**:
-El momento en que el Portero registra que el Visitante abandonó la Unidad residencial.
+El momento en que el Portero registra que el Visitante abandonó la Unidad residencial, desde Visitantes dentro o volviendo a escanear o digitar su Pase.
 _Avoid_: Check-out
 
 ### Portería
@@ -114,6 +114,10 @@ _Avoid_: Check-out
 **Turno**:
 El periodo de trabajo de un Portero en una Unidad residencial, delimitado por el inicio y el fin que el propio Portero marca. Nadie lo programa por adelantado.
 _Avoid_: Jornada, horario
+
+**Visitantes dentro**:
+Las Visitas abiertas de una Unidad residencial, sin importar qué Portero registró su Ingreso. Las de días anteriores siguen ahí hasta que alguien registre su Salida.
+_Avoid_: Visitas activas, ocupación
 
 **Reporte de turno**:
 El listado de las Visitas registradas durante un Turno, exportable a Excel y enviable por correo al Administrador.
