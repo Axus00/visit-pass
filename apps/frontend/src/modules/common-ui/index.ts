@@ -6,6 +6,7 @@ export {
 export { FormDialog } from './form-dialog.components';
 export { GlobalSpinner } from './global-spinner.components';
 export { NavLinkButton } from './nav-link-button.components';
+export { PrototypeSwitcher } from './prototype-switcher.components';
 export { SearchField } from './search-field.components';
 export { useDebouncedText } from './use-debounced-text.hooks';
 export { useIsMountedRef } from './use-is-mounted-ref.hooks';

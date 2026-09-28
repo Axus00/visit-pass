@@ -20,6 +20,7 @@ import { Route as AuthPublicSignupIndexRouteImport } from './routes/_auth-public
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
 import { Route as AuthenticatedSignoutIndexRouteImport } from './routes/_authenticated/signout/index'
 import { Route as SandboxDefaultErrorIndexRouteImport } from './routes/sandbox/default-error/index'
+import { Route as SandboxPrototypePorteroIndexRouteImport } from './routes/sandbox/prototype-portero/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +77,12 @@ const SandboxDefaultErrorIndexRoute =
     path: '/default-error/',
     getParentRoute: () => SandboxRouteRoute,
   } as any)
+const SandboxPrototypePorteroIndexRoute =
+  SandboxPrototypePorteroIndexRouteImport.update({
+    id: '/prototype-portero/',
+    path: '/prototype-portero/',
+    getParentRoute: () => SandboxRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AuthenticatedAppIndexRoute
   '/signout/': typeof AuthenticatedSignoutIndexRoute
   '/sandbox/default-error/': typeof SandboxDefaultErrorIndexRoute
+  '/sandbox/prototype-portero/': typeof SandboxPrototypePorteroIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -98,6 +106,7 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppIndexRoute
   '/signout': typeof AuthenticatedSignoutIndexRoute
   '/sandbox/default-error': typeof SandboxDefaultErrorIndexRoute
+  '/sandbox/prototype-portero': typeof SandboxPrototypePorteroIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -112,6 +121,7 @@ export interface FileRoutesById {
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/signout/': typeof AuthenticatedSignoutIndexRoute
   '/sandbox/default-error/': typeof SandboxDefaultErrorIndexRoute
+  '/sandbox/prototype-portero/': typeof SandboxPrototypePorteroIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/signout/'
     | '/sandbox/default-error/'
+    | '/sandbox/prototype-portero/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/signout'
     | '/sandbox/default-error'
+    | '/sandbox/prototype-portero'
   id:
     | '__root__'
     | '/'
@@ -149,6 +161,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/'
     | '/_authenticated/signout/'
     | '/sandbox/default-error/'
+    | '/sandbox/prototype-portero/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -239,6 +252,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SandboxDefaultErrorIndexRouteImport
       parentRoute: typeof SandboxRouteRoute
     }
+    '/sandbox/prototype-portero/': {
+      id: '/sandbox/prototype-portero/'
+      path: '/prototype-portero'
+      fullPath: '/sandbox/prototype-portero/'
+      preLoaderRoute: typeof SandboxPrototypePorteroIndexRouteImport
+      parentRoute: typeof SandboxRouteRoute
+    }
   }
 }
 
@@ -271,10 +291,12 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface SandboxRouteRouteChildren {
   SandboxDefaultErrorIndexRoute: typeof SandboxDefaultErrorIndexRoute
+  SandboxPrototypePorteroIndexRoute: typeof SandboxPrototypePorteroIndexRoute
 }
 
 const SandboxRouteRouteChildren: SandboxRouteRouteChildren = {
   SandboxDefaultErrorIndexRoute: SandboxDefaultErrorIndexRoute,
+  SandboxPrototypePorteroIndexRoute: SandboxPrototypePorteroIndexRoute,
 }
 
 const SandboxRouteRouteWithChildren = SandboxRouteRoute._addFileChildren(
