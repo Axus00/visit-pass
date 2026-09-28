@@ -16,7 +16,7 @@ Versions are pinned in `pnpm-workspace.yaml` catalogs.
 
 - **Full-stack type safety**: Confect specs in `packages/backend/src/confect/*.spec.ts` generate `@repo/backend/refs`. The frontend calls `useQuery(refs.public.users.me, {})` and gets decoded returns and typed errors, with no hand-written client types.
 - **Authentication**: `/signin`, `/signup`, `/callback`, `/signout`, and `/signout-callback` are wired to WorkOS AuthKit, plus an `_authenticated` layout route with `returnTo` handling. The WorkOS webhook upserts users into Convex, and the `RequireUserIdentity` middleware guards Confect functions.
-- **Durable execution**: the `workflows` module wraps `@convex-dev/workflow` so steps keep Confect's codecs and typed errors, and `classifyWorkflowError` recovers typed failures. `shiftReports` shows the end-to-end pattern (mutation, workflow, `onComplete`, reactive status on the report row).
+- **Durable execution**: the `workflows` module wraps `@convex-dev/workflow` so steps keep Confect's codecs and typed errors, and `classifyWorkflowError` recovers typed failures. `exampleWorkflows` shows the end-to-end pattern (mutation, workflow, `onComplete`, reactive status on `/app`) and is meant to be deleted.
 - **Parallel-agent worktrees**: `pnpm setup:worktree` gives each linked worktree its own Convex deployment, WorkOS environment, dev-server port, and seeded dev accounts.
 - **Agent context**: `AGENTS.md`, coding standards in `docs/agents/`, ADRs in `docs/adr/`, a `CONTEXT.md` glossary, and skills in `.agents/skills` and `.claude/skills`.
 - **CI**: format, lint, typecheck, and tests on every PR, plus opt-in isolated PR previews on Convex + WorkOS + Vercel (`docs/pr-previews.md`).
@@ -46,6 +46,7 @@ Then make it yours:
 
 - Rename the app in `apps/frontend/src/modules/common-ui/app-name.constant.ts` and `apps/frontend/index.html`.
 - Describe the domain in `CONTEXT.md`.
+- Replace `exampleWorkflows` (backend group, module and table, plus `apps/frontend/src/routes/_authenticated/app/-feat`) with real features.
 
 ## Layout
 

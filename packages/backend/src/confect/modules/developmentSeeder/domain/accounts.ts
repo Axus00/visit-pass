@@ -1,8 +1,7 @@
 /**
  * Accounts seeded into every development deployment. The WorkOS environment
  * behind a linked worktree is disposable, so these credentials never reach a
- * real user base. `seedSampleData` gives each account its Membresías; see
- * `sampleData.ts`.
+ * real user base. Add an account per role once the app has roles.
  *
  * Use `example.org`: every unclaimed WorkOS environment ships a "Test
  * Organization" whose SSO connection claims `example.com`, which would route
@@ -22,27 +21,6 @@ export const DEVELOPMENT_ACCOUNTS = [
     password: 'dev-account-human&1',
     firstName: 'Human',
     lastName: 'Developer',
-  },
-  {
-    email: 'residente@example.org',
-    externalId: 'development-residente',
-    password: 'dev-account-residente&1',
-    firstName: 'Laura',
-    lastName: 'Gómez',
-  },
-  {
-    email: 'portero@example.org',
-    externalId: 'development-portero',
-    password: 'dev-account-portero&1',
-    firstName: 'Carlos',
-    lastName: 'Ramírez',
-  },
-  {
-    email: 'administrador@example.org',
-    externalId: 'development-administrador',
-    password: 'dev-account-administrador&1',
-    firstName: 'Ana',
-    lastName: 'Martínez',
   },
 ] as const;
 

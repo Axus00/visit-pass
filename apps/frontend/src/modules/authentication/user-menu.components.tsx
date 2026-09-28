@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type * as React from 'react';
 
 import { Link } from '@tanstack/react-router';
-import * as Predicate from 'effect/Predicate';
 import { ChevronDown, ChevronRight, LogOut } from 'lucide-react';
 
 import {
@@ -22,9 +21,7 @@ import type { AuthUser } from './user.models';
 import { getUserDisplayName } from './user.utils';
 
 export function UserAvatarMenu({ user }: { user: AuthUser }) {
-  if (Predicate.isNull(user)) return null;
-
-  const hasName = Boolean(user.firstName || user.lastName);
+  if (!user) return null;
 
   return (
     <DropdownMenu>
@@ -33,7 +30,7 @@ export function UserAvatarMenu({ user }: { user: AuthUser }) {
           <button
             type="button"
             className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            aria-label="Abrir menú de usuario"
+            aria-label="Open user menu"
           />
         }
       >
@@ -43,11 +40,9 @@ export function UserAvatarMenu({ user }: { user: AuthUser }) {
         <div className="px-2 py-2">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">
-              {hasName
-                ? getUserDisplayName(user.firstName, user.lastName)
-                : 'Sesión iniciada'}
+              {getUserDisplayName(user.firstName, user.lastName)}
             </p>
-            {Predicate.isNotNull(user.email) ? (
+            {user.email ? (
               <p className="truncate text-sm text-muted-foreground">
                 {user.email}
               </p>
@@ -87,7 +82,7 @@ export function UserSessionMenu({
           <button
             type="button"
             className="group/menu-button flex h-12 w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring active:bg-accent active:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground"
-            aria-label="Abrir menú de sesión"
+            aria-label="Open session menu"
           />
         }
       >
@@ -125,10 +120,7 @@ function UserSessionInfo({
   className?: string;
   textClassName?: string;
 }) {
-  const hasName = Boolean(user.firstName || user.lastName);
-  const displayName = hasName
-    ? getUserDisplayName(user.firstName, user.lastName)
-    : 'Sesión iniciada';
+  const displayName = getUserDisplayName(user.firstName, user.lastName);
 
   return (
     <div className={cn('flex min-w-0 items-center gap-2', className)}>
@@ -140,7 +132,7 @@ function UserSessionInfo({
         )}
       >
         <span className="truncate font-medium">{displayName}</span>
-        {Predicate.isNotNull(user.email) ? (
+        {user.email ? (
           <span className="truncate text-xs text-muted-foreground">
             {user.email}
           </span>
@@ -156,7 +148,7 @@ function UserSignOutMenuItem() {
       render={
         <Link className="flex items-center gap-2" to="/signout">
           <LogOut />
-          Cerrar sesión
+          Log out
         </Link>
       }
     />
@@ -176,7 +168,7 @@ function UserAvatar({
     initialFromFullname.toUpperCase() || initialFromEmail.toUpperCase() || '?';
 
   const fullname = parsedFullname.join(' ');
-  const label = fullname ? `Foto de perfil de ${fullname}` : 'Foto de perfil';
+  const label = fullname ? `${fullname}'s profile photo` : 'User profile photo';
 
   return (
     <Avatar aria-label={label} title={fullname || email || undefined}>

@@ -30,8 +30,6 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
-  readonly RESEND_API_KEY: string | undefined;
-  readonly SHIFT_REPORT_FROM_EMAIL: string | undefined;
   readonly WORKOS_API_KEY: string;
   readonly WORKOS_CLIENT_ID: string;
   readonly WORKOS_WEBHOOK_SECRET: string;

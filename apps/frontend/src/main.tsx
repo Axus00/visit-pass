@@ -8,24 +8,15 @@ import { ConvexProviderWithAuth, ConvexReactClient } from 'convex/react';
 import { Duration } from 'effect';
 import { createRoot } from 'react-dom/client';
 
-import { Toaster, tw, useIsMobile } from '@repo/ui';
+import { Toaster, useIsMobile } from '@repo/ui';
 
 import * as Authentication from '#modules/authentication';
-import * as Theme from '#modules/theme';
 
 import { App } from './App';
 import { env } from './env';
 
 // Validate environment variables
 void env;
-
-// A phone on the LAN opens the dev server over plain HTTP, where AuthKit's
-// PKCE hashing is unavailable. Production builds drop this branch.
-if (import.meta.env.DEV) {
-  const { installInsecureContextShims } =
-    await import('./modules/authentication/insecure-context-shims.dev');
-  installInsecureContextShims();
-}
 
 const convex = new ConvexReactClient(env.VITE_CONVEX_URI, {
   initialAuthTokenReuse: true,
@@ -36,8 +27,10 @@ const convex = new ConvexReactClient(env.VITE_CONVEX_URI, {
   placement needs a component to read the viewport from. `bottom-right` is
   Sonner's own default, restated here because the ternary has to name both.
 
-  `theme` follows the resolved app theme. Left to decide for itself, Sonner
-  reads the OS `prefers-color-scheme`, which disagrees with an explicit choice.
+  `theme` is pinned to light because the app has no dark mode yet. Left to
+  decide for itself, Sonner reads the OS `prefers-color-scheme` and renders a
+  dark toast over the light app. When dark mode lands, this is where the
+  resolved app theme goes.
 
   The 48px clearance keeps mobile toasts below the page header. Sonner switches
   from `offset` to `mobileOffset` at 600px, while the app treats widths below
@@ -48,27 +41,20 @@ const MOBILE_TOAST_OFFSET = { top: 48 };
 
 function AppToaster() {
   const isMobile = useIsMobile();
-  const theme = Theme.useApplyTheme();
 
   return (
     <Toaster
       richColors
-      theme={theme}
+      theme="light"
       position={isMobile ? 'top-center' : 'bottom-right'}
       offset={isMobile ? MOBILE_TOAST_OFFSET : undefined}
       mobileOffset={isMobile ? MOBILE_TOAST_OFFSET : undefined}
       toastOptions={{
-        classNames: { toast: isMobile ? tw`text-base!` : undefined },
+        classNames: { toast: isMobile ? 'text-base!' : undefined },
       }}
     />
   );
 }
-
-// Disposable preview hosts, and the dev server opened by IP from another device
-// on the LAN, cannot share WorkOS's session cookies. Persist their session
-// across reloads so direct /signout can end it.
-const persistsSessionLocally =
-  env.VITE_PR_PREVIEW === 'true' || import.meta.env.DEV;
 
 // Render the app
 const rootElement = document.getElementById('root')!;
@@ -85,7 +71,9 @@ if (!rootElement.innerHTML) {
         <AuthKitProvider
           clientId={env.VITE_WORKOS_CLIENT_ID}
           redirectUri={`${window.location.origin}/callback`}
-          devMode={persistsSessionLocally ? true : undefined}
+          // Disposable preview hosts cannot share WorkOS's session cookies.
+          // Persist their session across reloads so direct /signout can end it.
+          devMode={env.VITE_PR_PREVIEW === 'true' ? true : undefined}
         >
           <ConvexProviderWithAuth
             client={convex}

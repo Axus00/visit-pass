@@ -13,17 +13,4 @@ export default GroupSpec.make()
       returns: () => Schema.Null,
       error: () => Schema.Never,
     })
-  )
-  .addFunction(
-    /**
-     * Idempotent: seeds the Superadmin and the sample Unidades residenciales
-     * with their Membresías, Autorizaciones, Turnos and Visitas. `seed` runs it
-     * once the development accounts exist.
-     */
-    FunctionSpec.internalMutation({
-      name: 'seedSampleData',
-      args: () => ({}),
-      returns: () => Schema.Null,
-      error: () => Schema.Never,
-    })
   );

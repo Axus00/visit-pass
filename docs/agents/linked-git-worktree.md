@@ -18,13 +18,6 @@ For backend-only work, use `pnpm dev:backend:agent`. Both commands start the Con
 
 The setup summary prints the frontend URL. You can also find its port in the root `.env.local` file as `VITE_DEV_SERVER_PORT`; open `http://localhost:<VITE_DEV_SERVER_PORT>/` for browser or computer-use verification.
 
-### Opening the dev server from a phone on the LAN
-
-`pnpm dev` already listens on every interface, so other devices on the network reach it at `http://<lan-ip>:<VITE_DEV_SERVER_PORT>/`. Two things make sign-in work there:
-
-- WorkOS must allow that origin. Add `http://<lan-ip>:<port>/callback` as a redirect URI and `http://<lan-ip>:<port>` as a CORS origin with `workos seed` and the worktree's `WORKOS_API_KEY` (same seed shape `setup.ts` writes). Setup only registers `localhost`, so repeat this when the IP changes.
-- Plain HTTP on an IP is not a secure context, so browsers hide `crypto.subtle`, which AuthKit needs for PKCE. In development `main.tsx` loads `insecure-context-shims.dev.ts`, which fills in SHA-256 digest, and AuthKit runs in dev mode so the session survives reloads. The camera, `navigator.share` with files and the clipboard still need a secure context there: the Portero types the Pase code and the Residente shares through `wa.me`.
-
 ### Sign-out lands through the app homepage URL
 
 Neither the WorkOS CLI nor its API can provision a Sign-out URI in an unclaimed environment, so WorkOS still rejects the `return_to` the application asks for. What it does accept from an API key is the app homepage URL, and that is where it sends the browser whenever `return_to` is absent or not a permitted Sign-out URI. `pnpm setup:worktree` therefore sets the homepage to `http://localhost:<port>/signout-callback`, so the fallback lands on the application's sign-out callback screen, which sends the browser to the landing page once AuthKit reports no user.
@@ -40,22 +33,14 @@ The landing page is a convenience. Sign-out is still verified by its durable sig
 
 ## Development accounts
 
-`developmentSeeder:seed` creates these accounts in the worktree's WorkOS environment, syncs them into Convex, then runs `developmentSeeder:seedSampleData`:
+`developmentSeeder:seed` creates these accounts in the worktree's WorkOS environment and syncs them into Convex:
 
-| Email                       | Password                      | Name            | What it can do                                                                                               |
-| --------------------------- | ----------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
-| `agent@example.org`         | `dev-account-agent&1`         | Agent Developer | Superadmin; in Los Almendros: Administrador, Portero, and Residente (propietario) of Torre 1 · 101           |
-| `human@example.org`         | `dev-account-human&1`         | Human Developer | Administrador and Portero of Edificio Mirador 80; Residente (arrendatario) of Torre 2 · 202 in Los Almendros |
-| `residente@example.org`     | `dev-account-residente&1`     | Laura Gómez     | Residente (arrendataria) of Torre 1 · 101 in Los Almendros                                                   |
-| `portero@example.org`       | `dev-account-portero&1`       | Carlos Ramírez  | Portero of Los Almendros; owns yesterday's closed Turno and tomorrow's scheduled one                         |
-| `administrador@example.org` | `dev-account-administrador&1` | Ana Martínez    | Administrador of Los Almendros                                                                               |
+| Access | Email               | Password              |
+| ------ | ------------------- | --------------------- |
+| Agent  | `agent@example.org` | `dev-account-agent&1` |
+| Human  | `human@example.org` | `dev-account-human&1` |
 
-Sign in with email and password on the AuthKit page. The sample data lives in two Unidades residenciales:
-
-- **Conjunto Residencial Los Almendros** (Bogotá): towers 1 and 2 with Apartamentos 101–104 through 501–504; pending invitations for `nuevo.residente@example.org` (Torre 2 · 301) and `portero.noche@example.org`; Favoritos for both Residentes of Torre 1 · 101; Autorizaciones (Temporal today, Evento tomorrow with three guests, a Monday–Friday Servicio, a used one yesterday and a cancelled one); a closed Turno yesterday with ten Visitas, two still inside; an older closed night Turno; and scheduled Turnos.
-- **Edificio Mirador 80** (Medellín): tower A with Apartamentos 101–304 and a closed Turno with two Visitas, to check that nothing crosses units.
-
-Add accounts in `packages/backend/src/confect/modules/developmentSeeder/domain/accounts.ts` and their data in `modules/developmentSeeder/application/sampleData.ts`. Keep both idempotent, because setup reseeds on every run: a sample unit that already exists (by name) is skipped entirely, so reset the deployment's data to reseed it.
+Sign in with email and password on the AuthKit page. Add accounts in `packages/backend/src/confect/modules/developmentSeeder/domain/accounts.ts` once the app has roles; keep them idempotent, because setup reseeds on every run.
 
 ## Environment lifecycle
 

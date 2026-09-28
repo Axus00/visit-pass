@@ -19,31 +19,7 @@ import { Route as AuthPublicSigninIndexRouteImport } from './routes/_auth-public
 import { Route as AuthPublicSignupIndexRouteImport } from './routes/_auth-public/signup/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app/index'
 import { Route as AuthenticatedSignoutIndexRouteImport } from './routes/_authenticated/signout/index'
-import { Route as PTokenIndexRouteImport } from './routes/p/$token/index'
 import { Route as SandboxDefaultErrorIndexRouteImport } from './routes/sandbox/default-error/index'
-import { Route as AuthenticatedAppMMembershipIdRouteRouteImport } from './routes/_authenticated/app/m/$membershipId/route'
-import { Route as AuthenticatedAppPerfilIndexRouteImport } from './routes/_authenticated/app/perfil/index'
-import { Route as AuthenticatedAppSuperadminIndexRouteImport } from './routes/_authenticated/app/superadmin/index'
-import { Route as AuthenticatedAppMMembershipIdIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/index'
-import { Route as AuthenticatedAppMMembershipIdAdminRouteRouteImport } from './routes/_authenticated/app/m/$membershipId/admin/route'
-import { Route as AuthenticatedAppMMembershipIdPorteriaRouteRouteImport } from './routes/_authenticated/app/m/$membershipId/porteria/route'
-import { Route as AuthenticatedAppMMembershipIdResidenteRouteRouteImport } from './routes/_authenticated/app/m/$membershipId/residente/route'
-import { Route as AuthenticatedAppMMembershipIdAdminIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/admin/index'
-import { Route as AuthenticatedAppMMembershipIdPorteriaIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/porteria/index'
-import { Route as AuthenticatedAppMMembershipIdResidenteIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/residente/index'
-import { Route as AuthenticatedAppMMembershipIdAdminAjustesIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/admin/ajustes/index'
-import { Route as AuthenticatedAppMMembershipIdAdminApartamentosIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/admin/apartamentos/index'
-import { Route as AuthenticatedAppMMembershipIdAdminMembresiasIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/admin/membresias/index'
-import { Route as AuthenticatedAppMMembershipIdAdminReportesIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/admin/reportes/index'
-import { Route as AuthenticatedAppMMembershipIdAdminTurnosIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/admin/turnos/index'
-import { Route as AuthenticatedAppMMembershipIdAdminVisitasIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/admin/visitas/index'
-import { Route as AuthenticatedAppMMembershipIdPorteriaDentroIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/porteria/dentro/index'
-import { Route as AuthenticatedAppMMembershipIdPorteriaEscanearIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/porteria/escanear/index'
-import { Route as AuthenticatedAppMMembershipIdPorteriaRegistroIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/porteria/registro/index'
-import { Route as AuthenticatedAppMMembershipIdPorteriaTurnosIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/porteria/turnos/index'
-import { Route as AuthenticatedAppMMembershipIdResidenteAutorizacionesIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/residente/autorizaciones/index'
-import { Route as AuthenticatedAppMMembershipIdResidenteFavoritosIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/residente/favoritos/index'
-import { Route as AuthenticatedAppMMembershipIdResidenteHistorialIndexRouteImport } from './routes/_authenticated/app/m/$membershipId/residente/historial/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -94,154 +70,11 @@ const AuthenticatedSignoutIndexRoute =
     path: '/signout/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const PTokenIndexRoute = PTokenIndexRouteImport.update({
-  id: '/p/$token/',
-  path: '/p/$token/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SandboxDefaultErrorIndexRoute =
   SandboxDefaultErrorIndexRouteImport.update({
     id: '/default-error/',
     path: '/default-error/',
     getParentRoute: () => SandboxRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdRouteRoute =
-  AuthenticatedAppMMembershipIdRouteRouteImport.update({
-    id: '/app/m/$membershipId',
-    path: '/app/m/$membershipId',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppPerfilIndexRoute =
-  AuthenticatedAppPerfilIndexRouteImport.update({
-    id: '/app/perfil/',
-    path: '/app/perfil/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppSuperadminIndexRoute =
-  AuthenticatedAppSuperadminIndexRouteImport.update({
-    id: '/app/superadmin/',
-    path: '/app/superadmin/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdIndexRoute =
-  AuthenticatedAppMMembershipIdIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdAdminRouteRoute =
-  AuthenticatedAppMMembershipIdAdminRouteRouteImport.update({
-    id: '/admin',
-    path: '/admin',
-    getParentRoute: () => AuthenticatedAppMMembershipIdRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdPorteriaRouteRoute =
-  AuthenticatedAppMMembershipIdPorteriaRouteRouteImport.update({
-    id: '/porteria',
-    path: '/porteria',
-    getParentRoute: () => AuthenticatedAppMMembershipIdRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdResidenteRouteRoute =
-  AuthenticatedAppMMembershipIdResidenteRouteRouteImport.update({
-    id: '/residente',
-    path: '/residente',
-    getParentRoute: () => AuthenticatedAppMMembershipIdRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdAdminIndexRoute =
-  AuthenticatedAppMMembershipIdAdminIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdAdminRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdPorteriaIndexRoute =
-  AuthenticatedAppMMembershipIdPorteriaIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdPorteriaRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdResidenteIndexRoute =
-  AuthenticatedAppMMembershipIdResidenteIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdResidenteRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdAdminAjustesIndexRoute =
-  AuthenticatedAppMMembershipIdAdminAjustesIndexRouteImport.update({
-    id: '/ajustes/',
-    path: '/ajustes/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdAdminRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdAdminApartamentosIndexRoute =
-  AuthenticatedAppMMembershipIdAdminApartamentosIndexRouteImport.update({
-    id: '/apartamentos/',
-    path: '/apartamentos/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdAdminRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdAdminMembresiasIndexRoute =
-  AuthenticatedAppMMembershipIdAdminMembresiasIndexRouteImport.update({
-    id: '/membresias/',
-    path: '/membresias/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdAdminRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdAdminReportesIndexRoute =
-  AuthenticatedAppMMembershipIdAdminReportesIndexRouteImport.update({
-    id: '/reportes/',
-    path: '/reportes/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdAdminRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdAdminTurnosIndexRoute =
-  AuthenticatedAppMMembershipIdAdminTurnosIndexRouteImport.update({
-    id: '/turnos/',
-    path: '/turnos/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdAdminRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdAdminVisitasIndexRoute =
-  AuthenticatedAppMMembershipIdAdminVisitasIndexRouteImport.update({
-    id: '/visitas/',
-    path: '/visitas/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdAdminRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdPorteriaDentroIndexRoute =
-  AuthenticatedAppMMembershipIdPorteriaDentroIndexRouteImport.update({
-    id: '/dentro/',
-    path: '/dentro/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdPorteriaRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdPorteriaEscanearIndexRoute =
-  AuthenticatedAppMMembershipIdPorteriaEscanearIndexRouteImport.update({
-    id: '/escanear/',
-    path: '/escanear/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdPorteriaRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdPorteriaRegistroIndexRoute =
-  AuthenticatedAppMMembershipIdPorteriaRegistroIndexRouteImport.update({
-    id: '/registro/',
-    path: '/registro/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdPorteriaRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdPorteriaTurnosIndexRoute =
-  AuthenticatedAppMMembershipIdPorteriaTurnosIndexRouteImport.update({
-    id: '/turnos/',
-    path: '/turnos/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdPorteriaRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdResidenteAutorizacionesIndexRoute =
-  AuthenticatedAppMMembershipIdResidenteAutorizacionesIndexRouteImport.update({
-    id: '/autorizaciones/',
-    path: '/autorizaciones/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdResidenteRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdResidenteFavoritosIndexRoute =
-  AuthenticatedAppMMembershipIdResidenteFavoritosIndexRouteImport.update({
-    id: '/favoritos/',
-    path: '/favoritos/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdResidenteRouteRoute,
-  } as any)
-const AuthenticatedAppMMembershipIdResidenteHistorialIndexRoute =
-  AuthenticatedAppMMembershipIdResidenteHistorialIndexRouteImport.update({
-    id: '/historial/',
-    path: '/historial/',
-    getParentRoute: () => AuthenticatedAppMMembershipIdResidenteRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -253,31 +86,7 @@ export interface FileRoutesByFullPath {
   '/signup/': typeof AuthPublicSignupIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/signout/': typeof AuthenticatedSignoutIndexRoute
-  '/p/$token/': typeof PTokenIndexRoute
   '/sandbox/default-error/': typeof SandboxDefaultErrorIndexRoute
-  '/app/m/$membershipId': typeof AuthenticatedAppMMembershipIdRouteRouteWithChildren
-  '/app/perfil/': typeof AuthenticatedAppPerfilIndexRoute
-  '/app/superadmin/': typeof AuthenticatedAppSuperadminIndexRoute
-  '/app/m/$membershipId/admin': typeof AuthenticatedAppMMembershipIdAdminRouteRouteWithChildren
-  '/app/m/$membershipId/porteria': typeof AuthenticatedAppMMembershipIdPorteriaRouteRouteWithChildren
-  '/app/m/$membershipId/residente': typeof AuthenticatedAppMMembershipIdResidenteRouteRouteWithChildren
-  '/app/m/$membershipId/': typeof AuthenticatedAppMMembershipIdIndexRoute
-  '/app/m/$membershipId/admin/': typeof AuthenticatedAppMMembershipIdAdminIndexRoute
-  '/app/m/$membershipId/porteria/': typeof AuthenticatedAppMMembershipIdPorteriaIndexRoute
-  '/app/m/$membershipId/residente/': typeof AuthenticatedAppMMembershipIdResidenteIndexRoute
-  '/app/m/$membershipId/admin/ajustes/': typeof AuthenticatedAppMMembershipIdAdminAjustesIndexRoute
-  '/app/m/$membershipId/admin/apartamentos/': typeof AuthenticatedAppMMembershipIdAdminApartamentosIndexRoute
-  '/app/m/$membershipId/admin/membresias/': typeof AuthenticatedAppMMembershipIdAdminMembresiasIndexRoute
-  '/app/m/$membershipId/admin/reportes/': typeof AuthenticatedAppMMembershipIdAdminReportesIndexRoute
-  '/app/m/$membershipId/admin/turnos/': typeof AuthenticatedAppMMembershipIdAdminTurnosIndexRoute
-  '/app/m/$membershipId/admin/visitas/': typeof AuthenticatedAppMMembershipIdAdminVisitasIndexRoute
-  '/app/m/$membershipId/porteria/dentro/': typeof AuthenticatedAppMMembershipIdPorteriaDentroIndexRoute
-  '/app/m/$membershipId/porteria/escanear/': typeof AuthenticatedAppMMembershipIdPorteriaEscanearIndexRoute
-  '/app/m/$membershipId/porteria/registro/': typeof AuthenticatedAppMMembershipIdPorteriaRegistroIndexRoute
-  '/app/m/$membershipId/porteria/turnos/': typeof AuthenticatedAppMMembershipIdPorteriaTurnosIndexRoute
-  '/app/m/$membershipId/residente/autorizaciones/': typeof AuthenticatedAppMMembershipIdResidenteAutorizacionesIndexRoute
-  '/app/m/$membershipId/residente/favoritos/': typeof AuthenticatedAppMMembershipIdResidenteFavoritosIndexRoute
-  '/app/m/$membershipId/residente/historial/': typeof AuthenticatedAppMMembershipIdResidenteHistorialIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -288,27 +97,7 @@ export interface FileRoutesByTo {
   '/signup': typeof AuthPublicSignupIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/signout': typeof AuthenticatedSignoutIndexRoute
-  '/p/$token': typeof PTokenIndexRoute
   '/sandbox/default-error': typeof SandboxDefaultErrorIndexRoute
-  '/app/perfil': typeof AuthenticatedAppPerfilIndexRoute
-  '/app/superadmin': typeof AuthenticatedAppSuperadminIndexRoute
-  '/app/m/$membershipId': typeof AuthenticatedAppMMembershipIdIndexRoute
-  '/app/m/$membershipId/admin': typeof AuthenticatedAppMMembershipIdAdminIndexRoute
-  '/app/m/$membershipId/porteria': typeof AuthenticatedAppMMembershipIdPorteriaIndexRoute
-  '/app/m/$membershipId/residente': typeof AuthenticatedAppMMembershipIdResidenteIndexRoute
-  '/app/m/$membershipId/admin/ajustes': typeof AuthenticatedAppMMembershipIdAdminAjustesIndexRoute
-  '/app/m/$membershipId/admin/apartamentos': typeof AuthenticatedAppMMembershipIdAdminApartamentosIndexRoute
-  '/app/m/$membershipId/admin/membresias': typeof AuthenticatedAppMMembershipIdAdminMembresiasIndexRoute
-  '/app/m/$membershipId/admin/reportes': typeof AuthenticatedAppMMembershipIdAdminReportesIndexRoute
-  '/app/m/$membershipId/admin/turnos': typeof AuthenticatedAppMMembershipIdAdminTurnosIndexRoute
-  '/app/m/$membershipId/admin/visitas': typeof AuthenticatedAppMMembershipIdAdminVisitasIndexRoute
-  '/app/m/$membershipId/porteria/dentro': typeof AuthenticatedAppMMembershipIdPorteriaDentroIndexRoute
-  '/app/m/$membershipId/porteria/escanear': typeof AuthenticatedAppMMembershipIdPorteriaEscanearIndexRoute
-  '/app/m/$membershipId/porteria/registro': typeof AuthenticatedAppMMembershipIdPorteriaRegistroIndexRoute
-  '/app/m/$membershipId/porteria/turnos': typeof AuthenticatedAppMMembershipIdPorteriaTurnosIndexRoute
-  '/app/m/$membershipId/residente/autorizaciones': typeof AuthenticatedAppMMembershipIdResidenteAutorizacionesIndexRoute
-  '/app/m/$membershipId/residente/favoritos': typeof AuthenticatedAppMMembershipIdResidenteFavoritosIndexRoute
-  '/app/m/$membershipId/residente/historial': typeof AuthenticatedAppMMembershipIdResidenteHistorialIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -322,31 +111,7 @@ export interface FileRoutesById {
   '/_auth-public/signup/': typeof AuthPublicSignupIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/signout/': typeof AuthenticatedSignoutIndexRoute
-  '/p/$token/': typeof PTokenIndexRoute
   '/sandbox/default-error/': typeof SandboxDefaultErrorIndexRoute
-  '/_authenticated/app/m/$membershipId': typeof AuthenticatedAppMMembershipIdRouteRouteWithChildren
-  '/_authenticated/app/perfil/': typeof AuthenticatedAppPerfilIndexRoute
-  '/_authenticated/app/superadmin/': typeof AuthenticatedAppSuperadminIndexRoute
-  '/_authenticated/app/m/$membershipId/admin': typeof AuthenticatedAppMMembershipIdAdminRouteRouteWithChildren
-  '/_authenticated/app/m/$membershipId/porteria': typeof AuthenticatedAppMMembershipIdPorteriaRouteRouteWithChildren
-  '/_authenticated/app/m/$membershipId/residente': typeof AuthenticatedAppMMembershipIdResidenteRouteRouteWithChildren
-  '/_authenticated/app/m/$membershipId/': typeof AuthenticatedAppMMembershipIdIndexRoute
-  '/_authenticated/app/m/$membershipId/admin/': typeof AuthenticatedAppMMembershipIdAdminIndexRoute
-  '/_authenticated/app/m/$membershipId/porteria/': typeof AuthenticatedAppMMembershipIdPorteriaIndexRoute
-  '/_authenticated/app/m/$membershipId/residente/': typeof AuthenticatedAppMMembershipIdResidenteIndexRoute
-  '/_authenticated/app/m/$membershipId/admin/ajustes/': typeof AuthenticatedAppMMembershipIdAdminAjustesIndexRoute
-  '/_authenticated/app/m/$membershipId/admin/apartamentos/': typeof AuthenticatedAppMMembershipIdAdminApartamentosIndexRoute
-  '/_authenticated/app/m/$membershipId/admin/membresias/': typeof AuthenticatedAppMMembershipIdAdminMembresiasIndexRoute
-  '/_authenticated/app/m/$membershipId/admin/reportes/': typeof AuthenticatedAppMMembershipIdAdminReportesIndexRoute
-  '/_authenticated/app/m/$membershipId/admin/turnos/': typeof AuthenticatedAppMMembershipIdAdminTurnosIndexRoute
-  '/_authenticated/app/m/$membershipId/admin/visitas/': typeof AuthenticatedAppMMembershipIdAdminVisitasIndexRoute
-  '/_authenticated/app/m/$membershipId/porteria/dentro/': typeof AuthenticatedAppMMembershipIdPorteriaDentroIndexRoute
-  '/_authenticated/app/m/$membershipId/porteria/escanear/': typeof AuthenticatedAppMMembershipIdPorteriaEscanearIndexRoute
-  '/_authenticated/app/m/$membershipId/porteria/registro/': typeof AuthenticatedAppMMembershipIdPorteriaRegistroIndexRoute
-  '/_authenticated/app/m/$membershipId/porteria/turnos/': typeof AuthenticatedAppMMembershipIdPorteriaTurnosIndexRoute
-  '/_authenticated/app/m/$membershipId/residente/autorizaciones/': typeof AuthenticatedAppMMembershipIdResidenteAutorizacionesIndexRoute
-  '/_authenticated/app/m/$membershipId/residente/favoritos/': typeof AuthenticatedAppMMembershipIdResidenteFavoritosIndexRoute
-  '/_authenticated/app/m/$membershipId/residente/historial/': typeof AuthenticatedAppMMembershipIdResidenteHistorialIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -359,31 +124,7 @@ export interface FileRouteTypes {
     | '/signup/'
     | '/app/'
     | '/signout/'
-    | '/p/$token/'
     | '/sandbox/default-error/'
-    | '/app/m/$membershipId'
-    | '/app/perfil/'
-    | '/app/superadmin/'
-    | '/app/m/$membershipId/admin'
-    | '/app/m/$membershipId/porteria'
-    | '/app/m/$membershipId/residente'
-    | '/app/m/$membershipId/'
-    | '/app/m/$membershipId/admin/'
-    | '/app/m/$membershipId/porteria/'
-    | '/app/m/$membershipId/residente/'
-    | '/app/m/$membershipId/admin/ajustes/'
-    | '/app/m/$membershipId/admin/apartamentos/'
-    | '/app/m/$membershipId/admin/membresias/'
-    | '/app/m/$membershipId/admin/reportes/'
-    | '/app/m/$membershipId/admin/turnos/'
-    | '/app/m/$membershipId/admin/visitas/'
-    | '/app/m/$membershipId/porteria/dentro/'
-    | '/app/m/$membershipId/porteria/escanear/'
-    | '/app/m/$membershipId/porteria/registro/'
-    | '/app/m/$membershipId/porteria/turnos/'
-    | '/app/m/$membershipId/residente/autorizaciones/'
-    | '/app/m/$membershipId/residente/favoritos/'
-    | '/app/m/$membershipId/residente/historial/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -394,27 +135,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/app'
     | '/signout'
-    | '/p/$token'
     | '/sandbox/default-error'
-    | '/app/perfil'
-    | '/app/superadmin'
-    | '/app/m/$membershipId'
-    | '/app/m/$membershipId/admin'
-    | '/app/m/$membershipId/porteria'
-    | '/app/m/$membershipId/residente'
-    | '/app/m/$membershipId/admin/ajustes'
-    | '/app/m/$membershipId/admin/apartamentos'
-    | '/app/m/$membershipId/admin/membresias'
-    | '/app/m/$membershipId/admin/reportes'
-    | '/app/m/$membershipId/admin/turnos'
-    | '/app/m/$membershipId/admin/visitas'
-    | '/app/m/$membershipId/porteria/dentro'
-    | '/app/m/$membershipId/porteria/escanear'
-    | '/app/m/$membershipId/porteria/registro'
-    | '/app/m/$membershipId/porteria/turnos'
-    | '/app/m/$membershipId/residente/autorizaciones'
-    | '/app/m/$membershipId/residente/favoritos'
-    | '/app/m/$membershipId/residente/historial'
   id:
     | '__root__'
     | '/'
@@ -427,31 +148,7 @@ export interface FileRouteTypes {
     | '/_auth-public/signup/'
     | '/_authenticated/app/'
     | '/_authenticated/signout/'
-    | '/p/$token/'
     | '/sandbox/default-error/'
-    | '/_authenticated/app/m/$membershipId'
-    | '/_authenticated/app/perfil/'
-    | '/_authenticated/app/superadmin/'
-    | '/_authenticated/app/m/$membershipId/admin'
-    | '/_authenticated/app/m/$membershipId/porteria'
-    | '/_authenticated/app/m/$membershipId/residente'
-    | '/_authenticated/app/m/$membershipId/'
-    | '/_authenticated/app/m/$membershipId/admin/'
-    | '/_authenticated/app/m/$membershipId/porteria/'
-    | '/_authenticated/app/m/$membershipId/residente/'
-    | '/_authenticated/app/m/$membershipId/admin/ajustes/'
-    | '/_authenticated/app/m/$membershipId/admin/apartamentos/'
-    | '/_authenticated/app/m/$membershipId/admin/membresias/'
-    | '/_authenticated/app/m/$membershipId/admin/reportes/'
-    | '/_authenticated/app/m/$membershipId/admin/turnos/'
-    | '/_authenticated/app/m/$membershipId/admin/visitas/'
-    | '/_authenticated/app/m/$membershipId/porteria/dentro/'
-    | '/_authenticated/app/m/$membershipId/porteria/escanear/'
-    | '/_authenticated/app/m/$membershipId/porteria/registro/'
-    | '/_authenticated/app/m/$membershipId/porteria/turnos/'
-    | '/_authenticated/app/m/$membershipId/residente/autorizaciones/'
-    | '/_authenticated/app/m/$membershipId/residente/favoritos/'
-    | '/_authenticated/app/m/$membershipId/residente/historial/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -461,7 +158,6 @@ export interface RootRouteChildren {
   SandboxRouteRoute: typeof SandboxRouteRouteWithChildren
   CallbackIndexRoute: typeof CallbackIndexRoute
   SignoutCallbackIndexRoute: typeof SignoutCallbackIndexRoute
-  PTokenIndexRoute: typeof PTokenIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -536,180 +232,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSignoutIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/p/$token/': {
-      id: '/p/$token/'
-      path: '/p/$token'
-      fullPath: '/p/$token/'
-      preLoaderRoute: typeof PTokenIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/sandbox/default-error/': {
       id: '/sandbox/default-error/'
       path: '/default-error'
       fullPath: '/sandbox/default-error/'
       preLoaderRoute: typeof SandboxDefaultErrorIndexRouteImport
       parentRoute: typeof SandboxRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId': {
-      id: '/_authenticated/app/m/$membershipId'
-      path: '/app/m/$membershipId'
-      fullPath: '/app/m/$membershipId'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdRouteRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/perfil/': {
-      id: '/_authenticated/app/perfil/'
-      path: '/app/perfil'
-      fullPath: '/app/perfil/'
-      preLoaderRoute: typeof AuthenticatedAppPerfilIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/superadmin/': {
-      id: '/_authenticated/app/superadmin/'
-      path: '/app/superadmin'
-      fullPath: '/app/superadmin/'
-      preLoaderRoute: typeof AuthenticatedAppSuperadminIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/': {
-      id: '/_authenticated/app/m/$membershipId/'
-      path: '/'
-      fullPath: '/app/m/$membershipId/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/admin': {
-      id: '/_authenticated/app/m/$membershipId/admin'
-      path: '/admin'
-      fullPath: '/app/m/$membershipId/admin'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdAdminRouteRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/porteria': {
-      id: '/_authenticated/app/m/$membershipId/porteria'
-      path: '/porteria'
-      fullPath: '/app/m/$membershipId/porteria'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdPorteriaRouteRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/residente': {
-      id: '/_authenticated/app/m/$membershipId/residente'
-      path: '/residente'
-      fullPath: '/app/m/$membershipId/residente'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdResidenteRouteRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/admin/': {
-      id: '/_authenticated/app/m/$membershipId/admin/'
-      path: '/'
-      fullPath: '/app/m/$membershipId/admin/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdAdminIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdAdminRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/porteria/': {
-      id: '/_authenticated/app/m/$membershipId/porteria/'
-      path: '/'
-      fullPath: '/app/m/$membershipId/porteria/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdPorteriaIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdPorteriaRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/residente/': {
-      id: '/_authenticated/app/m/$membershipId/residente/'
-      path: '/'
-      fullPath: '/app/m/$membershipId/residente/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdResidenteIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdResidenteRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/admin/ajustes/': {
-      id: '/_authenticated/app/m/$membershipId/admin/ajustes/'
-      path: '/ajustes'
-      fullPath: '/app/m/$membershipId/admin/ajustes/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdAdminAjustesIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdAdminRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/admin/apartamentos/': {
-      id: '/_authenticated/app/m/$membershipId/admin/apartamentos/'
-      path: '/apartamentos'
-      fullPath: '/app/m/$membershipId/admin/apartamentos/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdAdminApartamentosIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdAdminRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/admin/membresias/': {
-      id: '/_authenticated/app/m/$membershipId/admin/membresias/'
-      path: '/membresias'
-      fullPath: '/app/m/$membershipId/admin/membresias/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdAdminMembresiasIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdAdminRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/admin/reportes/': {
-      id: '/_authenticated/app/m/$membershipId/admin/reportes/'
-      path: '/reportes'
-      fullPath: '/app/m/$membershipId/admin/reportes/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdAdminReportesIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdAdminRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/admin/turnos/': {
-      id: '/_authenticated/app/m/$membershipId/admin/turnos/'
-      path: '/turnos'
-      fullPath: '/app/m/$membershipId/admin/turnos/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdAdminTurnosIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdAdminRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/admin/visitas/': {
-      id: '/_authenticated/app/m/$membershipId/admin/visitas/'
-      path: '/visitas'
-      fullPath: '/app/m/$membershipId/admin/visitas/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdAdminVisitasIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdAdminRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/porteria/dentro/': {
-      id: '/_authenticated/app/m/$membershipId/porteria/dentro/'
-      path: '/dentro'
-      fullPath: '/app/m/$membershipId/porteria/dentro/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdPorteriaDentroIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdPorteriaRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/porteria/escanear/': {
-      id: '/_authenticated/app/m/$membershipId/porteria/escanear/'
-      path: '/escanear'
-      fullPath: '/app/m/$membershipId/porteria/escanear/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdPorteriaEscanearIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdPorteriaRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/porteria/registro/': {
-      id: '/_authenticated/app/m/$membershipId/porteria/registro/'
-      path: '/registro'
-      fullPath: '/app/m/$membershipId/porteria/registro/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdPorteriaRegistroIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdPorteriaRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/porteria/turnos/': {
-      id: '/_authenticated/app/m/$membershipId/porteria/turnos/'
-      path: '/turnos'
-      fullPath: '/app/m/$membershipId/porteria/turnos/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdPorteriaTurnosIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdPorteriaRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/residente/autorizaciones/': {
-      id: '/_authenticated/app/m/$membershipId/residente/autorizaciones/'
-      path: '/autorizaciones'
-      fullPath: '/app/m/$membershipId/residente/autorizaciones/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdResidenteAutorizacionesIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdResidenteRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/residente/favoritos/': {
-      id: '/_authenticated/app/m/$membershipId/residente/favoritos/'
-      path: '/favoritos'
-      fullPath: '/app/m/$membershipId/residente/favoritos/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdResidenteFavoritosIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdResidenteRouteRoute
-    }
-    '/_authenticated/app/m/$membershipId/residente/historial/': {
-      id: '/_authenticated/app/m/$membershipId/residente/historial/'
-      path: '/historial'
-      fullPath: '/app/m/$membershipId/residente/historial/'
-      preLoaderRoute: typeof AuthenticatedAppMMembershipIdResidenteHistorialIndexRouteImport
-      parentRoute: typeof AuthenticatedAppMMembershipIdResidenteRouteRoute
     }
   }
 }
@@ -728,129 +256,14 @@ const AuthPublicRouteRouteWithChildren = AuthPublicRouteRoute._addFileChildren(
   AuthPublicRouteRouteChildren,
 )
 
-interface AuthenticatedAppMMembershipIdAdminRouteRouteChildren {
-  AuthenticatedAppMMembershipIdAdminIndexRoute: typeof AuthenticatedAppMMembershipIdAdminIndexRoute
-  AuthenticatedAppMMembershipIdAdminAjustesIndexRoute: typeof AuthenticatedAppMMembershipIdAdminAjustesIndexRoute
-  AuthenticatedAppMMembershipIdAdminApartamentosIndexRoute: typeof AuthenticatedAppMMembershipIdAdminApartamentosIndexRoute
-  AuthenticatedAppMMembershipIdAdminMembresiasIndexRoute: typeof AuthenticatedAppMMembershipIdAdminMembresiasIndexRoute
-  AuthenticatedAppMMembershipIdAdminReportesIndexRoute: typeof AuthenticatedAppMMembershipIdAdminReportesIndexRoute
-  AuthenticatedAppMMembershipIdAdminTurnosIndexRoute: typeof AuthenticatedAppMMembershipIdAdminTurnosIndexRoute
-  AuthenticatedAppMMembershipIdAdminVisitasIndexRoute: typeof AuthenticatedAppMMembershipIdAdminVisitasIndexRoute
-}
-
-const AuthenticatedAppMMembershipIdAdminRouteRouteChildren: AuthenticatedAppMMembershipIdAdminRouteRouteChildren =
-  {
-    AuthenticatedAppMMembershipIdAdminIndexRoute:
-      AuthenticatedAppMMembershipIdAdminIndexRoute,
-    AuthenticatedAppMMembershipIdAdminAjustesIndexRoute:
-      AuthenticatedAppMMembershipIdAdminAjustesIndexRoute,
-    AuthenticatedAppMMembershipIdAdminApartamentosIndexRoute:
-      AuthenticatedAppMMembershipIdAdminApartamentosIndexRoute,
-    AuthenticatedAppMMembershipIdAdminMembresiasIndexRoute:
-      AuthenticatedAppMMembershipIdAdminMembresiasIndexRoute,
-    AuthenticatedAppMMembershipIdAdminReportesIndexRoute:
-      AuthenticatedAppMMembershipIdAdminReportesIndexRoute,
-    AuthenticatedAppMMembershipIdAdminTurnosIndexRoute:
-      AuthenticatedAppMMembershipIdAdminTurnosIndexRoute,
-    AuthenticatedAppMMembershipIdAdminVisitasIndexRoute:
-      AuthenticatedAppMMembershipIdAdminVisitasIndexRoute,
-  }
-
-const AuthenticatedAppMMembershipIdAdminRouteRouteWithChildren =
-  AuthenticatedAppMMembershipIdAdminRouteRoute._addFileChildren(
-    AuthenticatedAppMMembershipIdAdminRouteRouteChildren,
-  )
-
-interface AuthenticatedAppMMembershipIdPorteriaRouteRouteChildren {
-  AuthenticatedAppMMembershipIdPorteriaIndexRoute: typeof AuthenticatedAppMMembershipIdPorteriaIndexRoute
-  AuthenticatedAppMMembershipIdPorteriaDentroIndexRoute: typeof AuthenticatedAppMMembershipIdPorteriaDentroIndexRoute
-  AuthenticatedAppMMembershipIdPorteriaEscanearIndexRoute: typeof AuthenticatedAppMMembershipIdPorteriaEscanearIndexRoute
-  AuthenticatedAppMMembershipIdPorteriaRegistroIndexRoute: typeof AuthenticatedAppMMembershipIdPorteriaRegistroIndexRoute
-  AuthenticatedAppMMembershipIdPorteriaTurnosIndexRoute: typeof AuthenticatedAppMMembershipIdPorteriaTurnosIndexRoute
-}
-
-const AuthenticatedAppMMembershipIdPorteriaRouteRouteChildren: AuthenticatedAppMMembershipIdPorteriaRouteRouteChildren =
-  {
-    AuthenticatedAppMMembershipIdPorteriaIndexRoute:
-      AuthenticatedAppMMembershipIdPorteriaIndexRoute,
-    AuthenticatedAppMMembershipIdPorteriaDentroIndexRoute:
-      AuthenticatedAppMMembershipIdPorteriaDentroIndexRoute,
-    AuthenticatedAppMMembershipIdPorteriaEscanearIndexRoute:
-      AuthenticatedAppMMembershipIdPorteriaEscanearIndexRoute,
-    AuthenticatedAppMMembershipIdPorteriaRegistroIndexRoute:
-      AuthenticatedAppMMembershipIdPorteriaRegistroIndexRoute,
-    AuthenticatedAppMMembershipIdPorteriaTurnosIndexRoute:
-      AuthenticatedAppMMembershipIdPorteriaTurnosIndexRoute,
-  }
-
-const AuthenticatedAppMMembershipIdPorteriaRouteRouteWithChildren =
-  AuthenticatedAppMMembershipIdPorteriaRouteRoute._addFileChildren(
-    AuthenticatedAppMMembershipIdPorteriaRouteRouteChildren,
-  )
-
-interface AuthenticatedAppMMembershipIdResidenteRouteRouteChildren {
-  AuthenticatedAppMMembershipIdResidenteIndexRoute: typeof AuthenticatedAppMMembershipIdResidenteIndexRoute
-  AuthenticatedAppMMembershipIdResidenteAutorizacionesIndexRoute: typeof AuthenticatedAppMMembershipIdResidenteAutorizacionesIndexRoute
-  AuthenticatedAppMMembershipIdResidenteFavoritosIndexRoute: typeof AuthenticatedAppMMembershipIdResidenteFavoritosIndexRoute
-  AuthenticatedAppMMembershipIdResidenteHistorialIndexRoute: typeof AuthenticatedAppMMembershipIdResidenteHistorialIndexRoute
-}
-
-const AuthenticatedAppMMembershipIdResidenteRouteRouteChildren: AuthenticatedAppMMembershipIdResidenteRouteRouteChildren =
-  {
-    AuthenticatedAppMMembershipIdResidenteIndexRoute:
-      AuthenticatedAppMMembershipIdResidenteIndexRoute,
-    AuthenticatedAppMMembershipIdResidenteAutorizacionesIndexRoute:
-      AuthenticatedAppMMembershipIdResidenteAutorizacionesIndexRoute,
-    AuthenticatedAppMMembershipIdResidenteFavoritosIndexRoute:
-      AuthenticatedAppMMembershipIdResidenteFavoritosIndexRoute,
-    AuthenticatedAppMMembershipIdResidenteHistorialIndexRoute:
-      AuthenticatedAppMMembershipIdResidenteHistorialIndexRoute,
-  }
-
-const AuthenticatedAppMMembershipIdResidenteRouteRouteWithChildren =
-  AuthenticatedAppMMembershipIdResidenteRouteRoute._addFileChildren(
-    AuthenticatedAppMMembershipIdResidenteRouteRouteChildren,
-  )
-
-interface AuthenticatedAppMMembershipIdRouteRouteChildren {
-  AuthenticatedAppMMembershipIdAdminRouteRoute: typeof AuthenticatedAppMMembershipIdAdminRouteRouteWithChildren
-  AuthenticatedAppMMembershipIdPorteriaRouteRoute: typeof AuthenticatedAppMMembershipIdPorteriaRouteRouteWithChildren
-  AuthenticatedAppMMembershipIdResidenteRouteRoute: typeof AuthenticatedAppMMembershipIdResidenteRouteRouteWithChildren
-  AuthenticatedAppMMembershipIdIndexRoute: typeof AuthenticatedAppMMembershipIdIndexRoute
-}
-
-const AuthenticatedAppMMembershipIdRouteRouteChildren: AuthenticatedAppMMembershipIdRouteRouteChildren =
-  {
-    AuthenticatedAppMMembershipIdAdminRouteRoute:
-      AuthenticatedAppMMembershipIdAdminRouteRouteWithChildren,
-    AuthenticatedAppMMembershipIdPorteriaRouteRoute:
-      AuthenticatedAppMMembershipIdPorteriaRouteRouteWithChildren,
-    AuthenticatedAppMMembershipIdResidenteRouteRoute:
-      AuthenticatedAppMMembershipIdResidenteRouteRouteWithChildren,
-    AuthenticatedAppMMembershipIdIndexRoute:
-      AuthenticatedAppMMembershipIdIndexRoute,
-  }
-
-const AuthenticatedAppMMembershipIdRouteRouteWithChildren =
-  AuthenticatedAppMMembershipIdRouteRoute._addFileChildren(
-    AuthenticatedAppMMembershipIdRouteRouteChildren,
-  )
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedSignoutIndexRoute: typeof AuthenticatedSignoutIndexRoute
-  AuthenticatedAppMMembershipIdRouteRoute: typeof AuthenticatedAppMMembershipIdRouteRouteWithChildren
-  AuthenticatedAppPerfilIndexRoute: typeof AuthenticatedAppPerfilIndexRoute
-  AuthenticatedAppSuperadminIndexRoute: typeof AuthenticatedAppSuperadminIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedSignoutIndexRoute: AuthenticatedSignoutIndexRoute,
-  AuthenticatedAppMMembershipIdRouteRoute:
-    AuthenticatedAppMMembershipIdRouteRouteWithChildren,
-  AuthenticatedAppPerfilIndexRoute: AuthenticatedAppPerfilIndexRoute,
-  AuthenticatedAppSuperadminIndexRoute: AuthenticatedAppSuperadminIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -875,7 +288,6 @@ const rootRouteChildren: RootRouteChildren = {
   SandboxRouteRoute: SandboxRouteRouteWithChildren,
   CallbackIndexRoute: CallbackIndexRoute,
   SignoutCallbackIndexRoute: SignoutCallbackIndexRoute,
-  PTokenIndexRoute: PTokenIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

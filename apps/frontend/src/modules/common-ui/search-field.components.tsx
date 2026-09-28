@@ -51,7 +51,7 @@ export function SearchField({
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Borrar búsqueda"
+          aria-label="Clear search"
           className="absolute top-1/2 right-1 -translate-y-1/2"
           onClick={onClear}
         >

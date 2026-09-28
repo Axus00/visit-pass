@@ -47,7 +47,7 @@ This repo uses a single-context domain documentation layout. See `docs/agents/do
 ### Shared
 
 - Comments are concise, describe how a thing is used (mostly on functions), and move when the code moves.
-- Give a payload schema and its type one bare name and let TypeScript merge them, so call sites never pick between two spellings. Keep the `Dto` suffix for payloads that name a write, with the verb in front (`InviteMemberDto`, `RegisterManualEntryDto`); read and response shapes use projection nouns instead (`MembershipDetail`, `VisitSummary`). Keep the `Schema` suffix for values something consumes as a schema, such as `UsersTableSchema` or `RegisterManualEntryFormStandardSchema`.
+- Give a payload schema and its type one bare name and let TypeScript merge them, so call sites never pick between two spellings. Keep the `Dto` suffix for payloads that name a write, with the verb in front (`UpdateUserDto`, `StartExampleWorkflowDto`); read and response shapes use projection nouns instead (`UserDetail`, `RunSummary`). Keep the `Schema` suffix for values something consumes as a schema, such as `UsersTableSchema` or `StartExampleWorkflowFormStandardSchema`.
 - Name compound conditions as descriptive boolean constants before branching on them, check nullability with Effect's `Predicate` refinements (`isNull`, `isNotUndefined`, …) instead of raw `===` comparisons, resolve state immutably (a ternary for simple cases, a value- or Effect-returning IIFE instead of `let` for multi-statement branches), and replace `else` with early-return guards.
 - Keep logic inline in the function that uses it. A helper earns extraction when it has a **third** caller or when it turns an `else` branch into an early-return guard.
 - Tests assert observable behaviour through the subject's public interface. A tautological test, one that restates the subject's own source or configuration and passes whenever the file exists, proves nothing and is deleted.
@@ -65,7 +65,7 @@ If a rule here fights the task in front of you, say so loudly and get a human si
 
 ## Gotchas
 
-- **Durable work**: long-running or multi-step backend work uses `@convex-dev/workflow` through the `workflows` module. Copy the shape of `shiftReports` (backend group, module, table, and the workflow definitions in `shiftReports.ts`); [ADR 0005](docs/adr/0005-run-durable-work-as-confect-workflows-terminalized-on-complete.md) explains it.
+- **Durable work**: long-running or multi-step backend work uses `@convex-dev/workflow` through the `workflows` module. Copy the shape of `exampleWorkflows` (backend group, module, table, and the `/app` panel); [ADR 0005](docs/adr/0005-run-durable-work-as-confect-workflows-terminalized-on-complete.md) explains it. Delete the example once a real feature replaces it.
 - **Generated code is committed**: `packages/backend/src/confect/_generated`, `packages/backend/src/convex/_generated`, the one-line re-exports in `packages/backend/src/convex/*.ts`, and `apps/frontend/src/routeTree.gen.ts`. `pnpm dev` keeps them current. After changing a `*.spec.ts` or a table without the dev server, run `pnpm confect:codegen`.
 - **Auth routes**: `/signin`, `/signup`, `/callback`, `/signout`, and `/signout-callback` are fixed; WorkOS is configured with the last two by `pnpm setup:worktree` and the PR-preview workflow. Pages that require a session go under `src/routes/_authenticated/`.
 
