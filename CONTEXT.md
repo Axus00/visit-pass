@@ -120,7 +120,7 @@ Las Visitas abiertas de una Unidad residencial, sin importar qué Portero regist
 _Avoid_: Visitas activas, ocupación
 
 **Reporte de turno**:
-El listado de las Visitas registradas durante un Turno, exportable a Excel y enviable por correo al Administrador.
+El resumen de un Turno cerrado con las Visitas y los Pases rechazados que registró su Portero. Se envía por correo a todos los Administradores de la Unidad residencial al cerrarse el Turno y se puede descargar en Excel.
 _Avoid_: Bitácora, minuta, log
 
 ### Privacidad
