@@ -10,6 +10,10 @@ Control de acceso de visitantes para copropiedades residenciales: los residentes
 Una copropiedad (conjunto o edificio) con su propia portería, apartamentos y personal. Es el límite de datos: nada se comparte entre unidades residenciales.
 _Avoid_: Conjunto, edificio, copropiedad, tenant, organización
 
+**Unidad en preparación**:
+Una Unidad residencial creada que aún no opera: ya admite Apartamentos y Membresías, pero no Autorizaciones, Turnos ni Ingresos. Pasa a operar cuando el Superadmin la habilita con sus datos legales completos, lo que publica la primera versión de su Aviso de privacidad, y no vuelve atrás.
+_Avoid_: Unidad inactiva, borrador
+
 **Apartamento**:
 Una vivienda dentro de una Unidad residencial, identificada por su Agrupación (si la unidad tiene más de una) y su número. Destino de toda visita.
 _Avoid_: Unidad (ambiguo con Unidad residencial), casa, inmueble
@@ -57,7 +61,8 @@ Membresía con rol administrador. Da de alta apartamentos, residentes y porteros
 _Avoid_: Admin, administradora, gerente
 
 **Superadmin**:
-Rol de plataforma, fuera de toda Membresía, que crea Unidades residenciales y su primer Administrador.
+Rol de plataforma, fuera de toda Membresía, que crea Unidades residenciales, carga sus datos legales, las habilita para operar y gestiona sus Administradores. Como Superadmin no ve Visitantes, Visitas ni Membresías de Residentes y Porteros; solo los vería con una Membresía propia.
+_Avoid_: Admin de plataforma, root
 
 **Visitante**:
 Persona externa identificada por nombre y documento de identidad. No tiene cuenta ni un perfil compartido: cada Pase, Visita y Favorito guarda sus propios datos. Si el Residente no conoce el documento, el Portero lo completa en el Ingreso.
