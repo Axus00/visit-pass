@@ -1,8 +1,8 @@
-import { LoaderCircle, Sparkles } from 'lucide-react';
+import { LoaderCircle, ShieldCheck } from 'lucide-react';
 
 import { APP_NAME } from './app-name.constant';
 
-const DEFAULT_MESSAGE = 'Preparing your workspace';
+const DEFAULT_MESSAGE = 'Preparando tu espacio';
 
 type GlobalSpinnerProps = {
   message?: string;
@@ -21,7 +21,11 @@ export function GlobalSpinner({
             strokeWidth={1.5}
             aria-hidden="true"
           />
-          <Sparkles className="size-7" strokeWidth={1.8} aria-hidden="true" />
+          <ShieldCheck
+            className="size-7"
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
         </div>
         <div className="space-y-2">
           <p className="text-sm font-semibold tracking-[0.24em] uppercase">

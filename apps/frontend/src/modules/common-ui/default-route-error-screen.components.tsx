@@ -1,4 +1,5 @@
 import type { ErrorComponentProps } from '@tanstack/react-router';
+import * as Predicate from 'effect/Predicate';
 import { CircleAlert, RefreshCw } from 'lucide-react';
 
 import { Button } from '@repo/ui';
@@ -18,7 +19,7 @@ export function DefaultRouteErrorComponent({
   return (
     <DefaultRouteErrorScreen
       debugMessage={getErrorMessage(error)}
-      message="An unexpected error interrupted this page. Try again, or refresh the page if the problem continues."
+      message="Un error inesperado interrumpió esta página. Inténtalo de nuevo o recarga la página si el problema continúa."
       onRetry={reset}
     />
   );
@@ -29,6 +30,11 @@ function DefaultRouteErrorScreen({
   message,
   onRetry,
 }: DefaultRouteErrorScreenProps) {
+  const showsDebugMessage =
+    env.DEV &&
+    Predicate.isNotUndefined(debugMessage) &&
+    debugMessage.length > 0;
+
   return (
     <main className="fixed inset-0 z-50 grid min-h-dvh place-items-center overflow-hidden bg-background px-6 text-foreground">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,hsl(var(--destructive)/0.12),transparent_28%),radial-gradient(circle_at_20%_84%,hsl(var(--primary)/0.12),transparent_26%)]" />
@@ -46,7 +52,7 @@ function DefaultRouteErrorScreen({
         </div>
         <div className="space-y-3">
           <h1 id="default-route-error-title" className="text-lg tracking-tight">
-            Something went wrong
+            Algo salió mal
           </h1>
           <p className="leading-6 text-balance text-muted-foreground">
             {message}
@@ -56,14 +62,14 @@ function DefaultRouteErrorScreen({
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
           <Button type="button" size="lg" onClick={onRetry}>
             <RefreshCw aria-hidden="true" />
-            Try again
+            Intentar de nuevo
           </Button>
         </div>
 
-        {env.DEV && debugMessage ? (
+        {showsDebugMessage ? (
           <details className="w-full rounded-2xl bg-muted/50 px-4 py-3 text-left text-xs text-muted-foreground">
             <summary className="cursor-pointer font-medium">
-              Developer details
+              Detalles para desarrollo
             </summary>
             <pre className="mt-3 max-h-36 overflow-auto wrap-break-word whitespace-pre-wrap">
               {debugMessage}
@@ -77,6 +83,6 @@ function DefaultRouteErrorScreen({
 
 export function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
-  if (typeof error === 'string') return error;
+  if (Predicate.isString(error)) return error;
   return undefined;
 }

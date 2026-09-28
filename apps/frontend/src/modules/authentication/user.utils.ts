@@ -2,9 +2,10 @@ export function getUserDisplayName(
   firstName: string | null,
   lastName: string | null
 ) {
-  if (firstName && lastName) {
-    return `${firstName} ${lastName}`;
-  }
+  // Empty names count as missing, like absent ones.
+  const hasFullName = Boolean(firstName) && Boolean(lastName);
 
-  return firstName || lastName || 'Signed in';
+  if (hasFullName) return `${firstName} ${lastName}`;
+
+  return firstName || lastName || 'Usuario';
 }

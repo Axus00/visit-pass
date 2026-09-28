@@ -17,7 +17,13 @@
     "./refs": "./src/confect/_generated/refs.ts",
     "./docs": "./src/confect/_generated/docs.ts",
     "./id": "./src/confect/_generated/id.ts",
-    "./shared/exampleWorkflows": "./src/confect/modules/exampleWorkflows/domain/models.ts"
+    "./shared/calendar": "./src/confect/modules/calendar/domain/index.ts",
+    "./shared/residentialUnits": "./src/confect/modules/residentialUnits/domain/index.ts",
+    "./shared/memberships": "./src/confect/modules/memberships/domain/index.ts",
+    "./shared/authorizations": "./src/confect/modules/authorizations/domain/index.ts",
+    "./shared/visits": "./src/confect/modules/visits/domain/index.ts",
+    "./shared/shifts": "./src/confect/modules/shifts/domain/index.ts",
+    "./shared/shiftReports": "./src/confect/modules/shiftReports/domain/index.ts"
   },
   "scripts": {
     "confect:codegen": "pnpm -w run confect:codegen",
@@ -41,7 +47,8 @@
     "@effect/platform-node": "catalog:",
     "@workos-inc/node": "10.13.0",
     "convex": "catalog:",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "fflate": "0.8.3"
   },
   "devDependencies": {
     "@confect/test": "catalog:",
