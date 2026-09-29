@@ -68,6 +68,18 @@ _Avoid_: Admin de plataforma, root
 Persona externa identificada por nombre y documento de identidad. No tiene cuenta ni un perfil compartido: cada Pase, Visita y Favorito guarda sus propios datos. Si el Residente no conoce el documento, el Portero lo completa en el Ingreso.
 _Avoid_: Invitado, huésped, usuario visitante
 
+**Visitante menor de edad**:
+Un Visitante menor de 18 años. Su Visita es propia, con su Ingreso y su Salida, y siempre queda vinculada a quien responde por él: un Acompañante o un Residente que recibe. Suministrar sus datos es facultativo: el nombre es opcional, el documento solo se registra si tiene 14 años o más y lo presenta, y nunca se registra la placa.
+_Avoid_: Niño, menor acompañante
+
+**Acompañante**:
+El Visitante adulto que presenta a un Visitante menor de edad en el mismo Ingreso y responde por él. Otro menor nunca es Acompañante. Cuando el Acompañante sale, sus menores que siguen dentro salen con él, salvo que el Portero indique que alguno se queda.
+_Avoid_: Tutor, responsable (es el Responsable del tratamiento)
+
+**Residente que recibe**:
+El Residente activo del Apartamento destino que responde por un Visitante menor de edad que llega sin Acompañante, porque lo confirma en persona o por citófono, o porque creó su Autorización.
+_Avoid_: Anfitrión, autorizante
+
 **Favorito**:
 Un Visitante guardado por un Residente, con Parentesco, para autorizarlo con un toque.
 _Avoid_: Contacto, visitante frecuente
@@ -96,7 +108,7 @@ _Avoid_: ID corto, PIN, token
 Un Pase escaneado o digitado que no habilita el Ingreso, con un motivo (no válido en esta unidad, reemplazado, cancelado, vencido, aún no vigente, día no permitido, ya usado, Apartamento sin Residente activo). El Portero puede forzar el ingreso con un Registro manual. Un Pase cuyo Visitante sigue dentro no se rechaza: volver a escanearlo registra su Salida.
 
 **Registro manual**:
-Alta de una Visita hecha por el Portero sin un Pase válido: nombre, tipo y número de documento (opcional para un menor de edad), Apartamento destino, Tipo de visita y placa opcional. Incluye el ingreso forzado tras un Pase rechazado.
+Alta de una Visita hecha por el Portero sin un Pase válido: nombre, tipo y número de documento, Apartamento destino, Tipo de visita y placa opcional. Un Visitante menor de edad sin Acompañante solo se registra con un Residente que recibe. Incluye el ingreso forzado tras un Pase rechazado.
 _Avoid_: Visita espontánea, walk-in
 
 **Visita**:
