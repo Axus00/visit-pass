@@ -8,7 +8,7 @@ import * as CommonUI from '#modules/common-ui';
 export const Route = createFileRoute('/_auth-public/signin/')({
   errorComponent: ({ error }) => (
     <p>
-      Something went wrong: {CommonUI.getErrorMessage(error) ?? 'Unknown error'}
+      Algo salió mal: {CommonUI.getErrorMessage(error) ?? 'error desconocido'}
     </p>
   ),
 
@@ -24,5 +24,7 @@ function RouteComponent() {
     void signIn({ state: { returnTo: postLoginReturnTo } });
   }, [postLoginReturnTo, signIn]);
 
-  return <CommonUI.GlobalSpinner message="Signing you in" />;
+  return (
+    <CommonUI.GlobalSpinner message="Te estamos llevando al inicio de sesión" />
+  );
 }

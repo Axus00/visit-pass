@@ -8,10 +8,17 @@
  * @module
  */
 
+import type * as authorizations from "../authorizations.js";
+import type * as crons from "../crons.js";
 import type * as developmentSeeder from "../developmentSeeder.js";
-import type * as exampleWorkflows from "../exampleWorkflows.js";
 import type * as http from "../http.js";
+import type * as memberships from "../memberships.js";
+import type * as residentialUnits from "../residentialUnits.js";
+import type * as retention from "../retention.js";
+import type * as shiftReports from "../shiftReports.js";
+import type * as shifts from "../shifts.js";
 import type * as users from "../users.js";
+import type * as visits from "../visits.js";
 import type * as workosAuth from "../workosAuth.js";
 
 import type {
@@ -21,10 +28,17 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  authorizations: typeof authorizations;
+  crons: typeof crons;
   developmentSeeder: typeof developmentSeeder;
-  exampleWorkflows: typeof exampleWorkflows;
   http: typeof http;
+  memberships: typeof memberships;
+  residentialUnits: typeof residentialUnits;
+  retention: typeof retention;
+  shiftReports: typeof shiftReports;
+  shifts: typeof shifts;
   users: typeof users;
+  visits: typeof visits;
   workosAuth: typeof workosAuth;
 }>;
 

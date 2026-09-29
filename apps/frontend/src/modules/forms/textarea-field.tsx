@@ -1,5 +1,7 @@
 import { type ComponentProps, useId } from 'react';
 
+import * as Predicate from 'effect/Predicate';
+
 import { Label, Textarea, cn } from '@repo/ui';
 
 import { useFieldContext } from './form-context';
@@ -32,13 +34,13 @@ export function TextareaField({
   return (
     <div
       className="flex w-full flex-col gap-1.5"
-      data-invalid={error ? '' : undefined}
+      data-invalid={Predicate.isNull(error) ? undefined : ''}
     >
       <Label htmlFor={textareaId} className="gap-1">
         {label}
         {required ? <span className="text-destructive">*</span> : null}
         {optional ? (
-          <span className="font-normal text-muted-foreground">(Optional)</span>
+          <span className="font-normal text-muted-foreground">(opcional)</span>
         ) : null}
       </Label>
       <Textarea
@@ -49,11 +51,13 @@ export function TextareaField({
         value={field.state.value}
         onBlur={field.handleBlur}
         onChange={(event) => field.handleChange(event.target.value)}
-        aria-invalid={error !== null}
+        aria-invalid={Predicate.isNotNull(error)}
         aria-required={required}
       />
       <div className="flex items-start justify-between gap-3">
-        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        {Predicate.isNull(error) ? null : (
+          <p className="text-xs text-destructive">{error}</p>
+        )}
         {/* Keep the changing count silent for screen readers. */}
         <p
           className="ml-auto text-xs text-muted-foreground tabular-nums"

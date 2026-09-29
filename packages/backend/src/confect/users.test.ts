@@ -3,11 +3,16 @@ import * as EffectVitestUtils from '@effect/vitest/utils';
 import type { User } from '@workos-inc/node';
 import * as Effect from 'effect/Effect';
 import * as Predicate from 'effect/Predicate';
+import * as Record from 'effect/Record';
+import * as Schema from 'effect/Schema';
 
+import { Id } from './_generated/id';
 import refs from './_generated/refs';
-import { DatabaseWriter } from './_generated/services';
+import { DatabaseReader, DatabaseWriter } from './_generated/services';
 import * as Authentication from './modules/authentication';
+import * as Memberships from './modules/memberships';
 import * as Users from './modules/users';
+import * as TestFixtures from './test.fixtures';
 import * as TestConfect from './test.setup';
 
 const workOSClientId = 'client_test';
@@ -30,6 +35,11 @@ const makeWorkOSUser = (overrides: Partial<User> = {}): User => ({
   externalId: null,
   metadata: {},
   ...overrides,
+});
+
+const Invitation = Schema.Struct({
+  status: Memberships.MembershipStatus,
+  userId: Schema.optional(Id('users')),
 });
 
 const seedUser = Effect.fn('seedUser')(function* (args: {
@@ -229,6 +239,207 @@ describe('users', () => {
       EffectVitestUtils.strictEqual(
         reactivated.externalUpdatedAt,
         Date.parse('2026-07-03T12:00:00.000Z')
+      );
+    }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'activates the synced email’s pending invitations, even after sign-in',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* TestFixtures.seedTwoUnits;
+
+        const { newUserInvitationId, renamedUserInvitationId } =
+          yield* Effect.all(
+            Record.map(
+              {
+                newUserInvitationId: { email: userEmail, role: 'porter' },
+                renamedUserInvitationId: {
+                  email: 'renamed@example.test',
+                  role: 'administrator',
+                },
+              } as const,
+              ({ email, role }) =>
+                confect
+                  .withIdentity(TestFixtures.identityOf('adminA'))
+                  .mutation(refs.public.memberships.invite, {
+                    membershipId: world.adminA,
+                    email,
+                    role,
+                  })
+            ),
+            { concurrency: 'unbounded' }
+          );
+
+        const created = yield* confect.mutation(
+          refs.internal.users.upsertFromWorkOS,
+          { workosUser: makeWorkOSUser() }
+        );
+
+        EffectVitestUtils.deepStrictEqual(
+          yield* confect.run(
+            Effect.gen(function* () {
+              const reader = yield* DatabaseReader;
+              const membership = yield* reader
+                .table('memberships')
+                .get(newUserInvitationId);
+
+              return { status: membership.status, userId: membership.userId };
+            }).pipe(Effect.orDie),
+            Invitation
+          ),
+          { status: 'active', userId: created._id }
+        );
+
+        // The client already signed in, so its own activation finds nothing.
+        const lateActivation = yield* confect
+          .withIdentity({
+            subject: externalUserId,
+            tokenIdentifier: created.identityTokenIdentifier,
+          })
+          .mutation(refs.public.memberships.activatePending, {});
+        EffectVitestUtils.strictEqual(lateActivation, 0);
+
+        yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+          workosUser: makeWorkOSUser({ email: 'renamed@example.test' }),
+        });
+
+        EffectVitestUtils.deepStrictEqual(
+          yield* confect.run(
+            Effect.gen(function* () {
+              const reader = yield* DatabaseReader;
+              const membership = yield* reader
+                .table('memberships')
+                .get(renamedUserInvitationId);
+
+              return { status: membership.status, userId: membership.userId };
+            }).pipe(Effect.orDie),
+            Invitation
+          ),
+          { status: 'active', userId: created._id }
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect(
+    'moves the Usuario’s Membresías onto a changed email and frees the old one',
+    () =>
+      Effect.gen(function* () {
+        const confect = yield* TestConfect.TestConfect;
+        const world = yield* TestFixtures.seedTwoUnits;
+        const admin = confect.withIdentity(TestFixtures.identityOf('adminA'));
+
+        const invitePorter = (email: string) =>
+          admin.mutation(refs.public.memberships.invite, {
+            membershipId: world.adminA,
+            email,
+            role: 'porter',
+          });
+
+        yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+          workosUser: makeWorkOSUser(),
+        });
+        const seatId = yield* invitePorter(userEmail);
+        // The next WorkOS sync activates the invitation.
+        yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+          workosUser: makeWorkOSUser(),
+        });
+
+        yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+          workosUser: makeWorkOSUser({ email: 'renamed@example.test' }),
+        });
+
+        const members = yield* admin.query(
+          refs.public.memberships.listForUnit,
+          { membershipId: world.adminA }
+        );
+        const seat = members.find(({ _id }) => _id === seatId);
+
+        EffectVitestUtils.deepStrictEqual(
+          { email: seat?.email, status: seat?.status },
+          { email: 'renamed@example.test', status: 'active' }
+        );
+
+        const [oldEmailInvitation, newEmailInvitation] = yield* Effect.all(
+          [
+            invitePorter(userEmail),
+            Effect.result(invitePorter('renamed@example.test')),
+          ],
+          { concurrency: 'unbounded' }
+        );
+
+        const membersAfterInvite = yield* admin.query(
+          refs.public.memberships.listForUnit,
+          { membershipId: world.adminA }
+        );
+
+        EffectVitestUtils.strictEqual(
+          membersAfterInvite.find(({ _id }) => _id === oldEmailInvitation)
+            ?.status,
+          'pending'
+        );
+        EffectVitestUtils.assertFailure(
+          newEmailInvitation,
+          new Memberships.MembershipAlreadyExistsError({
+            email: 'renamed@example.test',
+          })
+        );
+      }).pipe(Effect.provide(TestConfect.layer))
+  );
+
+  it.effect('leaves a revoked Membresía under the email it left with', () =>
+    Effect.gen(function* () {
+      const confect = yield* TestConfect.TestConfect;
+      const world = yield* TestFixtures.seedTwoUnits;
+      const admin = confect.withIdentity(TestFixtures.identityOf('adminA'));
+
+      yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+        workosUser: makeWorkOSUser(),
+      });
+      const [porterSeat, residentSeat] = yield* Effect.all(
+        [
+          admin.mutation(refs.public.memberships.invite, {
+            membershipId: world.adminA,
+            email: userEmail,
+            role: 'porter',
+          }),
+          admin.mutation(refs.public.memberships.invite, {
+            membershipId: world.adminA,
+            email: userEmail,
+            role: 'resident',
+            apartmentId: world.apartmentA102,
+            occupancyType: 'tenant',
+          }),
+        ],
+        { concurrency: 'unbounded' }
+      );
+      // The next WorkOS sync activates both invitations.
+      yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+        workosUser: makeWorkOSUser(),
+      });
+      yield* admin.mutation(refs.public.memberships.revoke, {
+        membershipId: world.adminA,
+        targetMembershipId: porterSeat,
+      });
+
+      yield* confect.mutation(refs.internal.users.upsertFromWorkOS, {
+        workosUser: makeWorkOSUser({ email: 'renamed@example.test' }),
+      });
+
+      const members = yield* admin.query(refs.public.memberships.listForUnit, {
+        membershipId: world.adminA,
+      });
+
+      EffectVitestUtils.deepStrictEqual(
+        [porterSeat, residentSeat].map((seatId) => {
+          const seat = members.find(({ _id }) => _id === seatId);
+          return { email: seat?.email, status: seat?.status };
+        }),
+        [
+          { email: userEmail, status: 'revoked' },
+          { email: 'renamed@example.test', status: 'active' },
+        ]
       );
     }).pipe(Effect.provide(TestConfect.layer))
   );
