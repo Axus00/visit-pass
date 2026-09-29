@@ -29,17 +29,17 @@ Una cuenta con sesión, identificada por WorkOS. Por sí sola no pertenece a nin
 _Avoid_: Cuenta, perfil
 
 **Membresía**:
-La pertenencia de un Usuario a una Unidad residencial con un solo Rol y, si es Residente, un solo Apartamento. Quien tiene dos Roles o dos Apartamentos tiene dos Membresías, también dentro de una misma unidad.
+La pertenencia de un Usuario a una Unidad residencial con un solo Rol y, si es Residente, un solo Apartamento. Quien tiene dos Roles o dos Apartamentos tiene dos Membresías, también dentro de una misma unidad. Lleva el nombre y el correo con que la unidad la registró, y es a ella, no al Usuario, a quien nombran las Visitas, los Turnos y las Autorizaciones.
 
 **Membresía pendiente**:
-Una Membresía que el Administrador creó con un correo y un Rol, y que se activa solo cuando el Usuario con ese mismo correo la acepta. Si no la acepta en 30 días, caduca; si responde "No soy yo", queda rechazada.
+Una Membresía que el Administrador creó con un correo y un Rol, y que se activa solo cuando el Usuario con ese mismo correo la acepta. Si no la acepta en 30 días, caduca; si responde "No soy yo", queda rechazada. Rechazada, caducada o retirada, se borra 30 días después.
 
 **Invitación**:
 El correo que avisa a una persona de su Membresía pendiente y la lleva a aceptarla o rechazarla. El Administrador puede reenviarla o retirarla.
 _Avoid_: Invitación para un Visitante (eso es una Autorización), alta
 
 **Membresía revocada**:
-Una Membresía que el Administrador terminó. Se conserva para el historial y no se reactiva: volver a invitar crea otra. Cambiar el Rol o el Apartamento de alguien es revocar e invitar de nuevo. Si era la última Membresía activa de su Apartamento, las Autorizaciones vigentes del Apartamento se cancelan.
+Una Membresía que el Administrador terminó. Se conserva para el historial durante el Plazo de retención de su Unidad residencial, contado desde la revocación, y luego se anonimiza. No se reactiva: volver a invitar crea otra. Cambiar el Rol o el Apartamento de alguien es revocar e invitar de nuevo. Si era la última Membresía activa de su Apartamento, las Autorizaciones vigentes del Apartamento se cancelan.
 
 **Rol**:
 El papel de una Membresía dentro de su Unidad residencial: Residente, Portero o Administrador.
@@ -159,9 +159,9 @@ Una marca que el Administrador pone sobre un documento de Visitante, por un recl
 _Avoid_: Bloqueo, congelamiento
 
 **Plazo de retención**:
-Los meses que una Unidad residencial conserva los datos de un Visitante en sus Visitas, contados desde el Ingreso. Lo fija el Superadmin por Unidad residencial, entre 3 y 24 meses (12 por defecto).
+Los meses que una Unidad residencial conserva los datos personales de un registro cumplida su finalidad: los de un Visitante en sus Visitas, contados desde el Ingreso, y los de una Membresía revocada, contados desde la revocación. Lo fija el Superadmin por Unidad residencial, entre 3 y 24 meses (12 por defecto).
 _Avoid_: Vigencia, caducidad
 
 **Anonimización**:
-Borrar de una Visita, Pase o Autorización el nombre, el documento y la placa del Visitante y conservar el resto del registro. Así caducan los datos de un Visitante en esos registros, que nunca se borran por completo.
+Borrar de una Visita, Pase o Autorización el nombre, el documento y la placa del Visitante, o de una Membresía revocada el nombre, el correo, el Tipo de ocupación y su Usuario, y conservar el resto del registro. Así caducan los datos personales en esos registros, que nunca se borran por completo.
 _Avoid_: Purga (es el proceso que la ejecuta), supresión (es el derecho que ejerce el Visitante)

@@ -87,7 +87,7 @@ Además de los deberes del artículo 18 de la Ley 1581 de 2012, el Encargado se 
 4. Los favoritos se borran cuando termina la Membresía del residente que los creó.
 5. La Anonimización se suspende sobre los registros de un documento con Marca de retención activa, mientras el Responsable no la levante.
 6. El Encargado conserva durante cinco (5) años un registro de cada Anonimización, con fecha y conteos, sin datos personales, como prueba de cumplimiento.
-7. **[PENDIENTE]** Plazo de conservación de las Membresías revocadas y de los turnos.
+7. Una Membresía revocada conserva el nombre, el correo y el tipo de ocupación durante el Plazo de retención, contado desde la revocación. Cumplido, se anonimiza: se conservan solo el rol, el Apartamento y las fechas. Los turnos conservan sus horas y la identidad del portero sigue la regla de su Membresía. Las Membresías pendientes rechazadas, caducadas o retiradas se borran treinta (30) días después.
 8. La Anonimización y la supresión alcanzan las copias de respaldo y los registros técnicos a más tardar al cumplirse su ciclo de retención de {dias_copias_respaldo} días.
 
 ## Octava. Medidas de seguridad
@@ -182,10 +182,10 @@ Se firma en {unidad_ciudad}, el {fecha_firma}.
 
 Este texto ya incorpora la [revisión preliminar hecha por un agente de IA](https://github.com/Axus00/visit-pass/issues/23#issuecomment-5892384352), que no es asesoría jurídica. El [README](README.md) marca cada cambio que viene de ella. Antes de firmar con la copropiedad piloto, un abogado real debe validar:
 
-- **Todo el texto**, en particular los cambios de la revisión preliminar: preámbulo, tercera, quinta 4 y 8, sexta 7 y 8, séptima 8, novena, décima 4, duodécima 3.2 y decimotercera 4.
+- **Todo el texto**, en particular los cambios de la revisión preliminar: preámbulo, tercera, quinta 4 y 8, sexta 7 y 8, séptima 7 y 8, novena, décima 4, duodécima 3.2 y decimotercera 4.
 - **Transmisión a Estados Unidos (novena)**: la revisión concluye que basta este contrato, porque Estados Unidos figura entre los países con nivel adecuado (Circular Única, Título V, numeral 3.2) y los proveedores son sub-encargados. Falta confirmar que el contrato de tratamiento de datos de cada proveedor cubra el mínimo del artículo 2.2.2.25.5.2.
 - **Anonimización como supresión (séptima)**: la revisión la acepta si es irreversible y alcanza las copias de respaldo. Falta fijar `{dias_copias_respaldo}` con la configuración real de Convex. Riesgo residual: en Autorizaciones de Servicio con días recurrentes, el Apartamento, los días y las horas podrían reidentificar a una persona.
 - **Menores de edad (tercera)**: registrar el documento del menor desde los 14 años, si lo presenta, se aparta de la revisión preliminar, que decía "nunca documento" ([Decidir cómo se registra a un menor de edad en el Registro manual](https://github.com/Axus00/visit-pass/issues/30#issuecomment-5897018407)). Se apoya en que el artículo 12, literal b, de la Ley 1581 hace facultativa la respuesta sin prohibirla.
 - **Responsabilidad solidaria (decimocuarta)**: es válida frente a la copropiedad, pero dos personas naturales que operan juntas sin sociedad pueden configurar una sociedad de hecho (Código de Comercio, art. 501), cuyos asociados responden solidaria e ilimitadamente. La revisión recomienda constituir una SAS antes de escalar y considerar una póliza voluntaria.
 - **Terminación (duodécima 2)**: la revisión sugiere 60 días en lugar de 30 cuando es Visit Pass quien termina, para que la copropiedad alcance a migrar.
-- **Plazo pendiente (séptima 7)**: conservación de las Membresías revocadas, de los turnos y de las Membresías pendientes rechazadas o caducadas. Lo decide [Decidir la conservación de Membresías revocadas, Turnos y cuentas de Usuario eliminadas](https://github.com/Axus00/visit-pass/issues/24).
+- **Membresías y turnos (séptima 7)**: siguen la propuesta de la revisión preliminar ([Decidir la conservación de Membresías revocadas, Turnos y cuentas de Usuario eliminadas](https://github.com/Axus00/visit-pass/issues/24)). Si el portero es empleado directo de la copropiedad, las acciones laborales prescriben en 3 años (CST, art. 488): la copropiedad conserva los Reportes de turno que recibió por correo o exporta antes lo que necesite. Falta confirmar que baste.

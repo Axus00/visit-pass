@@ -70,15 +70,19 @@ Los datos no se usan para ninguna otra finalidad.
 
 ## 6. Conservación y anonimización
 
-| Dato                                           | Plazo                                                                                          |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Datos del visitante en cada visita             | {plazo_retencion_meses} meses contados desde el ingreso                                        |
-| Pases que no se usaron                         | 30 días después de su última fecha válida                                                      |
-| Archivos de reporte de turno en la plataforma  | 7 días después de generados. Los enviados por correo quedan bajo custodia de la administración |
-| Favoritos                                      | Hasta que termina la membresía del residente que los creó                                      |
-| Residentes, porteros, administradores y turnos | **[PENDIENTE]** Mientras exista la membresía; plazo tras su revocación por decidir             |
+| Dato                                          | Plazo                                                                                          |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Datos del visitante en cada visita            | {plazo_retencion_meses} meses contados desde el ingreso                                        |
+| Pases que no se usaron                        | 30 días después de su última fecha válida                                                      |
+| Archivos de reporte de turno en la plataforma | 7 días después de generados. Los enviados por correo quedan bajo custodia de la administración |
+| Favoritos                                     | Hasta que termina la membresía del residente que los creó                                      |
+| Residentes, porteros y administradores        | Mientras la membresía esté activa y {plazo_retencion_meses} meses desde su revocación          |
+| Turnos                                        | Sus horas se conservan; el nombre del portero sigue la fila anterior                           |
+| Invitaciones no aceptadas                     | 30 días después de rechazadas, caducadas o retiradas                                           |
 
 Cumplido el plazo, los datos del visitante se **anonimizan**: se borran su nombre, documento y placa y se conserva el resto del registro (apartamento, tipo de visita y horas), que ya no permite identificarlo. Si hay un reclamo en trámite o un requerimiento de autoridad sobre un documento, la anonimización de sus registros se suspende hasta resolverlo.
+
+La membresía revocada también se anonimiza al cumplir su plazo: se borran el nombre, el correo y el tipo de ocupación, y se conservan el rol, el apartamento y las fechas.
 
 **Vigencia de las bases de datos**: mientras la copropiedad preste el servicio de control de acceso con la plataforma, con los plazos anteriores para cada registro.
 
@@ -132,10 +136,10 @@ Ley 1581 de 2012, Decreto 1074 de 2015 y Ley 675 de 2001.
 
 Este texto ya incorpora la [revisión preliminar hecha por un agente de IA](https://github.com/Axus00/visit-pass/issues/23#issuecomment-5892384352), que no es asesoría jurídica. El [README](README.md) marca cada cambio que viene de ella. Antes de publicar la Política en la copropiedad piloto, un abogado real debe validar:
 
-- **Todo el texto**, en particular los cambios de la revisión preliminar: el Aviso y las secciones 2, 3, 5, 7, 9 y 11.
+- **Todo el texto**, en particular los cambios de la revisión preliminar: el Aviso y las secciones 2, 3, 5, 6, 7, 9 y 11.
 - **Conducta inequívoca (sección 5)**: la revisión concluye que basta, sin un "Acepto" en el Pase, si el Aviso se muestra antes de recoger los datos y cada Visita guarda la versión vigente. Si el residente comparte solo la imagen del QR, el visitante ve el Aviso por primera vez en el cartel de la portería.
 - **Menores de edad (Aviso y secciones 3, 5 y 9)**: registrar el documento del menor desde los 14 años, si lo presenta, se aparta de la revisión preliminar, que decía "nunca documento" ([Decidir cómo se registra a un menor de edad en el Registro manual](https://github.com/Axus00/visit-pass/issues/30#issuecomment-5897018407)). Se apoya en que el artículo 12, literal b, de la Ley 1581 hace facultativa la respuesta sin prohibirla.
 - **Anonimización como supresión (sección 6)**: la revisión la acepta si es irreversible y alcanza las copias de respaldo (Contrato de transmisión, séptima 8).
-- **Plazo pendiente (sección 6)**: conservación de los datos de residentes, porteros y administradores tras revocar su membresía, de los turnos y de las invitaciones rechazadas o caducadas. Lo decide [Decidir la conservación de Membresías revocadas, Turnos y cuentas de Usuario eliminadas](https://github.com/Axus00/visit-pass/issues/24).
+- **Membresías, turnos e invitaciones (sección 6)**: siguen la propuesta de la revisión preliminar ([Decidir la conservación de Membresías revocadas, Turnos y cuentas de Usuario eliminadas](https://github.com/Axus00/visit-pass/issues/24)). Los turnos sirven también como prueba laboral si el portero es empleado directo (CST, art. 488, 3 años); la copropiedad conserva los Reportes de turno que recibió por correo.
 
 El Aviso de privacidad de arriba parte del texto de la sección 13 de la investigación, con "se anonimizan" en lugar de "se eliminan" según [ADR 0007](../adr/0007-expire-visitor-data-by-anonymizing-on-a-daily-cron.md), y suma los cambios de la revisión preliminar. La plantilla del Aviso que hoy está en código es provisional y se alineará con este texto cuando el abogado lo apruebe.

@@ -54,7 +54,7 @@ Resumen operativo del artículo 18 de la Ley 1581:
 1. El área responde directamente las consultas en **10 días hábiles**, prorrogables 5 avisando el motivo y la fecha, y los reclamos en **15 días hábiles**, prorrogables 8.
 2. La identidad se acredita escribiendo desde el correo de la cuenta. Si no es posible, con copia del documento de identidad, que se borra al cerrar la solicitud.
 3. Si el reclamo está incompleto, se pide completarlo dentro de los 5 días siguientes; pasados 2 meses sin respuesta, se entiende desistido.
-4. Si la solicitud pide suprimir la cuenta, se elimina en WorkOS y se revocan sus accesos. **[PENDIENTE]** Plazo para borrar la fila local que hoy solo se marca como eliminada (ADR 0004).
+4. Si la solicitud pide suprimir la cuenta, se elimina en WorkOS. Eso revoca sus Membresías y borra en el acto el nombre, el correo y los identificadores de WorkOS de la fila local, que conserva solo su id y la fecha de eliminación (ADR 0010). El nombre y el correo de sus Membresías son datos de cada Unidad residencial: si también pide suprimirlos, la solicitud se traslada como en 4.1.
 
 ### 4.3 Instrucciones del Responsable
 

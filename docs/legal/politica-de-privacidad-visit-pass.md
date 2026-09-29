@@ -55,9 +55,9 @@ Y con autoridades que los pidan conforme a la ley. Cada copropiedad a la que per
 
 ## 6. Cuánto tiempo los conservamos
 
-Mientras tu cuenta exista. Al eliminarla, se borra en nuestro proveedor de inicio de sesión y pierdes todo acceso. **[PENDIENTE]** Plazo para borrar la copia local, que hoy se conserva marcada como eliminada (ADR 0004).
+Mientras tu cuenta exista. Al eliminarla, se borra en nuestro proveedor de inicio de sesión, pierdes todo acceso y borramos en el acto tu nombre y tu correo de nuestra copia local, que conserva solo un identificador interno. Si vuelves a registrarte con el mismo correo, es una cuenta nueva.
 
-La información de tu participación en una copropiedad (apartamento, rol, turnos, visitas que autorizaste) la conserva esa copropiedad según su propia política.
+La información de tu participación en una copropiedad (tu nombre y correo en la membresía, apartamento, rol, turnos, visitas que autorizaste) la conserva esa copropiedad según su propia política. Si quieres que también la suprima, escríbele a ella; si nos escribes a nosotros, le trasladamos la solicitud.
 
 ## 7. Tus derechos
 

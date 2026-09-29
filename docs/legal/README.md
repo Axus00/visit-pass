@@ -110,12 +110,4 @@ Cambios de texto que propuso la [revisión preliminar](https://github.com/Axus00
 
 **Se aparta de la revisión:** registrar el documento del menor desde los 14 años, si lo presenta. La revisión decía "nunca documento"; [Decidir cómo se registra a un menor de edad](https://github.com/Axus00/visit-pass/issues/30#issuecomment-5897018407) lo admite porque el artículo 12, literal b, de la Ley 1581 hace facultativa la respuesta sin prohibirla. Debe validarlo el abogado real.
 
-**Sin aplicar:** los plazos de conservación siguen **[PENDIENTE]** hasta [Decidir la conservación de Membresías revocadas, Turnos y cuentas de Usuario eliminadas](https://github.com/Axus00/visit-pass/issues/24), que ya tiene la referencia de la revisión.
-
-## Vacíos detectados
-
-Datos sin plazo de retención decidido. Los borradores los marcan con **[PENDIENTE]**:
-
-- **Membresías revocadas** (nombre, correo, Apartamento, Tipo de ocupación) y **Turnos**: `CONTEXT.md` dice que revocar conserva la Membresía para el historial, sin plazo.
-- **Cuentas de Usuario eliminadas**: [ADR 0004](../adr/0004-soft-delete-users-from-workos-delete-events.md) conserva la fila local con correo y nombre y solo marca `deletedAt`.
-- **Membresías pendientes rechazadas o caducadas**: la revisión preliminar propone suprimirlas a los 30 días. Se decide con los anteriores y afecta la cláusula séptima del contrato y la sección 5 de la Política.
+**Plazos de conservación:** [Decidir la conservación de Membresías revocadas, Turnos y cuentas de Usuario eliminadas](https://github.com/Axus00/visit-pass/issues/24) adoptó la referencia de la revisión para Membresías revocadas, turnos e invitaciones no aceptadas (Contrato de transmisión, séptima 7; Plantilla de la Política, sección 6). Se aparta en las cuentas de Usuario eliminadas: la copia local borra el nombre y el correo en el acto, no a los 30 días, porque WorkOS no recupera una cuenta eliminada y sus Membresías ya quedan revocadas (Política de privacidad de Visit Pass, sección 6; manual, 4.2). Detalle en [ADR 0010](../adr/0010-anonymize-revoked-memberships-and-scrub-deleted-users.md).
