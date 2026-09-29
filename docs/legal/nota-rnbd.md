@@ -15,7 +15,7 @@ Solo deben inscribirse (Decreto 1074 de 2015, art. 2.2.2.26.1.2, modificado por 
 - Las **sociedades y entidades sin ánimo de lucro con activos totales superiores a 100.000 UVT**.
 - Las personas jurídicas de naturaleza pública.
 
-Una copropiedad es una persona jurídica sin ánimo de lucro (Ley 675 de 2001, art. 33). Por eso **solo debe inscribirse si sus activos totales superan 100.000 UVT**. Multiplique 100.000 por el valor de la UVT del año en curso, que fija la DIAN cada año; el resultado está en el orden de los miles de millones de pesos. La mayoría de conjuntos pequeños y medianos quedan por debajo; algunos conjuntos grandes pueden superarlo.
+Una copropiedad es una persona jurídica sin ánimo de lucro (Ley 675 de 2001, art. 33). Por eso **solo debe inscribirse si sus activos totales superan 100.000 UVT**. Con la UVT de 2026 ($52.374, fijada por la DIAN) el umbral es de unos **$5.237 millones**. La DIAN fija la UVT cada año: multiplique 100.000 por el valor del año en curso. La mayoría de conjuntos pequeños y medianos quedan por debajo; algunos conjuntos grandes pueden superarlo.
 
 Consulte al contador de la copropiedad el valor de los activos totales en los últimos estados financieros.
 
@@ -38,6 +38,7 @@ Consulte al contador de la copropiedad el valor de los activos totales en los ú
 | Política de tratamiento   | {url_plataforma}/privacidad/{slug}                                                                                                                                                                                                              |
 
 4. Mantenga la inscripción actualizada cuando cambie algo sustancial, por ejemplo un sub-encargado que Visit Pass le avise.
+5. Reporte en el RNBD cada incidente de seguridad dentro de los **15 días hábiles** siguientes a que lo detecte (Visit Pass le avisa en 72 horas) y, cada semestre, los reclamos de los titulares.
 
 ## Si no está obligada
 

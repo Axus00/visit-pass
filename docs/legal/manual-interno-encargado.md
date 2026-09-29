@@ -70,9 +70,9 @@ Incidente es todo hecho que comprometa la confidencialidad, integridad o disponi
 
 1. **Detección**. Cualquiera que sospeche un incidente avisa de inmediato al área, aunque no esté seguro. Fuentes: alertas y avisos de los sub-encargados, errores en producción, reportes de usuarios.
 2. **Contención**. El área rota las credenciales comprometidas, revoca accesos y corrige la falla antes de investigar a fondo.
-3. **Registro**. Se abre una entrada en el registro de incidentes (sección 8) con fecha y hora de conocimiento, descripción, Unidades residenciales y datos afectados, y medidas. Se registra todo incidente, se notifique o no.
+3. **Registro**. Se abre una entrada en el registro de incidentes (sección 8) con la fecha y hora en que se detectó y en que lo conoció el área (desde esta corre el plazo del paso 5), descripción, Unidades residenciales y datos afectados, y medidas. Se registra todo incidente, se notifique o no.
 4. **Notificación al Responsable**. Dentro de las **72 horas** desde que se conoce, se escribe al correo de la administración de cada Unidad residencial afectada con el alcance, los datos y titulares afectados, las medidas tomadas y las recomendadas. Lo que falte se completa en cuanto se sepa.
-5. **Notificación a la SIC** (art. 18 k). El área reporta el incidente a la Superintendencia de Industria y Comercio por el canal y en el plazo que la SIC tenga vigentes. **[PENDIENTE]** Confirmar con el abogado el canal y el plazo.
+5. **Notificación a la SIC** (art. 18 k). El área reporta el incidente a la Superintendencia de Industria y Comercio dentro de los **15 días hábiles** siguientes a que lo detecte y lo conozca el área, por el aplicativo "Reporte de incidentes de seguridad" del micrositio de la Delegatura para la Protección de Datos Personales o por los canales habilitados por la SIC (Circular Única, Título V, numeral 2.1, literal f, ii), y envía a cada Responsable afectado el número de radicado.
 6. **Cierre**. Se anota la causa, lo que se cambió para que no se repita y la fecha de cierre.
 
 Un incidente que afecte solo cuentas de Usuario sigue los mismos pasos, sin el paso 4.
@@ -90,7 +90,10 @@ Un incidente que afecte solo cuentas de Usuario sigue los mismos pasos, sin el p
 **Cada año**, y antes de agregar un proveedor:
 
 1. **Sub-encargados**: confirmar para Convex, Resend, WorkOS y Vercel qué datos ven, dónde los alojan, que sus condiciones de tratamiento de datos siguen vigentes y que no hubo incidentes sin informar. Un cambio de sub-encargado se avisa a cada Unidad residencial con 30 días de antelación (Contrato de transmisión, cláusula novena).
-2. **Anonimización** (ADR 0007): revisar el registro de purga de los últimos 12 meses y comprobar con una muestra que no quedan Visitas con datos después del Plazo de retención, salvo las que tienen Marca de retención.
+2. **Anonimización** (ADR 0007): revisar el registro de purga de los últimos 12 meses y comprobar con una muestra que no quedan Visitas con datos después del Plazo de retención, salvo las que tienen Marca de retención. La Anonimización vale como supresión solo si es irreversible y alcanza todas las copias, así que se comprueba además que:
+    - No se conserva hash ni tabla de correspondencia del documento del Visitante.
+    - Los logs de funciones no contienen nombre ni documento de Visitantes.
+    - Las copias de respaldo de Convex se conservan como máximo {dias_copias_respaldo} días, según su configuración documentada (Contrato de transmisión, cláusula séptima, numeral 8).
 3. **Accesos**: revisar quién tiene acceso a producción y a cada proveedor, y que todas las cuentas tengan dos factores.
 4. **Este manual**: actualizarlo si algo cambió y registrar la nueva versión.
 

@@ -4,11 +4,11 @@
 
 > Borrador para revisión de un abogado colombiano. No es asesoría jurídica. Texto base de la página `/privacidad`. Marcadores descritos en el [README](README.md).
 
-Esta política explica cómo Visit Pass trata los datos de las cuentas con las que las personas inician sesión en {url_plataforma}. No cubre los datos de Visitantes, apartamentos, turnos ni membresías: de esos es responsable cada copropiedad, y su política está en `{url_plataforma}/privacidad/<copropiedad>`.
+Esta política explica cómo Visit Pass trata los datos de las cuentas con las que las personas inician sesión en {url_plataforma} y los registros técnicos de quien abre la página pública de un Pase, aunque no tenga cuenta. No cubre los demás datos de Visitantes, apartamentos, turnos ni membresías: de esos es responsable cada copropiedad, y su política está en `{url_plataforma}/privacidad/<copropiedad>`.
 
-## 1. Responsable
+## 1. Responsables
 
-Visit Pass, plataforma operada por {encargado_1} ({encargado_1_documento}) y {encargado_2} ({encargado_2_documento}).
+{encargado_1} ({encargado_1_documento}) y {encargado_2} ({encargado_2_documento}), personas naturales que operan conjuntamente Visit Pass. Visit Pass no es una persona jurídica.
 
 - Dirección: {visit_pass_direccion}
 - Teléfono: {visit_pass_telefono}
@@ -23,6 +23,8 @@ Cuando creas tu cuenta o inicias sesión:
 - El identificador de tu cuenta y las fechas de creación, actualización e inicio de sesión.
 - Registros técnicos de acceso: dirección IP y navegador.
 
+Si abres la página pública de un Pase, aunque no tengas cuenta, tratamos solo los registros técnicos de acceso para proteger la plataforma.
+
 No tratamos datos sensibles ni pedimos tu documento de identidad para crear la cuenta.
 
 ## 3. Para qué los usamos
@@ -36,11 +38,11 @@ No usamos tus datos para publicidad, no los vendemos y no los compartimos con ot
 
 ## 4. Autorización
 
-Al crear tu cuenta nos autorizas a tratar tus datos para las finalidades anteriores. Puedes revocar la autorización eliminando tu cuenta (sección 7).
+Al crear tu cuenta nos autorizas a tratar tus datos para las finalidades anteriores. Guardamos prueba de tu aceptación: la versión de esta política, la fecha y hora y tu cuenta. Puedes revocar la autorización eliminando tu cuenta (sección 7).
 
 ## 5. Con quién los compartimos
 
-Con proveedores que los tratan por nuestra cuenta, todos ubicados en Estados Unidos:
+Con proveedores que los tratan por nuestra cuenta, todos ubicados en Estados Unidos y con los que tenemos un contrato escrito de tratamiento de datos:
 
 | Proveedor    | Para qué                                              |
 | ------------ | ----------------------------------------------------- |

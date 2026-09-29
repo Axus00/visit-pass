@@ -12,11 +12,13 @@
 
 > **Aviso de privacidad – Control de acceso de visitantes**
 >
-> **{unidad_razon_social}**, NIT {unidad_nit}, con domicilio en {unidad_direccion}, {unidad_ciudad}, teléfono {unidad_telefono} y correo {unidad_correo}, es responsable del tratamiento de los datos personales que usted suministra para ingresar: nombre, tipo y número de documento de identidad, apartamento que visita, tipo de visita y, si aplica, placa del vehículo.
+> **{unidad_razon_social}**, NIT {unidad_nit}, con domicilio en {unidad_direccion}, {unidad_ciudad}, teléfono {unidad_telefono} y correo {unidad_correo}, es responsable del tratamiento de los datos personales que usted, o el residente que autoriza su visita, suministra para ingresar: nombre, tipo y número de documento de identidad, apartamento que visita, tipo de visita y, si aplica, placa del vehículo.
 >
 > **Finalidad:** controlar el ingreso y la salida de visitantes, verificar la autorización del residente, garantizar la seguridad de la copropiedad y elaborar los reportes de portería. Los datos se conservan durante {plazo_retencion_meses} meses contados desde su visita y luego se anonimizan, salvo obligación legal o requerimiento de autoridad.
 >
-> Los datos se registran en la plataforma Visit Pass, que actúa como encargada del tratamiento por cuenta de la copropiedad, y no se comparten con terceros distintos de las autoridades que los requieran conforme a la ley.
+> Los datos se registran en la plataforma Visit Pass, que actúa como encargada del tratamiento por cuenta de la copropiedad, y no se comparten con terceros, salvo los proveedores tecnológicos que la plataforma usa por cuenta de la copropiedad y las autoridades que los requieran conforme a la ley.
+>
+> Si el visitante es menor de edad, suministrar sus datos es facultativo: su nombre y su documento son opcionales, y su ingreso queda vinculado al adulto que lo acompaña o al residente que lo recibe.
 >
 > **Sus derechos:** conocer, actualizar, rectificar y solicitar la supresión de sus datos; pedir prueba de la autorización; conocer el uso que se les ha dado; revocar la autorización; y presentar quejas ante la Superintendencia de Industria y Comercio. Puede ejercerlos gratuitamente escribiendo a {unidad_correo} o en la administración de la copropiedad.
 >
@@ -36,16 +38,16 @@
 
 La copropiedad registra los datos en la plataforma **Visit Pass**, que los trata solo por cuenta de la copropiedad y según sus instrucciones, bajo un contrato de transmisión de datos personales. Visit Pass no usa estos datos para fines propios ni los comparte con otras copropiedades. Contacto de Visit Pass: {correo_proteccion_datos}.
 
-La plataforma aloja los datos en servidores de sus proveedores en **Estados Unidos**. Esa transmisión internacional está amparada por el contrato de transmisión (Decreto 1074 de 2015, art. 2.2.2.25.5.1).
+La plataforma aloja los datos en servidores de sus proveedores en **Estados Unidos**. Esa transmisión internacional está amparada por el contrato de transmisión (Decreto 1074 de 2015, art. 2.2.2.25.5.1). Estados Unidos figura entre los países con nivel adecuado de protección (Circular Única de la SIC, Título V, numeral 3.2).
 
 ## 3. Bases de datos y datos que se tratan
 
-| Titulares                           | Datos                                                                                                                                                                                                | Cómo se obtienen                                                                          |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Visitantes                          | Nombre; tipo y número de documento; apartamento visitado; tipo de visita (temporal, evento o servicio); placa del vehículo, si la hay; fecha y hora de ingreso y salida; indicación de menor de edad | Los entrega el visitante en la portería, o los aporta el residente que autoriza la visita |
-| Visitantes guardados como favoritos | Nombre, tipo y número de documento y parentesco (familiar, amigo u otro)                                                                                                                             | Los aporta el residente                                                                   |
-| Residentes                          | Nombre, correo, apartamento y tipo de ocupación (propietario o arrendatario)                                                                                                                         | Los registra la administración                                                            |
-| Porteros y administradores          | Nombre, correo y turnos                                                                                                                                                                              | Los registra la administración                                                            |
+| Titulares                           | Datos                                                                                                                                                                                                                                                                         | Cómo se obtienen                                                                          |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Visitantes                          | Nombre; tipo y número de documento; apartamento visitado; tipo de visita (temporal, evento o servicio); placa del vehículo, si la hay; fecha y hora de ingreso y salida; indicación de menor de edad y vínculo con el adulto que lo acompaña o con el residente que lo recibe | Los entrega el visitante en la portería, o los aporta el residente que autoriza la visita |
+| Visitantes guardados como favoritos | Nombre, tipo y número de documento y parentesco (familiar, amigo u otro)                                                                                                                                                                                                      | Los aporta el residente                                                                   |
+| Residentes                          | Nombre, correo, apartamento y tipo de ocupación (propietario o arrendatario)                                                                                                                                                                                                  | Los registra la administración                                                            |
+| Porteros y administradores          | Nombre, correo y turnos                                                                                                                                                                                                                                                       | Los registra la administración                                                            |
 
 **No se recolectan** fotografías, huellas ni otros datos biométricos, fecha de nacimiento ni teléfono de los visitantes, ni datos sensibles. El documento de identidad se exhibe en la portería y se devuelve de inmediato; nunca se retiene (Decreto 2150 de 1995, art. 18).
 
@@ -61,10 +63,10 @@ Los datos no se usan para ninguna otra finalidad.
 
 ## 5. Cómo se autoriza el tratamiento
 
-- **Visitantes**: el aviso de privacidad está a la vista en la portería, en la pantalla del portero y en el enlace del pase que envía el residente. Al entregar sus datos para ingresar, o al presentar su pase, el visitante autoriza el tratamiento mediante una conducta inequívoca (Decreto 1074 de 2015, art. 2.2.2.25.2.4). Como prueba, cada visita guarda la versión del aviso vigente en su ingreso, la fecha y hora, el medio (pase o registro en portería) y el portero que la registró.
+- **Visitantes**: el aviso de privacidad está a la vista en la portería, en la pantalla del portero y en el enlace del pase que envía el residente. Al entregar sus datos para ingresar, o al presentar su pase, el visitante autoriza el tratamiento mediante una conducta inequívoca (Decreto 1074 de 2015, art. 2.2.2.25.2.4). Como prueba, cada visita guarda la versión del aviso vigente en su ingreso, la fecha y hora, el medio (pase o registro en portería) y el portero que la registró. Si el visitante no desea suministrar sus datos, puede no ingresar o pedir que el residente lo reciba en portería.
 - **Datos que aporta un residente** (pases y favoritos): el residente solo aporta los datos necesarios para autorizar el ingreso. Los pases que no se usan se anonimizan 30 días después de su última fecha válida.
-- **Residentes, porteros y administradores**: al aceptar la invitación de la administración e iniciar sesión.
-- **Menores de edad**: si el visitante es menor de edad, su documento es opcional y no se registra placa. Solo se tratan los datos necesarios para su ingreso y seguridad, respetando su interés superior.
+- **Residentes, porteros y administradores**: al aceptar la invitación de la administración e iniciar sesión. La invitación incluye el enlace a esta política.
+- **Menores de edad**: si el visitante es menor de edad, suministrar sus datos es facultativo. Su nombre es opcional, su documento solo se registra si tiene catorce (14) años o más y lo presenta, y nunca se registra placa. Su ingreso se vincula al adulto que lo acompaña, quien al presentarlo autoriza el tratamiento como su representante legal o por encargo de este. Si llega sin acompañante, solo ingresa si un residente del apartamento lo recibe, y queda registrado qué residente lo recibió. Solo se tratan los datos necesarios para su ingreso y seguridad, en su interés superior.
 
 ## 6. Conservación y anonimización
 
@@ -89,7 +91,7 @@ Todo titular puede, de forma gratuita (Ley 1581 de 2012, art. 8):
 3. Ser informado del uso que se ha dado a sus datos.
 4. Presentar quejas ante la Superintendencia de Industria y Comercio, después de agotar la consulta o el reclamo ante la copropiedad.
 5. Revocar la autorización y solicitar la supresión de sus datos, cuando no exista un deber legal o contractual de conservarlos.
-6. Acceder a sus datos al menos una vez al mes.
+6. Consultar gratuitamente sus datos al menos una vez cada mes calendario y cada vez que esta política cambie sustancialmente.
 
 ## 8. Quién atiende las solicitudes
 
@@ -99,7 +101,7 @@ Las solicitudes que lleguen a Visit Pass se trasladan a la administración en 2 
 
 ## 9. Procedimiento
 
-**Quién puede pedir**: el titular, sus causahabientes, su representante o apoderado, o quien actúe por estipulación a favor de otro.
+**Quién puede pedir**: el titular, sus causahabientes, su representante o apoderado, o quien actúe por estipulación a favor de otro. Los derechos de los menores de edad los ejercen sus representantes legales.
 
 **Cómo se acredita la identidad**: presentando el documento de identidad en la administración o, por correo, adjuntando una copia. Los representantes y apoderados adjuntan además el documento que los acredita. La administración no guarda la copia más allá de lo necesario para responder.
 
@@ -110,8 +112,9 @@ Las solicitudes que lleguen a Visit Pass se trasladan a la administración en 2 
 **Reclamos** (corregir, actualizar, suprimir o revocar):
 
 1. Si el reclamo está incompleto, se pide completarlo dentro de los 5 días siguientes a su recibo. Si pasan 2 meses sin que se complete, se entiende desistido.
-2. Dentro de los 2 días hábiles siguientes a recibir el reclamo completo, sus registros quedan marcados como "reclamo en trámite" hasta que se decida.
-3. Se responde en un máximo de **15 días hábiles** desde el día siguiente a su recibo. Si no es posible, se informa el motivo y la nueva fecha, que no supera **8 días hábiles** adicionales.
+2. Si quien recibe el reclamo no es competente para resolverlo, lo traslada a quien corresponda en un máximo de 2 días hábiles e informa al interesado.
+3. Dentro de los 2 días hábiles siguientes a recibir el reclamo completo, sus registros quedan marcados como "reclamo en trámite" hasta que se decida.
+4. Se responde en un máximo de **15 días hábiles** desde el día siguiente a su recibo. Si no es posible, se informa el motivo y la nueva fecha, que no supera **8 días hábiles** adicionales.
 
 ## 10. Seguridad y confidencialidad
 
@@ -119,7 +122,7 @@ Los datos se cifran en tránsito y en reposo. Cada persona ve solo lo que su pap
 
 ## 11. Vigencia y cambios
 
-Esta política rige desde el {fecha_aprobacion}, fecha en que la aprobó {organo_aprobacion}. Cada cambio crea una versión nueva, que se publica en esta misma dirección junto con las anteriores y su fecha.
+Esta política rige desde el {fecha_aprobacion}, fecha en que la aprobó {organo_aprobacion}. Cada cambio crea una versión nueva, que se publica en esta misma dirección junto con las anteriores y su fecha. Los cambios sustanciales se comunican a los titulares antes de aplicarse; si cambian las finalidades, se pide una nueva autorización.
 
 Ley 1581 de 2012, Decreto 1074 de 2015 y Ley 675 de 2001.
 
@@ -127,12 +130,12 @@ Ley 1581 de 2012, Decreto 1074 de 2015 y Ley 675 de 2001.
 
 ## Notas para el abogado (no forman parte de la política)
 
-Preguntas de la consulta previa al piloto que afectan este texto (numeración de [Decidir la política de tratamiento pública y el contrato Responsable–Encargado](https://github.com/Axus00/visit-pass/issues/20#issuecomment-5858616275)):
+Este texto ya incorpora la [revisión preliminar hecha por un agente de IA](https://github.com/Axus00/visit-pass/issues/23#issuecomment-5892384352), que no es asesoría jurídica. El [README](README.md) marca cada cambio que viene de ella. Antes de publicar la Política en la copropiedad piloto, un abogado real debe validar:
 
-- **1 (bloqueante)**: si la conducta inequívoca de la sección 5 basta o hace falta un "Acepto" en el Pase.
-- **2 (bloqueante)**: si la transmisión a Estados Unidos de la sección 2 basta con el contrato de transmisión.
-- **3 (informativa)**: si la anonimización de la sección 6 vale como supresión.
-- **5 (bloqueante)**: el tratamiento de menores sin documento de la sección 5 (Ley 1581, art. 7).
-- **7 (bloqueante)**: revisión del texto completo.
+- **Todo el texto**, en particular los cambios de la revisión preliminar: el Aviso y las secciones 2, 3, 5, 7, 9 y 11.
+- **Conducta inequívoca (sección 5)**: la revisión concluye que basta, sin un "Acepto" en el Pase, si el Aviso se muestra antes de recoger los datos y cada Visita guarda la versión vigente. Si el residente comparte solo la imagen del QR, el visitante ve el Aviso por primera vez en el cartel de la portería.
+- **Menores de edad (Aviso y secciones 3, 5 y 9)**: registrar el documento del menor desde los 14 años, si lo presenta, se aparta de la revisión preliminar, que decía "nunca documento" ([Decidir cómo se registra a un menor de edad en el Registro manual](https://github.com/Axus00/visit-pass/issues/30#issuecomment-5897018407)). Se apoya en que el artículo 12, literal b, de la Ley 1581 hace facultativa la respuesta sin prohibirla.
+- **Anonimización como supresión (sección 6)**: la revisión la acepta si es irreversible y alcanza las copias de respaldo (Contrato de transmisión, séptima 8).
+- **Plazo pendiente (sección 6)**: conservación de los datos de residentes, porteros y administradores tras revocar su membresía, de los turnos y de las invitaciones rechazadas o caducadas. Lo decide [Decidir la conservación de Membresías revocadas, Turnos y cuentas de Usuario eliminadas](https://github.com/Axus00/visit-pass/issues/24).
 
-El Aviso de privacidad de arriba es el texto de la sección 13 de la investigación, con "se anonimizan" en lugar de "se eliminan" según [ADR 0007](../adr/0007-expire-visitor-data-by-anonymizing-on-a-daily-cron.md). La plantilla del Aviso que hoy está en código es provisional y se alineará con este texto cuando el abogado lo apruebe.
+El Aviso de privacidad de arriba parte del texto de la sección 13 de la investigación, con "se anonimizan" en lugar de "se eliminan" según [ADR 0007](../adr/0007-expire-visitor-data-by-anonymizing-on-a-daily-cron.md), y suma los cambios de la revisión preliminar. La plantilla del Aviso que hoy está en código es provisional y se alineará con este texto cuando el abogado lo apruebe.
