@@ -8,9 +8,12 @@
  * @module
  */
 
+import type * as apartments from "../apartments.js";
 import type * as developmentSeeder from "../developmentSeeder.js";
 import type * as exampleWorkflows from "../exampleWorkflows.js";
 import type * as http from "../http.js";
+import type * as memberships from "../memberships.js";
+import type * as residentialUnits from "../residentialUnits.js";
 import type * as users from "../users.js";
 import type * as workosAuth from "../workosAuth.js";
 
@@ -21,9 +24,12 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  apartments: typeof apartments;
   developmentSeeder: typeof developmentSeeder;
   exampleWorkflows: typeof exampleWorkflows;
   http: typeof http;
+  memberships: typeof memberships;
+  residentialUnits: typeof residentialUnits;
   users: typeof users;
   workosAuth: typeof workosAuth;
 }>;
@@ -57,4 +63,5 @@ export declare const internal: FilterApi<
 export declare const components: {
   workOSAuthKit: import("@convex-dev/workos-authkit/_generated/component.js").ComponentApi<"workOSAuthKit">;
   workflow: import("@convex-dev/workflow/_generated/component.js").ComponentApi<"workflow">;
+  resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
 };

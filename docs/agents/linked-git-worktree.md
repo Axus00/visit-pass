@@ -40,11 +40,15 @@ The landing page is a convenience. Sign-out is still verified by its durable sig
 | Agent  | `agent@example.org` | `dev-account-agent&1` |
 | Human  | `human@example.org` | `dev-account-human&1` |
 
+The seeder also creates the Unidad residencial **Conjunto Demo** (three Apartamentos in Torres 1 and 2) with its WorkOS Organization. The Agent account is its Administrador; the Human account has no Membresía, so inviting it from the Agent's session walks the whole Invitación flow.
+
+Worktree deployments send no email: `RESEND_FROM_EMAIL` is unset, so a Membresía pendiente shows "sin correo" and the invited account answers it from `/app` after signing in. To exercise real delivery, run `pnpm exec convex env set RESEND_FROM_EMAIL "Visit Pass <visit-pass@daguttt.com>"` and invite an address you can read. WorkOS environments provisioned here lack Multiple Roles, so a Usuario with two Roles in a unit carries only the widest one in WorkOS; authorization reads the local Membresías and is unaffected.
+
 Sign in with email and password on the AuthKit page. Add accounts in `packages/backend/src/confect/modules/developmentSeeder/domain/accounts.ts` once the app has roles; keep them idempotent, because setup reseeds on every run.
 
 ## Environment lifecycle
 
-`pnpm setup:worktree` installs dependencies, provisions and selects the isolated Convex deployment, provisions an unclaimed WorkOS environment, configures its login callback, CORS origin, and app homepage URL, creates or recovers its webhook endpoint, runs Confect codegen, pushes the generated backend, and runs `developmentSeeder:seed`. It is implemented in `packages/scripts/src/worktree/setup.ts`.
+`pnpm setup:worktree` installs dependencies, provisions and selects the isolated Convex deployment, provisions an unclaimed WorkOS environment, configures its login callback, CORS origin, and app homepage URL, creates the `residente`, `portero` and `administrador` environment roles, creates or recovers its webhook endpoint, pushes the WorkOS values and `APP_URL` to the deployment, runs Confect codegen, pushes the generated backend, and runs `developmentSeeder:seed`. It is implemented in `packages/scripts/src/worktree/setup.ts`.
 
 Environment values and credentials are written to the ignored root `.env.local` file (mode `0600`) and to the selected Convex deployment. There is no manifest file: everything the teardown needs is `WORKOS_LOCAL_ENV_NAME` in `.env.local`, and the rest is derived from the git dir. Do not copy credentials into tracked files or reuse them outside this worktree.
 

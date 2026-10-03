@@ -192,6 +192,10 @@ const preparePreview = Effect.fn('preparePreview')(function* (
       : 'Persisted the new PR WorkOS environment.'
   );
 
+  yield* workosApi.ensureEnvironmentRoles(
+    WorkosApi.WORKOS_ENVIRONMENT_ROLES,
+    environment.apiKey
+  );
   const webhook = yield* workosApi.ensureWebhookEndpoint(
     {
       url: `${siteUrl}/workos/webhook`,
@@ -241,6 +245,7 @@ const configurePreview = Effect.fn('configurePreview')(function* (
       message: 'Prepare the preview before configuring its URL.',
     });
   const workos = yield* WorkosCli.WorkosCli;
+  const convex = yield* ConvexCli.ConvexCli;
   yield* workos.configureAuthKit(
     {
       redirectUri: `${origin}/callback`,
@@ -249,5 +254,8 @@ const configurePreview = Effect.fn('configurePreview')(function* (
     },
     state.environment.apiKey
   );
+  // The backend builds invitation email links from it. Targets the deployment
+  // the prepare step selected in this checkout's `.env.local`.
+  yield* convex.envSet('APP_URL', origin, options.repoRoot);
   yield* Console.log(`Preview ready: ${origin}`);
 }, CommandEnvironment.without(UNSET_KEYS));

@@ -14,7 +14,7 @@ export default GroupSpec.make()
     FunctionSpec.publicQuery({
       name: 'me',
       args: () => ({}),
-      returns: () => Schema.NullOr(UsersDomain.UsersDocSchema),
+      returns: () => Schema.NullOr(UsersDomain.ActiveUsersDocSchema),
       error: () => Schema.Never,
     }).middleware(RequireUserIdentity)
   )
@@ -44,7 +44,7 @@ export default GroupSpec.make()
       args: () => ({
         workosUser: WorkOSDomain.WorkOSUser,
       }),
-      returns: () => UsersDomain.UsersDocSchema,
+      returns: () => UsersDomain.ActiveUsersDocSchema,
       error: () => UsersDomain.IdentityConflictError,
     })
   )

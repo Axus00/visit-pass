@@ -1,6 +1,7 @@
 import { componentsGeneric } from "convex/server";
 
 export type Components = {
+  "resend": import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
   "workOSAuthKit": import("@convex-dev/workos-authkit/_generated/component.js").ComponentApi<"workOSAuthKit">;
   "workflow": import("@convex-dev/workflow/_generated/component.js").ComponentApi<"workflow">;
 };

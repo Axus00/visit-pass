@@ -3,12 +3,14 @@ import * as Clock from 'effect/Clock';
 import * as Duration from 'effect/Duration';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
+import * as Predicate from 'effect/Predicate';
 
 import refs from './_generated/refs';
 import databaseSchema from './_generated/schema';
 import { DatabaseWriter, Scheduler } from './_generated/services';
 import RequireUserIdentity from './middleware/RequireUserIdentity.impl';
 import * as Authentication from './modules/authentication';
+import * as Memberships from './modules/memberships';
 import * as Users from './modules/users';
 import * as WorkOS from './modules/workos';
 import usersSpec from './users.spec';
@@ -66,7 +68,7 @@ const upsertFromWorkOSImpl = FunctionImpl.make(
       const matchedUserIds = [
         ...new Set(
           [userByExternalId, userByEmail]
-            .filter((user) => user !== null)
+            .filter(Predicate.isNotNull)
             .map(({ _id }) => _id)
         ),
       ];
@@ -93,38 +95,28 @@ const upsertFromWorkOSImpl = FunctionImpl.make(
         )
       );
 
+      // A deleted User keeps no external id or email, so neither lookup finds
+      // it: the same person signing up again becomes a new User (ADR 0010).
       const targetUser = userByExternalId ?? userByEmail;
 
-      if (!targetUser) {
-        const createdUserId = yield* writer
-          .table('users')
-          .insert(createUserDto)
-          .pipe(Effect.catchTag('DocumentEncodeError', Effect.die));
+      const userId = Predicate.isNull(targetUser)
+        ? yield* writer
+            .table('users')
+            .insert(createUserDto)
+            .pipe(Effect.catchTag('DocumentEncodeError', Effect.die))
+        : yield* writer
+            .table('users')
+            .replace(targetUser._id, createUserDto)
+            .pipe(
+              Effect.catchTag('DocumentEncodeError', Effect.die),
+              Effect.as(targetUser._id)
+            );
 
-        const createdUser = yield* Users.getOneById(createdUserId).pipe(
-          Effect.andThen((user) => Effect.fromNullishOr(user)),
-          Effect.catchTag('NoSuchElementError', Effect.die)
-        );
-
-        return createdUser;
-      }
-
-      yield* writer
-        .table('users')
-        .patch(targetUser._id, { ...createUserDto, deletedAt: undefined })
-        .pipe(
-          Effect.catchTag(
-            ['GetByIdFailure', 'DocumentDecodeError', 'DocumentEncodeError'],
-            Effect.die
-          )
-        );
-
-      const reactivatedUser = yield* Users.getOneById(targetUser._id).pipe(
+      return yield* Users.getOneById(userId).pipe(
+        Users.isActiveOrNull,
         Effect.andThen((user) => Effect.fromNullishOr(user)),
         Effect.catchTag('NoSuchElementError', Effect.die)
       );
-
-      return reactivatedUser;
     })
 );
 
@@ -141,17 +133,19 @@ const softDeleteByExternalIdImpl = FunctionImpl.make(
       );
       if (!user) return false as const;
 
-      const now = yield* Clock.currentTimeMillis;
-
+      // Replacing the row drops the name, email and WorkOS identifiers at once.
       yield* writer
         .table('users')
-        .patch(user._id, { deletedAt: now })
-        .pipe(
-          Effect.catchTag(
-            ['GetByIdFailure', 'DocumentDecodeError', 'DocumentEncodeError'],
-            Effect.die
-          )
-        );
+        .replace(user._id, { deletedAt: yield* Clock.currentTimeMillis })
+        .pipe(Effect.catchTag('DocumentEncodeError', Effect.die));
+
+      // A deleted identity keeps no access: every Membresía it held is revoked.
+      const memberships = yield* Memberships.listActiveByUser(user._id);
+      yield* Effect.forEach(
+        memberships,
+        (membership) => Memberships.revokeMembership({ membership }),
+        { discard: true }
+      );
 
       return user._id;
     })

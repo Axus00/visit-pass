@@ -2,10 +2,9 @@ import { describe, it } from '@effect/vitest';
 import * as EffectVitestUtils from '@effect/vitest/utils';
 import type { User } from '@workos-inc/node';
 import * as Effect from 'effect/Effect';
-import * as Predicate from 'effect/Predicate';
 
 import refs from './_generated/refs';
-import { DatabaseWriter } from './_generated/services';
+import { DatabaseReader, DatabaseWriter } from './_generated/services';
 import * as Authentication from './modules/authentication';
 import * as Users from './modules/users';
 import * as TestConfect from './test.setup';
@@ -42,6 +41,7 @@ const seedUser = Effect.fn('seedUser')(function* (args: {
     externalId: args.externalId,
     identityTokenIdentifier: `seed|${args.externalId}`,
     email: args.email,
+    emailVerified: true,
     firstName: 'Seeded',
     lastName: 'User',
     profilePictureUrl: null,
@@ -165,7 +165,7 @@ describe('users', () => {
     }).pipe(Effect.provide(TestConfect.layer))
   );
 
-  it.effect('soft-deletes the user once', () =>
+  it.effect('scrubs a deleted User down to its id, once', () =>
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;
 
@@ -181,15 +181,35 @@ describe('users', () => {
 
       EffectVitestUtils.strictEqual(deletedUserId, created._id);
 
-      const deletedUser = yield* confect.query(
-        refs.internal.users.getOneByExternalId,
-        { externalId: externalUserId }
+      const [byExternalId, me] = yield* Effect.all([
+        confect.query(refs.internal.users.getOneByExternalId, {
+          externalId: externalUserId,
+        }),
+        confect
+          .withIdentity({
+            subject: externalUserId,
+            tokenIdentifier: created.identityTokenIdentifier,
+          })
+          .query(refs.public.users.me, {}),
+      ]);
+
+      EffectVitestUtils.strictEqual(byExternalId, null);
+      EffectVitestUtils.strictEqual(me, null);
+
+      const scrubbed = yield* confect.run(
+        Effect.gen(function* () {
+          const reader = yield* DatabaseReader;
+
+          return yield* reader.table('users').get(created._id);
+        }),
+        Users.UsersDocSchema
       );
 
-      EffectVitestUtils.assertTrue(Predicate.isNotNull(deletedUser));
-      EffectVitestUtils.assertTrue(
-        Predicate.isNotUndefined(deletedUser.deletedAt)
-      );
+      EffectVitestUtils.deepStrictEqual(Object.keys(scrubbed).toSorted(), [
+        '_creationTime',
+        '_id',
+        'deletedAt',
+      ]);
 
       const repeatedDeletion = yield* confect.mutation(
         refs.internal.users.softDeleteByExternalId,
@@ -200,7 +220,7 @@ describe('users', () => {
     }).pipe(Effect.provide(TestConfect.layer))
   );
 
-  it.effect('reactivates a soft-deleted user during upsert', () =>
+  it.effect('creates a new User when a deleted email signs up again', () =>
     Effect.gen(function* () {
       const confect = yield* TestConfect.TestConfect;
 
@@ -213,23 +233,13 @@ describe('users', () => {
         externalId: externalUserId,
       });
 
-      const reactivated = yield* confect.mutation(
+      const recreated = yield* confect.mutation(
         refs.internal.users.upsertFromWorkOS,
-        {
-          workosUser: makeWorkOSUser({
-            firstName: 'Reactivated',
-            updatedAt: '2026-07-03T12:00:00.000Z',
-          }),
-        }
+        { workosUser: makeWorkOSUser({ id: 'user_recreated' }) }
       );
 
-      EffectVitestUtils.strictEqual(reactivated._id, created._id);
-      EffectVitestUtils.strictEqual(reactivated.deletedAt, undefined);
-      EffectVitestUtils.strictEqual(reactivated.firstName, 'Reactivated');
-      EffectVitestUtils.strictEqual(
-        reactivated.externalUpdatedAt,
-        Date.parse('2026-07-03T12:00:00.000Z')
-      );
+      EffectVitestUtils.assertTrue(recreated._id !== created._id);
+      EffectVitestUtils.strictEqual(recreated.email, userEmail);
     }).pipe(Effect.provide(TestConfect.layer))
   );
 
