@@ -23,6 +23,10 @@ const withPreviewFixture = <A, E, R>(
     seedFails: Ref.Ref<boolean>;
     renewals: Array<number>;
     configured: Array<WorkosCli.ConfigureAuthKitDto>;
+    roleRequests: Array<{
+      roles: ReadonlyArray<WorkosApi.CreateEnvironmentRoleDto>;
+      apiKey: string;
+    }>;
     freshRunner: Effect.Effect<void>;
   }) => Effect.Effect<A, E, R>
 ) =>
@@ -34,6 +38,10 @@ const withPreviewFixture = <A, E, R>(
       const stored = new Map<string, string>();
       const configured: Array<WorkosCli.ConfigureAuthKitDto> = [];
       const renewals: Array<number> = [];
+      const roleRequests: Array<{
+        roles: ReadonlyArray<WorkosApi.CreateEnvironmentRoleDto>;
+        apiKey: string;
+      }> = [];
       const options = {
         project: 'team:project',
         pr: 123,
@@ -108,6 +116,7 @@ const withPreviewFixture = <A, E, R>(
         provisions,
         seedFails,
         configured,
+        roleRequests,
         renewals,
         freshRunner: fs
           .remove(worktree.envFilePath, { force: true })
@@ -117,7 +126,12 @@ const withPreviewFixture = <A, E, R>(
         Effect.provideService(WorkosCli.WorkosCli, workos),
         Effect.provideService(
           WorkosApi.WorkosApi,
-          TestProviders.fakeWorkosApi()
+          TestProviders.fakeWorkosApi({
+            ensureEnvironmentRoles: (roles, apiKey) =>
+              Effect.sync(() => {
+                roleRequests.push({ roles, apiKey: Redacted.value(apiKey) });
+              }),
+          })
         ),
         Effect.provideService(HttpClient.HttpClient, client),
         Effect.provide(spawner)
@@ -141,6 +155,28 @@ layer(TestProviders.worktreeFixtureLayer, { excludeTestServices: true })(
             expect(yield* Ref.get(fixture.provisions)).toBe(1);
             expect(fixture.renewals).toHaveLength(2);
             expect(second.expiresAt).toBeGreaterThanOrEqual(first.expiresAt);
+          })
+        )
+    );
+
+    it.effect(
+      "ensures the environment roles on every run with the PR environment's key",
+      () =>
+        withPreviewFixture((fixture) =>
+          Effect.gen(function* () {
+            yield* fixture.prepare;
+            yield* fixture.freshRunner;
+            yield* fixture.prepare;
+            expect(fixture.roleRequests).toEqual(
+              Array.from({ length: 2 }, () => ({
+                roles: [
+                  { slug: 'residente', name: 'Residente' },
+                  { slug: 'portero', name: 'Portero' },
+                  { slug: 'administrador', name: 'Administrador' },
+                ],
+                apiKey: 'sk_test_preview',
+              }))
+            );
           })
         )
     );
@@ -205,6 +241,9 @@ layer(TestProviders.worktreeFixtureLayer, { excludeTestServices: true })(
                 homepageUrl: 'https://app-abc.vercel.app/signout-callback',
               },
             ]);
+            expect(fixture.stored.get('APP_URL')).toBe(
+              'https://app-abc.vercel.app'
+            );
             for (const url of [
               'https://app-abc.vercel.app.evil.test',
               'https://secret@app-abc.vercel.app',
@@ -215,6 +254,9 @@ layer(TestProviders.worktreeFixtureLayer, { excludeTestServices: true })(
               );
             }
             expect(fixture.configured).toHaveLength(1);
+            expect(fixture.stored.get('APP_URL')).toBe(
+              'https://app-abc.vercel.app'
+            );
           })
         )
     );

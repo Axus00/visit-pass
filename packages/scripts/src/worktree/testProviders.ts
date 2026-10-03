@@ -91,6 +91,7 @@ const fakeWorkosApi = (
         status: 'enabled' as const,
         events: options.events,
       }),
+    ensureEnvironmentRoles: () => Effect.void,
     ...overrides,
   });
 

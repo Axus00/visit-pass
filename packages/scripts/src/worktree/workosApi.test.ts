@@ -336,3 +336,76 @@ describe('ensureWebhookEndpoint', () => {
     })
   );
 });
+
+describe('ensureEnvironmentRoles', () => {
+  const ROLES = [
+    { slug: 'residente', name: 'Residente' },
+    { slug: 'portero', name: 'Portero' },
+  ];
+  const rolePayload = (role: unknown) => ({
+    object: 'role',
+    id: 'role_01JABCDEF',
+    type: 'EnvironmentRole',
+    ...(role as Record<string, unknown>),
+  });
+  const ensureRoles = (workosApi: WorkosApi.WorkosApi['Service']) =>
+    workosApi.ensureEnvironmentRoles(ROLES, Redacted.make(API_KEY));
+
+  it.effect('creates every role with the environment key', () =>
+    Effect.gen(function* () {
+      const { outcome, requests } = yield* withRecordedHttp(
+        (request) => jsonResponse(rolePayload(request.body), 201),
+        ensureRoles
+      );
+
+      expect(outcome._tag).toBe('Success');
+      expect(requests).toStrictEqual(
+        ROLES.map((role) => ({
+          method: 'POST',
+          url: 'https://api.workos.com/authorization/roles',
+          authorization: 'the environment key',
+          body: role,
+        }))
+      );
+    })
+  );
+
+  it.effect('treats a role that already exists as created', () =>
+    Effect.gen(function* () {
+      const { outcome, requests } = yield* withRecordedHttp(
+        () =>
+          jsonResponse(
+            { code: 'role_slug_conflict', message: 'Slug already in use.' },
+            409
+          ),
+        ensureRoles
+      );
+
+      expect(outcome._tag).toBe('Success');
+      expect(requests.map((request) => request.body)).toStrictEqual(ROLES);
+    })
+  );
+
+  it.effect.each([401, 403, 422, 429, 500])(
+    'stops at a %i response and reports it safely',
+    (status) =>
+      Effect.gen(function* () {
+        const { outcome, requests } = yield* withRecordedHttp(
+          () =>
+            jsonResponse(
+              { message: `denied for ${API_KEY}`, code: 'unauthorized' },
+              status
+            ),
+          ensureRoles
+        );
+
+        const message = failureMessage(outcome);
+        expect(outcome._tag).toBe('Failure');
+        expect(message).toContain('environment role create');
+        expect(message).toContain(`HTTP ${status}`);
+        expect(message).not.toContain(API_KEY);
+        expect(message).not.toContain('denied for');
+        expect(requests).toHaveLength(1);
+      })
+  );
+});

@@ -1,12 +1,11 @@
-import type { Document } from '@confect/server';
 import type { User } from '@workos-inc/node';
 import * as Effect from 'effect/Effect';
 import * as Schema from 'effect/Schema';
 
 import { env } from '#convex/_generated/server';
 
-import type { UsersDoc } from '../../../_generated/docs';
 import * as CommonEmailAddressesDomain from '../../commonEmailAddresses/domain';
+import type * as UsersDomain from '../../users/domain';
 
 // -*******************************************************************************-
 // Private
@@ -42,6 +41,7 @@ export const toUserDoc = Effect.fn('WorkOS.toUserDoc')(function* (
       workosUser.id
     ),
     email: CommonEmailAddressesDomain.normalizeEmailAddress(workosUser.email),
+    emailVerified: workosUser.emailVerified,
     firstName: workosUser.firstName,
     lastName: workosUser.lastName,
     profilePictureUrl: workosUser.profilePictureUrl,
@@ -49,5 +49,5 @@ export const toUserDoc = Effect.fn('WorkOS.toUserDoc')(function* (
     locale: workosUser.locale,
     externalCreatedAt: externalCreatedAt.valueOf(),
     externalUpdatedAt: externalUpdatedAt.valueOf(),
-  } satisfies Document.WithoutSystemFields<UsersDoc>;
+  } satisfies Omit<UsersDomain.ActiveUsersDoc, '_id' | '_creationTime'>;
 });

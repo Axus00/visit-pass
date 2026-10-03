@@ -1,4 +1,5 @@
-import { Effect, Layer } from 'effect';
+import type { Invitation, OrganizationMembership } from '@workos-inc/node';
+import { Effect, Layer, Predicate } from 'effect';
 
 import * as Application from '../application';
 import * as Domain from '../domain';
@@ -8,6 +9,28 @@ import { mapNotFoundEntityError } from './errorMapping';
 type WorkOSServiceTestOverrides = {
   users?: Partial<Application.WorkOSService['Service']['users']>;
 };
+
+const toExternalOrganizationMembership = (
+  membership: OrganizationMembership
+): Application.ExternalOrganizationMembership => ({
+  id: membership.id,
+  status: membership.status,
+  roleSlugs: (membership.roles ?? [membership.role]).map((role) => role.slug),
+});
+
+const toExternalInvitation = (
+  invitation: Invitation
+): Application.ExternalInvitation => ({
+  id: invitation.id,
+  state: invitation.state,
+  acceptInvitationUrl: invitation.acceptInvitationUrl,
+});
+
+/** One slug travels as `roleSlug`, which every environment accepts. */
+const toRoleOptions = (roleSlugs: ReadonlyArray<string>) =>
+  roleSlugs.length === 1
+    ? { roleSlug: roleSlugs[0] }
+    : { roleSlugs: [...roleSlugs] };
 
 export const makeWorkOSUserFixture = (
   overrides: Partial<Domain.WorkOSUser> = {}
@@ -54,6 +77,20 @@ export const makeWorkOSTestLayer = (
         getOneByEmail:
           overrides.users?.getOneByEmail ?? (() => Effect.succeed(null)),
         deleteById: overrides.users?.deleteById ?? (() => Effect.void),
+      },
+      organizations: {
+        createIfNotExists: (input) =>
+          Effect.succeed({ id: `org_${input.externalId}` }),
+      },
+      organizationMemberships: {
+        getOne: () => Effect.succeed(null),
+        grant: () => Effect.void,
+        deactivate: () => Effect.void,
+      },
+      invitations: {
+        send: () => Effect.succeed(null),
+        getOne: () => Effect.succeed(null),
+        revoke: () => Effect.void,
       },
     })
   );
@@ -160,6 +197,180 @@ export const workOSLayerNoDeps = Layer.effect(
               );
           }
         ),
+      },
+      organizations: {
+        createIfNotExists: Effect.fn(
+          'WorkOSService.organizations.createIfNotExists'
+        )(function* (args) {
+          const existing = yield* workos
+            .use((client) =>
+              client.organizations.getOrganizationByExternalId(args.externalId)
+            )
+            .pipe(
+              mapNotFoundEntityError('organization'),
+              Effect.catchTag('WorkOSNotFoundEntity', () =>
+                Effect.succeed(null)
+              )
+            );
+
+          if (Predicate.isNotNull(existing)) return { id: existing.id };
+
+          const created = yield* workos.use((client) =>
+            client.organizations.createOrganization({
+              name: args.name,
+              externalId: args.externalId,
+            })
+          );
+
+          return { id: created.id };
+        }),
+      },
+      organizationMemberships: {
+        getOne: Effect.fn('WorkOSService.organizationMemberships.getOne')(
+          function* (args) {
+            const memberships = yield* workos.use((client) =>
+              client.userManagement.listOrganizationMemberships({
+                userId: args.externalUserId,
+                organizationId: args.externalOrganizationId,
+                statuses: ['active', 'inactive', 'pending'],
+              })
+            );
+            const [membership] = memberships.data;
+
+            return Predicate.isUndefined(membership)
+              ? null
+              : toExternalOrganizationMembership(membership);
+          }
+        ),
+        grant: Effect.fn('WorkOSService.organizationMemberships.grant')(
+          function* (args) {
+            const { current, roleSlugs } = args;
+            const [widestRoleSlug] = roleSlugs;
+
+            // Multiple Roles is a dashboard setting worktrees cannot carry.
+            const withSingleRoleFallback = <A>(
+              write: (
+                roleOptions: ReturnType<typeof toRoleOptions>
+              ) => Effect.Effect<A, Domain.WorkOSError>
+            ) =>
+              write(toRoleOptions(roleSlugs)).pipe(
+                Effect.catch((error) =>
+                  roleSlugs.length > 1 &&
+                  Predicate.isNotUndefined(widestRoleSlug)
+                    ? write(toRoleOptions([widestRoleSlug]))
+                    : Effect.fail(error)
+                )
+              );
+
+            // A WorkOS invitation leaves a pending membership behind that can be
+            // neither updated nor deactivated, only replaced.
+            const isAwaitingInvitation =
+              Predicate.isNotNull(current) && current.status === 'pending';
+
+            if (isAwaitingInvitation)
+              yield* workos.use((client) =>
+                client.userManagement.deleteOrganizationMembership(current.id)
+              );
+
+            if (Predicate.isNull(current) || isAwaitingInvitation) {
+              yield* withSingleRoleFallback((roleOptions) =>
+                workos.use((client) =>
+                  client.userManagement.createOrganizationMembership({
+                    userId: args.externalUserId,
+                    organizationId: args.externalOrganizationId,
+                    ...roleOptions,
+                  })
+                )
+              );
+              return;
+            }
+
+            if (current.status === 'inactive')
+              yield* workos.use((client) =>
+                client.userManagement.reactivateOrganizationMembership(
+                  current.id
+                )
+              );
+
+            yield* withSingleRoleFallback((roleOptions) =>
+              workos.use((client) =>
+                client.userManagement.updateOrganizationMembership(
+                  current.id,
+                  roleOptions
+                )
+              )
+            );
+          }
+        ),
+        deactivate: Effect.fn(
+          'WorkOSService.organizationMemberships.deactivate'
+        )(function* (args) {
+          yield* workos
+            .use((client) =>
+              client.userManagement.deactivateOrganizationMembership(
+                args.externalMembershipId
+              )
+            )
+            .pipe(
+              mapNotFoundEntityError('organization membership'),
+              Effect.catchTag('WorkOSNotFoundEntity', () => Effect.void)
+            );
+        }),
+      },
+      invitations: {
+        send: Effect.fn('WorkOSService.invitations.send')(function* (args) {
+          return yield* workos
+            .use((client) =>
+              client.userManagement.sendInvitation({
+                email: args.email,
+                organizationId: args.externalOrganizationId,
+                expiresInDays: args.expiresInDays,
+              })
+            )
+            .pipe(
+              Effect.map(toExternalInvitation),
+              Effect.catch((error) =>
+                Effect.logInfo(
+                  '[WorkOSService.invitations.send] WorkOS refused the invitation',
+                  { cause: error.cause }
+                ).pipe(Effect.as(null))
+              )
+            );
+        }),
+        getOne: Effect.fn('WorkOSService.invitations.getOne')(function* (args) {
+          return yield* workos
+            .use((client) =>
+              client.userManagement.getInvitation(args.externalInvitationId)
+            )
+            .pipe(
+              Effect.map(toExternalInvitation),
+              mapNotFoundEntityError('invitation'),
+              Effect.catchTag('WorkOSNotFoundEntity', () =>
+                Effect.succeed(null)
+              )
+            );
+        }),
+        revoke: Effect.fn('WorkOSService.invitations.revoke')(function* (args) {
+          const invitation = yield* workos
+            .use((client) =>
+              client.userManagement.getInvitation(args.externalInvitationId)
+            )
+            .pipe(
+              mapNotFoundEntityError('invitation'),
+              Effect.catchTag('WorkOSNotFoundEntity', () =>
+                Effect.succeed(null)
+              )
+            );
+
+          const isRevocable =
+            Predicate.isNotNull(invitation) && invitation.state === 'pending';
+
+          if (!isRevocable) return;
+
+          yield* workos.use((client) =>
+            client.userManagement.revokeInvitation(args.externalInvitationId)
+          );
+        }),
       },
     });
   })

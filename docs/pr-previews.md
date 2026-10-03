@@ -40,18 +40,18 @@ retention settings; their frontend can outlive the expired backend.
 
 Repository Actions secrets:
 
-| Name | Value |
-| --- | --- |
-| `PR_PREVIEW_CONVEX_ACCESS_TOKEN` | The `accessToken` from the local `~/.convex/config.json`. This authenticates the existing worktree CLI operations. |
-| `PR_PREVIEW_VERCEL_TOKEN` | A Vercel access token authorized to deploy to the configured project. Create a durable token, rather than copying the expiring CLI OAuth login. |
+| Name                             | Value                                                                                                                                           |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PR_PREVIEW_CONVEX_ACCESS_TOKEN` | The `accessToken` from the local `~/.convex/config.json`. This authenticates the existing worktree CLI operations.                              |
+| `PR_PREVIEW_VERCEL_TOKEN`        | A Vercel access token authorized to deploy to the configured project. Create a durable token, rather than copying the expiring CLI OAuth login. |
 
 Repository Actions variables:
 
-| Name | Value |
-| --- | --- |
-| `PR_PREVIEW_CONVEX_PROJECT` | `<team_slug>:<project_slug>` (the project `pnpm bootstrap:main` created) |
-| `PR_PREVIEW_VERCEL_ORG_ID` | The Vercel team id (`team_...`) |
-| `PR_PREVIEW_VERCEL_PROJECT_ID` | The Vercel project id (`prj_...`) |
+| Name                           | Value                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| `PR_PREVIEW_CONVEX_PROJECT`    | `<team_slug>:<project_slug>` (the project `pnpm bootstrap:main` created) |
+| `PR_PREVIEW_VERCEL_ORG_ID`     | The Vercel team id (`team_...`)                                          |
+| `PR_PREVIEW_VERCEL_PROJECT_ID` | The Vercel project id (`prj_...`)                                        |
 
 The label is `preview`. Do not apply it to code you would not run with these
 credentials. The job executes the PR's exact head commit with secret access,
@@ -84,4 +84,3 @@ WorkOS keys and webhook secrets stay on Convex; they are not workflow outputs,
 artifacts, caches, or frontend build variables. The root `.env.local` generated
 in the runner contains only the selected Convex reference and public frontend
 configuration. The command refuses to overwrite an existing `.env.local`.
-

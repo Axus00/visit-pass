@@ -492,6 +492,114 @@ realServiceLayer('setupWorktree outcomes', (it) => {
     );
 
     it.effect(
+      'creates the environment roles after AuthKit and before the backend deploys',
+      () =>
+        TestProviders.withWorktreeFixture((worktree, envFile) =>
+          Effect.gen(function* () {
+            const fileSystem = yield* FileSystem.FileSystem;
+            const steps = yield* Ref.make<ReadonlyArray<string>>([]);
+            const record = (step: string) =>
+              Ref.update(steps, (seen) => [...seen, step]);
+            const requested = yield* Ref.make<
+              | {
+                  readonly roles: ReadonlyArray<WorkosApi.CreateEnvironmentRoleDto>;
+                  readonly apiKey: string;
+                }
+              | undefined
+            >(undefined);
+            yield* writeMainEnvironment(worktree, fileSystem);
+
+            yield* Setup.setupWorktree(worktree).pipe(
+              Effect.provideService(
+                WorkosCli.WorkosCli,
+                TestProviders.fakeWorkosCli({
+                  configureAuthKit: () => record('authkit'),
+                })
+              ),
+              Effect.provideService(
+                WorkosApi.WorkosApi,
+                TestProviders.fakeWorkosApi({
+                  ensureEnvironmentRoles: (roles, apiKey) =>
+                    Ref.set(requested, {
+                      roles,
+                      apiKey: Redacted.value(apiKey),
+                    }).pipe(Effect.andThen(record('roles'))),
+                })
+              ),
+              Effect.provideService(ConvexCli.ConvexCli, {
+                ...convexFakeThatSelects(envFile, worktree.envFilePath),
+                devOnce: () => record('deploy'),
+                run: () => record('seed'),
+              }),
+              Effect.provideService(
+                Lock.WorkosRegistryLock,
+                TestProviders.unlockedRegistry
+              ),
+              Effect.provide(ordinaryCommandLayer)
+            );
+
+            expect(yield* Ref.get(requested)).toStrictEqual({
+              roles: [
+                { slug: 'residente', name: 'Residente' },
+                { slug: 'portero', name: 'Portero' },
+                { slug: 'administrador', name: 'Administrador' },
+              ],
+              apiKey: 'sk_test_default',
+            });
+            expect(yield* Ref.get(steps)).toStrictEqual([
+              'authkit',
+              'roles',
+              'deploy',
+              'seed',
+            ]);
+          })
+        )
+    );
+
+    it.effect('stops before deploying when a role cannot be created', () =>
+      TestProviders.withWorktreeFixture((worktree, envFile) =>
+        Effect.gen(function* () {
+          const fileSystem = yield* FileSystem.FileSystem;
+          const deploys = yield* Ref.make(0);
+          yield* writeMainEnvironment(worktree, fileSystem);
+
+          const error = yield* Effect.flip(
+            Setup.setupWorktree(worktree).pipe(
+              Effect.provideService(
+                WorkosCli.WorkosCli,
+                TestProviders.fakeWorkosCli()
+              ),
+              Effect.provideService(
+                WorkosApi.WorkosApi,
+                TestProviders.fakeWorkosApi({
+                  ensureEnvironmentRoles: () =>
+                    Effect.fail(
+                      new WorkosApi.WorkosApiError({
+                        message:
+                          'WorkOS environment role create failed: StatusCodeError (HTTP 403).',
+                      })
+                    ),
+                })
+              ),
+              Effect.provideService(ConvexCli.ConvexCli, {
+                ...convexFakeThatSelects(envFile, worktree.envFilePath),
+                devOnce: () => Ref.update(deploys, (count) => count + 1),
+              }),
+              Effect.provideService(
+                Lock.WorkosRegistryLock,
+                TestProviders.unlockedRegistry
+              ),
+              Effect.provide(ordinaryCommandLayer)
+            )
+          );
+
+          expect(error._tag).toBe('WorkosApiError');
+          expect(yield* Ref.get(deploys)).toBe(0);
+        })
+      )
+    );
+
+    it.effect(
       'provisions only the webhook when credentials survived without one',
       () =>
         TestProviders.withWorktreeFixture((worktree, envFile) =>
@@ -598,6 +706,54 @@ realServiceLayer('setupWorktree outcomes', (it) => {
           expect(yield* Ref.get(convexEnvironment)).toContainEqual([
             'WORKOS_WEBHOOK_SECRET',
             WEBHOOK_SECRET,
+          ]);
+        })
+      )
+    );
+
+    it.effect("pushes this worktree's frontend origin as APP_URL", () =>
+      TestProviders.withWorktreeFixture((worktree, envFile) =>
+        Effect.gen(function* () {
+          const fileSystem = yield* FileSystem.FileSystem;
+          const convexEnvironment = yield* Ref.make<
+            ReadonlyArray<readonly [string, string]>
+          >([]);
+          yield* writeMainEnvironment(worktree, fileSystem);
+          yield* fileSystem.writeFileString(
+            worktree.envFilePath,
+            'VITE_DEV_SERVER_PORT=5175\n'
+          );
+
+          yield* Setup.setupWorktree(worktree).pipe(
+            Effect.provideService(
+              WorkosCli.WorkosCli,
+              TestProviders.fakeWorkosCli()
+            ),
+            Effect.provideService(
+              WorkosApi.WorkosApi,
+              TestProviders.fakeWorkosApi()
+            ),
+            Effect.provideService(ConvexCli.ConvexCli, {
+              ...convexFakeThatSelects(envFile, worktree.envFilePath),
+              envSet: (key, value) =>
+                Ref.update(convexEnvironment, (entries) => [
+                  ...entries,
+                  [
+                    key,
+                    Redacted.isRedacted(value) ? Redacted.value(value) : value,
+                  ] as const,
+                ]),
+            }),
+            Effect.provideService(
+              Lock.WorkosRegistryLock,
+              TestProviders.unlockedRegistry
+            ),
+            Effect.provide(ordinaryCommandLayer)
+          );
+
+          expect(yield* Ref.get(convexEnvironment)).toContainEqual([
+            'APP_URL',
+            'http://localhost:5175',
           ]);
         })
       )

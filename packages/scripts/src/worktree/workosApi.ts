@@ -11,22 +11,40 @@ import * as HttpClientRequest from 'effect/unstable/http/HttpClientRequest';
 import * as HttpClientResponse from 'effect/unstable/http/HttpClientResponse';
 
 export {
+  WORKOS_ENVIRONMENT_ROLES,
   WORKOS_WEBHOOK_EVENTS,
   WorkosApi,
   WorkosApiError,
+  type CreateEnvironmentRoleDto,
   type EnsureWebhookEndpointDto,
   type WebhookEndpoint,
 };
 
 const WEBHOOK_ENDPOINTS_URL = 'https://api.workos.com/webhook_endpoints';
 
+const ENVIRONMENT_ROLES_URL = 'https://api.workos.com/authorization/roles';
+
+const HTTP_CONFLICT = 409;
+
 const LIST_PAGE_SIZE = 100;
 
-/** Match the Convex handler; it ignores membership events because they originate locally. */
+/** Match the Convex handler, which consumes every event listed here. */
 const WORKOS_WEBHOOK_EVENTS = [
   'user.created',
   'user.updated',
   'user.deleted',
+  'organization_membership.created',
+  'organization_membership.updated',
+  'organization_membership.deleted',
+  'invitation.accepted',
+  'invitation.revoked',
+] as const;
+
+/** The Roles a Membresía can carry, mirrored onto WorkOS organization memberships. */
+const WORKOS_ENVIRONMENT_ROLES = [
+  { slug: 'residente', name: 'Residente' },
+  { slug: 'portero', name: 'Portero' },
+  { slug: 'administrador', name: 'Administrador' },
 ] as const;
 
 class WorkosApiError extends Schema.TaggedError<WorkosApiError>()(
@@ -67,6 +85,13 @@ const UpdateWebhookEndpointDto = Schema.Struct({
   events: Schema.Array(Schema.NonEmptyString),
 });
 
+const CreateEnvironmentRoleDto = Schema.Struct({
+  slug: Schema.NonEmptyString,
+  name: Schema.NonEmptyString,
+});
+
+type CreateEnvironmentRoleDto = typeof CreateEnvironmentRoleDto.Type;
+
 type EnsureWebhookEndpointDto = {
   readonly url: string;
   readonly events: ReadonlyArray<string>;
@@ -91,6 +116,10 @@ class WorkosApi extends Context.Service<
       options: EnsureWebhookEndpointDto,
       apiKey: Redacted.Redacted<string>
     ) => Effect.Effect<WebhookEndpoint, WorkosApiError>;
+    readonly ensureEnvironmentRoles: (
+      roles: ReadonlyArray<CreateEnvironmentRoleDto>,
+      apiKey: Redacted.Redacted<string>
+    ) => Effect.Effect<void, WorkosApiError>;
   }
 >()('@repo/scripts/worktree/WorkosApi') {
   static readonly layer: Layer.Layer<WorkosApi, never, HttpClient.HttpClient> =
@@ -100,10 +129,29 @@ class WorkosApi extends Context.Service<
         const client = yield* HttpClient.HttpClient;
 
         /**
+         * Reports a failed call. Discards request and response details because
+         * either may contain credentials.
+         */
+        const toApiError = (operation: string) => (cause: RequestFailure) => {
+          const detail = ((): string => {
+            if (cause._tag !== 'HttpClientError') {
+              return cause._tag;
+            }
+
+            const { reason } = cause;
+            return 'response' in reason
+              ? `${reason._tag} (HTTP ${reason.response.status})`
+              : reason._tag;
+          })();
+
+          return new WorkosApiError({
+            message: `WorkOS ${operation} failed: ${detail}.`,
+          });
+        };
+
+        /**
          * Closes a request pipeline. Accepts the encoded request a body schema
          * produces as readily as a plain one, so every verb ends the same way.
-         * Discards request and response details because either may contain
-         * credentials.
          */
         const send =
           <S extends Schema.Top>(operation: string, response: S) =>
@@ -119,22 +167,7 @@ class WorkosApi extends Context.Service<
               Effect.flatMap(client.execute),
               Effect.flatMap(HttpClientResponse.filterStatusOk),
               Effect.flatMap(HttpClientResponse.schemaBodyJson(response)),
-              Effect.mapError((cause: RequestFailure) => {
-                const detail = ((): string => {
-                  if (cause._tag !== 'HttpClientError') {
-                    return cause._tag;
-                  }
-
-                  const { reason } = cause;
-                  return 'response' in reason
-                    ? `${reason._tag} (HTTP ${reason.response.status})`
-                    : reason._tag;
-                })();
-
-                return new WorkosApiError({
-                  message: `WorkOS ${operation} failed: ${detail}.`,
-                });
-              }),
+              Effect.mapError(toApiError(operation)),
               Effect.withSpan(`workosApi.${operation}`)
             );
 
@@ -234,7 +267,29 @@ class WorkosApi extends Context.Service<
           }
         );
 
-        return WorkosApi.of({ ensureWebhookEndpoint });
+        /** A conflict means an earlier run created the slug already. */
+        const ensureEnvironmentRoles = Effect.fn(
+          'ensureWorkosEnvironmentRoles'
+        )(function* (
+          roles: ReadonlyArray<CreateEnvironmentRoleDto>,
+          apiKey: Redacted.Redacted<string>
+        ): Effect.fn.Return<void, WorkosApiError> {
+          for (const role of roles) {
+            yield* HttpClientRequest.post(ENVIRONMENT_ROLES_URL).pipe(
+              authenticated(apiKey),
+              HttpClientRequest.schemaBodyJson(CreateEnvironmentRoleDto)(role),
+              Effect.flatMap(client.execute),
+              Effect.filterOrElse(
+                (response) => response.status === HTTP_CONFLICT,
+                HttpClientResponse.filterStatusOk
+              ),
+              Effect.mapError(toApiError('environment role create')),
+              Effect.withSpan('workosApi.environment role create')
+            );
+          }
+        });
+
+        return WorkosApi.of({ ensureWebhookEndpoint, ensureEnvironmentRoles });
       })
     );
 }

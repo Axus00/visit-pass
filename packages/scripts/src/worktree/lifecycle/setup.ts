@@ -291,6 +291,12 @@ const setupWorktree = Effect.fn('setupWorktree')(function* (
         environment.apiKey
       );
 
+      yield* log('Ensuring the WorkOS environment roles');
+      yield* workosApi.ensureEnvironmentRoles(
+        WorkosApi.WORKOS_ENVIRONMENT_ROLES,
+        environment.apiKey
+      );
+
       const webhookSecret = Predicate.isUndefined(resolvedWorkos.webhookSecret)
         ? yield* Effect.map(
             workosApi.ensureWebhookEndpoint(
@@ -308,7 +314,9 @@ const setupWorktree = Effect.fn('setupWorktree')(function* (
         ['WORKOS_WEBHOOK_SECRET', Redacted.value(webhookSecret)],
       ]);
 
-      yield* log('Pushing WorkOS values onto the Convex deployment');
+      yield* log(
+        'Pushing WorkOS values and the app URL onto the Convex deployment'
+      );
       // Sequential. A deployment keeps its environment variables in one
       // record, so parallel `env set` calls race and one loses with
       // `OptimisticConcurrencyControlFailure`.
@@ -316,6 +324,8 @@ const setupWorktree = Effect.fn('setupWorktree')(function* (
         convexCli.envSet('WORKOS_CLIENT_ID', environment.clientId, repoRoot),
         convexCli.envSet('WORKOS_API_KEY', environment.apiKey, repoRoot),
         convexCli.envSet('WORKOS_WEBHOOK_SECRET', webhookSecret, repoRoot),
+        // The backend builds invitation email links from it.
+        convexCli.envSet('APP_URL', frontendOrigin, repoRoot),
       ]);
 
       yield* log('Generating Confect and Convex bridge files');

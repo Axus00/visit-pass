@@ -17,7 +17,10 @@
     "./refs": "./src/confect/_generated/refs.ts",
     "./docs": "./src/confect/_generated/docs.ts",
     "./id": "./src/confect/_generated/id.ts",
-    "./shared/exampleWorkflows": "./src/confect/modules/exampleWorkflows/domain/models.ts"
+    "./shared/exampleWorkflows": "./src/confect/modules/exampleWorkflows/domain/models.ts",
+    "./shared/apartments": "./src/confect/modules/apartments/domain/index.ts",
+    "./shared/memberships": "./src/confect/modules/memberships/domain/index.ts",
+    "./shared/residentialUnits": "./src/confect/modules/residentialUnits/domain/index.ts"
   },
   "scripts": {
     "confect:codegen": "pnpm -w run confect:codegen",
@@ -36,6 +39,7 @@
     "@confect/cli": "catalog:",
     "@confect/core": "catalog:",
     "@confect/server": "catalog:",
+    "@convex-dev/resend": "^0.2.8",
     "@convex-dev/workflow": "0.4.6",
     "@convex-dev/workos-authkit": "0.2.9",
     "@effect/platform-node": "catalog:",
